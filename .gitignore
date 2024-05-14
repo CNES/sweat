@@ -1,0 +1,16 @@
+# Temporary files
+*.swp
+*_cache/
+
+# Python
+*.pyc
+.coverage
+__pycache__/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Data
+*.tif
+*.csv
+*.mat
