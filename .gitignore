@@ -9,8 +9,12 @@ __pycache__/
 
 # Notebooks
 .ipynb_checkpoints/
+Untitled*.ipynb
 
 # Data
 *.tif
 *.csv
 *.mat
+*.png
+
+report/
