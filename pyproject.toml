@@ -52,6 +52,7 @@ Source = "https://gitlab.cnes.fr/cesbio/evaspa"
 
 [project.scripts]
 evaspa = "evaspa.cli:evaspa"
+evaspa-tiling = "evaspa.cli:evaspa_tiling"
 
 [tool.hatch.metadata]
 allow-direct-references = true
