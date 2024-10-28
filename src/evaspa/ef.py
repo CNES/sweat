@@ -2,143 +2,130 @@
 # coding: utf8
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
-from abc import ABC, abstractmethod
-from dataclasses import InitVar, dataclass, field
-from typing import ClassVar
-
+from dataclasses import dataclass
 import numpy as np
-import pandas as pd
+import numpy.typing as npt
+
+from pydantic import BaseModel, ValidationError
+
+from .edge import Edge, create_edge, EdgeError
 
 
-@dataclass
-class EFModel(ABC):
-    """Abstract class for evaporative fraction model"""
+class EdgeConfig(BaseModel):
+    type: str
+    config: dict
 
-    var: InitVar[np.ndarray]
-    lst: InitVar[np.ndarray]
-    dry_coeffs: tuple[float, float] = field(init=False)
-    wet_coeffs: tuple[float, float] = field(init=False)
 
-    def __post_init__(self, var: np.ndarray, lst: np.ndarray) -> None:
-        """
-        Post initilization method
-        """
-        self._estimate_edges(var, lst)
+class EFModelConfig(BaseModel):
+    dry_edge: EdgeConfig
+    wet_edge: EdgeConfig
 
-    @abstractmethod
-    def _estimate_edges(self, var: np.ndarray, lst: np.ndarray) -> None:
+
+class EFConfigError(Exception):
+    """Exception in EF Model configuration"""
+
+
+class EFModelError(Exception):
+    """Exception in EF model creation"""
+
+
+@dataclass(frozen=True)
+class EFModel:
+    """Class for evaporative fraction model"""
+
+    wet_edge: Edge
+    dry_edge: Edge
+
+    def fit(self, var: npt.NDArray, lst: npt.NDArray) -> None:
         """
         Method to compute dry and wet edges
         """
-        pass
+        self.wet_edge.fit(var, lst)
+        self.dry_edge.fit(var, lst)
 
-    def dry_edge(self, var: float) -> float:
+    def tdry(self, var: npt.ArrayLike) -> npt.NDArray:
         """
         Compute dry temperature
         """
-        return self.dry_coeffs[0] * var + self.dry_coeffs[1]
+        return self.dry_edge.get(var)
 
-    def wet_edge(self, var: float) -> float:
+    def twet(self, var: npt.ArrayLike) -> npt.NDArray:
         """
-        Compute dry temperature
+        Compute wet temperature
         """
-        return self.wet_coeffs[0] * var + self.wet_coeffs[1]
+        return self.wet_edge.get(var)
 
-    def compute_ef(self, var: np.ndarray, lst: np.ndarray) -> np.ndarray:
+    def compute(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> npt.NDArray:
         """
         Method to compute evaporative fraction
         """
-        ef = (self.dry_coeffs[0] * var + self.dry_coeffs[1] - lst) / (
-            (self.dry_coeffs[0] - self.wet_coeffs[0]) * var
-            + (self.dry_coeffs[1] - self.wet_coeffs[1])
-        )
+        ef = (self.tdry(var) - np.array(lst)) / (self.tdry(var) - self.twet(var))
         ef = np.where(ef > 1, 1, ef)
         ef = np.where(ef < 0, 0, ef)
         return ef
 
-
-@dataclass
-class EFModel1(EFModel):
-    """Abstract class for evaporative fraction model"""
-
-    name: ClassVar[str] = "EF_1"
-    doi: ClassVar[str] = "https://doi.org/10.1016/j.proenv.2013.06.035"
-
-    nb_intervals: int = field(default=20, init=True)
-    percentile: int = field(default=5, init=True)
-
-    def _estimate_edges(self, var: np.ndarray, lst: np.ndarray) -> None:
-        """
-        Description
-        -----------
-        Domain division: Nb intervals of same pixels density
-
-        Dry edge calculation:
-        For each interval, compute the dry point:
-          - compute the median of var values
-          - compute the median of lst values of the percentile superior of the interval.
-        Perform a linear regression from the dry points
-
-        Wet edge calculation:
-        For each interval, compute the wet point:
-          - compute the median of var values
-          - compute the median of lst values of the percentile inferior of the interval.
-        Perform a linear regression from the wet points
-
-        Outliers are not removed.
-
-        Parameters
-        ----------
-        lst : np.array
-            Land surface temperature
-        var : np.array
-            Variable used versus temperature (Albedo)
-        """
-        # removing common nan
-        df = (
-            pd.DataFrame(data={"lst": lst.reshape(-1), "var": var.reshape(-1)})
-            .dropna(axis=0, how="any")
-            .sort_values(by="var")
-            .reset_index(drop=True)
-        )
-
-        var_values = []
-        lst_sup_values = []
-        lst_inf_values = []
-        interval_size = int(np.floor(len(df) / self.nb_intervals))
-        for i, group in df.groupby(df.index // interval_size):
-            if i == self.nb_intervals:
-                # Skip last not complete group
-                break
-            var_values.append(group["var"].median())
-            lst_inf_values.append(
-                group["lst"][
-                    group["lst"] < np.percentile(group["lst"], self.percentile)
-                ].median()
-            )
-            lst_sup_values.append(
-                group["lst"][
-                    group["lst"] > np.percentile(group["lst"], 100 - self.percentile)
-                ].median()
-            )
-
-        self.dry_coeffs = np.polyfit(var_values, lst_sup_values, 1)
-        self.wet_coeffs = np.polyfit(var_values, lst_inf_values, 1)
-
     def to_json(self) -> dict:
         """
         Return an dictionary
+        model_dump_json
         """
         return {
-            "name": self.name,
-            "parameters": {
-                "nb_intervals": self.nb_intervals,
-                "percentile": self.percentile,
+            "dry_edge": {
+                "type": self.dry_edge.__class__,
+                "config": self.dry_edge.model_dump_json(),
+            },
+            "wet_edge": {
+                "type": self.wet_edge.__class__,
+                "config": self.wet_edge.model_dump_json(),
             },
         }
 
+    def __str__(self) -> str:
+        """
+        String conversion
+        """
+        return (
+            f"Model(dry_edge={self.dry_edge.__class__},"
+            f"wet_edge={self.wet_edge.__class__})"
+        )
+
     def __repr__(self) -> str:
         """
-        Print
+        For print method
         """
-        return f"Method {self.name} with parameters: nb_intervals = {self.nb_intervals}, percentile = {self.percentile}"
+        return (
+            "Model:\n" f"dry edge = {self.dry_edge}\n" f"wet edge = {self.wet_edge}\n"
+        )
+
+
+def check_efmodel(config: dict) -> EFModelConfig:
+    """
+    Description
+    """
+    try:
+        efconfig = EFModelConfig.model_validate(config)
+    except ValidationError as e:
+        raise EFConfigError("Error in model configuration") from e
+    return efconfig
+
+
+def create_efmodel(config: dict) -> EFModel:
+    """
+    Description
+    """
+    # Read configuration
+    efconfig = check_efmodel(config)
+
+    # Dry edge
+    try:
+        dry_edge = create_edge(efconfig.dry_edge.type, efconfig.dry_edge.config)
+    except EdgeError as e:
+        raise EFModelError("Error in dry edge creation") from e
+
+    # Wet edge
+    try:
+        wet_edge = create_edge(efconfig.wet_edge.type, efconfig.wet_edge.config)
+    except EdgeError as e:
+        raise EFModelError("Error in wet edge creation") from e
+
+    return EFModel(dry_edge=dry_edge, wet_edge=wet_edge)
