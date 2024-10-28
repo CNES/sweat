@@ -2,10 +2,11 @@
 # coding: utf8
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
+import pytest
 import numpy as np
 import pandas as pd
 
-import evaspa.ef as efm
+from evaspa.ef import create_efmodel, EFModelError, EFConfigError, check_efmodel
 
 
 def setup_data(
@@ -46,26 +47,234 @@ def setup_data(
     return var, lst, ef
 
 
-def test_efmodel1() -> None:
+@pytest.mark.parametrize(
+    "config",
+    [
+        {
+            "dry_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 20,
+                    "percentile": [98, 100],
+                    "selection": "median",
+                },
+            },
+            "wet_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 20,
+                    "percentile": [0, 2],
+                    "selection": "median",
+                },
+            },
+        },
+        {
+            "dry_edge": {
+                "type": "FlatEdge",
+                "config": {
+                    "selection": "max",
+                },
+            },
+            "wet_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 20,
+                    "percentile": [0, 2],
+                    "selection": "median",
+                },
+            },
+        },
+        {
+            "dry_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 20,
+                    "percentile": [98, 100],
+                    "selection": "median",
+                },
+            },
+            "wet_edge": {
+                "type": "FlatEdge",
+                "config": {
+                    "selection": "min",
+                },
+            },
+        },
+        {
+            "dry_edge": {
+                "type": "FlatEdge",
+                "config": {
+                    "selection": "max",
+                },
+            },
+            "wet_edge": {
+                "type": "FlatEdge",
+                "config": {
+                    "selection": "min",
+                },
+            },
+        },
+    ],
+)
+def test_create_model(config) -> None:
     """
-    Test EF model 1
+    Test LinearEdge
     """
-    assert efm.EFModel1.name == "EF_1"
-    # Parameters
-    albedo_min = 0.0
-    albedo_max = 0.6
-    dry_c1 = -13.0
-    dry_c0 = 330.0
-    wet_c1 = 30
-    wet_c0 = 300.0
     # Generate data
-    albedo, lst, ef_ref = setup_data(
-        albedo_min, albedo_max, dry_c1, dry_c0, wet_c1, wet_c0
+    var, lst, ef_ref = setup_data(
+        var_min=0.0, var_max=0.6, dry_c0=330.0, dry_c1=-13.0, wet_c0=300, wet_c1=30
     )
-    # Run model
-    model = efm.EFModel1(var=albedo, lst=lst, nb_intervals=20, percentile=2)
-    ef = model.compute_ef(albedo, lst)
-    # Validation
-    np.testing.assert_allclose(model.dry_coeffs, (dry_c1, dry_c0), rtol=0.1)
-    np.testing.assert_allclose(model.wet_coeffs, (wet_c1, wet_c0), rtol=0.1)
-    np.testing.assert_allclose(ef, ef_ref, atol=0.07)
+    model = create_efmodel(config)
+    model.fit(var, lst)
+    np.testing.assert_allclose(model.tdry(0.0), 330.0, atol=1.0)
+    np.testing.assert_allclose(model.twet(0.0), 300.0, atol=1.0)
+    np.testing.assert_allclose(model.compute(0.0, 300), 0.0, atol=1.0)
+    np.testing.assert_allclose(model.compute(0.0, 330), 1.0, atol=1.0)
+    np.testing.assert_allclose(model.compute(0.0, 315), 0.5, atol=1.0)
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        {
+            "dry_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 20,
+                    "selection": "median",
+                },
+            },
+            "wet_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 20,
+                    "percentile": [0, 2],
+                    "selection": "median",
+                },
+            },
+        },
+        {
+            "dry_edge": {
+                "type": "FlatEdge",
+                "config": {
+                    "selection": "foo",
+                },
+            },
+            "wet_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 20,
+                    "percentile": [0, 2],
+                    "selection": "median",
+                },
+            },
+        },
+        {
+            "dry_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "foo",
+                    "interval_nb": 20,
+                    "percentile": [98, 100],
+                    "selection": "median",
+                },
+            },
+            "wet_edge": {
+                "type": "FlatEdge",
+                "config": {
+                    "selection": "min",
+                },
+            },
+        },
+        {
+            "dry_edge": {
+                "type": "FlatEdge",
+                "config": {
+                    "selection": "max",
+                },
+            },
+            "wet_edge": {
+                "type": "FlatEdge",
+                "config": {
+                    "selection": "foo",
+                },
+            },
+        },
+    ],
+)
+def test_create_model_error(config) -> None:
+    """
+    Test LinearEdge
+    """
+    with pytest.raises(EFModelError):
+        create_efmodel(config)
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        {
+            "dry_edge": {
+                "type": "LinearEdge",
+                "config": {},
+            },
+        },
+        {
+            "dry": {
+                "type": "FlatEdge",
+                "config": {
+                    "selection": "max",
+                },
+            },
+            "wet_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 20,
+                    "percentile": [0, 2],
+                    "selection": "median",
+                },
+            },
+        },
+        {
+            "dry_edge": {
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 20,
+                    "percentile": [98, 100],
+                    "selection": "median",
+                },
+            },
+            "wet_edge": {
+                "type": "FlatEdge",
+                "config": {
+                    "selection": "min",
+                },
+            },
+        },
+        {
+            "dry_edge": {
+                "type": "MaxEdge",
+                "config": {
+                    "selection": "max",
+                },
+            },
+            "wet_edge": {
+                "type": "FlatEdge",
+            },
+        },
+    ],
+)
+def test_config_model_error(config) -> None:
+    """
+    Test LinearEdge
+    """
+    with pytest.raises(EFConfigError):
+        check_efmodel(config)
