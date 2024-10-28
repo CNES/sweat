@@ -6,7 +6,7 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from evaspa.ef_model import create_efmodel
+from evaspa.ef_model import create_efmodel, EFModelError, EFConfigError, check_efmodel
 
 
 def setup_data(
@@ -70,6 +70,54 @@ def setup_data(
                 },
             },
         },
+        {
+            "dry_edge": {
+                "type": "FlatEdge",
+                "config": {
+                    "selection": "max",
+                },
+            },
+            "wet_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 20,
+                    "percentile": [0, 2],
+                    "selection": "median",
+                },
+            },
+        },
+        {
+            "dry_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 20,
+                    "percentile": [98, 100],
+                    "selection": "median",
+                },
+            },
+            "wet_edge": {
+                "type": "FlatEdge",
+                "config": {
+                    "selection": "min",
+                },
+            },
+        },
+        {
+            "dry_edge": {
+                "type": "FlatEdge",
+                "config": {
+                    "selection": "max",
+                },
+            },
+            "wet_edge": {
+                "type": "FlatEdge",
+                "config": {
+                    "selection": "min",
+                },
+            },
+        },
     ],
 )
 def test_create_model(config) -> None:
@@ -82,3 +130,151 @@ def test_create_model(config) -> None:
     )
     model = create_efmodel(config)
     model.fit(var, lst)
+    np.testing.assert_allclose(model.tdry(0.0), 330.0, atol=1.0)
+    np.testing.assert_allclose(model.twet(0.0), 300.0, atol=1.0)
+    np.testing.assert_allclose(model.compute(0.0, 300), 0.0, atol=1.0)
+    np.testing.assert_allclose(model.compute(0.0, 330), 1.0, atol=1.0)
+    np.testing.assert_allclose(model.compute(0.0, 315), 0.5, atol=1.0)
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        {
+            "dry_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 20,
+                    "selection": "median",
+                },
+            },
+            "wet_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 20,
+                    "percentile": [0, 2],
+                    "selection": "median",
+                },
+            },
+        },
+        {
+            "dry_edge": {
+                "type": "FlatEdge",
+                "config": {
+                    "selection": "foo",
+                },
+            },
+            "wet_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 20,
+                    "percentile": [0, 2],
+                    "selection": "median",
+                },
+            },
+        },
+        {
+            "dry_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "foo",
+                    "interval_nb": 20,
+                    "percentile": [98, 100],
+                    "selection": "median",
+                },
+            },
+            "wet_edge": {
+                "type": "FlatEdge",
+                "config": {
+                    "selection": "min",
+                },
+            },
+        },
+        {
+            "dry_edge": {
+                "type": "FlatEdge",
+                "config": {
+                    "selection": "max",
+                },
+            },
+            "wet_edge": {
+                "type": "FlatEdge",
+                "config": {
+                    "selection": "foo",
+                },
+            },
+        },
+    ],
+)
+def test_create_model_error(config) -> None:
+    """
+    Test LinearEdge
+    """
+    with pytest.raises(EFModelError):
+        create_efmodel(config)
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        {
+            "dry_edge": {
+                "type": "LinearEdge",
+                "config": {},
+            },
+        },
+        {
+            "dry": {
+                "type": "FlatEdge",
+                "config": {
+                    "selection": "max",
+                },
+            },
+            "wet_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 20,
+                    "percentile": [0, 2],
+                    "selection": "median",
+                },
+            },
+        },
+        {
+            "dry_edge": {
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 20,
+                    "percentile": [98, 100],
+                    "selection": "median",
+                },
+            },
+            "wet_edge": {
+                "type": "FlatEdge",
+                "config": {
+                    "selection": "min",
+                },
+            },
+        },
+        {
+            "dry_edge": {
+                "type": "MaxEdge",
+                "config": {
+                    "selection": "max",
+                },
+            },
+            "wet_edge": {
+                "type": "FlatEdge",
+            },
+        },
+    ],
+)
+def test_config_model_error(config) -> None:
+    """
+    Test LinearEdge
+    """
+    with pytest.raises(EFConfigError):
+        check_efmodel(config)

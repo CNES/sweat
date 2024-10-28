@@ -8,7 +8,7 @@ import numpy.typing as npt
 
 from pydantic import BaseModel, ValidationError
 
-from .edge import Edge, create_edge
+from .edge import Edge, create_edge, EdgeError
 
 
 class EdgeConfig(BaseModel):
@@ -98,14 +98,15 @@ class EFModel:
         )
 
 
-def check_efmodel(config: dict):
+def check_efmodel(config: dict) -> EFModelConfig:
     """
     Description
     """
     try:
-        _ = EFModelConfig.model_validate(config)
+        efconfig = EFModelConfig.model_validate(config)
     except ValidationError as e:
         raise EFConfigError("Error in model configuration") from e
+    return efconfig
 
 
 def create_efmodel(config: dict) -> EFModel:
@@ -113,21 +114,18 @@ def create_efmodel(config: dict) -> EFModel:
     Description
     """
     # Read configuration
-    try:
-        efconfig = EFModelConfig.model_validate(config)
-    except ValidationError as e:
-        raise EFConfigError("Error in model configuration") from e
+    efconfig = check_efmodel(config)
 
     # Dry edge
     try:
         dry_edge = create_edge(efconfig.dry_edge.type, efconfig.dry_edge.config)
-    except EFModelError as e:
+    except EdgeError as e:
         raise EFModelError("Error in dry edge creation") from e
 
     # Wet edge
     try:
         wet_edge = create_edge(efconfig.wet_edge.type, efconfig.wet_edge.config)
-    except EFModelError as e:
+    except EdgeError as e:
         raise EFModelError("Error in wet edge creation") from e
 
     return EFModel(dry_edge=dry_edge, wet_edge=wet_edge)

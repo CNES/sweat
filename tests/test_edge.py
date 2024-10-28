@@ -6,7 +6,9 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from evaspa.edge import FlatEdge, LinearEdge, create_edge
+from pydantic import ValidationError
+
+from evaspa.edge import FlatEdge, LinearEdge, create_edge, EdgeError
 
 
 def setup_data(
@@ -72,10 +74,25 @@ def test_flat_edge(config, expected) -> None:
 @pytest.mark.parametrize(
     "config",
     [
+        pytest.param('{"selection":"foo"}'),
+    ],
+)
+def test_flat_edge_error(config) -> None:
+    """
+    Test FlatEdge with exception raising
+    """
+    with pytest.raises(ValidationError):
+        FlatEdge.model_validate_json(config)
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
         '{"interval_type":"size","interval_nb":20,"percentile":[98,100],"selection":"max"}',
         '{"interval_type":"density","interval_nb":20,"percentile":[98,100],"selection":"max"}',
         '{"interval_type":"size","interval_nb":100,"percentile":[98,100],"selection":"max"}',
         '{"interval_type":"size","interval_nb":20,"percentile":[98,100],"selection":"median"}',
+        '{"percentile":[98,100]}',
     ],
 )
 def test_linear_edge(config) -> None:
@@ -91,6 +108,26 @@ def test_linear_edge(config) -> None:
     np.testing.assert_allclose(edge.coeffs[1], 330, atol=1.0)
     np.testing.assert_allclose(edge.coeffs[0], -13, atol=1.0)
     np.testing.assert_allclose(edge.get(0.3), 330.0 - 13.0 * 0.3, atol=1.0)
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        '{"interval_type":"size","interval_nb":20,"selection":"max"}',
+        '{"interval_type":"foo","interval_nb":20,"percentile":[98,100],"selection":"max"}',
+        '{"interval_type":"size","interval_nb":100,"percentile":[98,100],"selection":"foo"}',
+        '{"interval_type":"size","interval_nb":0,"percentile":[98,100],"selection":"median"}',
+        '{"interval_type":"size","interval_nb":20,"percentile":[46,12],"selection":"median"}',
+        '{"interval_type":"size","interval_nb":20,"percentile":[-1,5],"selection":"median"}',
+        '{"interval_type":"size","interval_nb":20,"percentile":[99,105],"selection":"median"}',
+    ],
+)
+def test_linear_edge_error(config) -> None:
+    """
+    Test LinearEdge
+    """
+    with pytest.raises(ValidationError):
+        LinearEdge.model_validate_json(config)
 
 
 @pytest.mark.parametrize(
@@ -133,3 +170,30 @@ def test_create_edge(name, config) -> None:
     Test LinearEdge
     """
     create_edge(name, config)
+
+
+@pytest.mark.parametrize(
+    "name,config",
+    [
+        pytest.param(
+            "FlatEdge",
+            {
+                "selection": "foo",
+            },
+        ),
+        pytest.param(
+            "LinearEdge",
+            {
+                "interval_type": "size",
+                "interval_nb": 20,
+                "selection": "max",
+            },
+        ),
+    ],
+)
+def test_create_edge_error(name, config) -> None:
+    """
+    Test LinearEdge
+    """
+    with pytest.raises(EdgeError):
+        create_edge(name, config)

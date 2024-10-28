@@ -10,7 +10,7 @@ import sys
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
 
 class EdgeError(Exception):
@@ -108,6 +108,20 @@ class LinearEdge(Edge):
     selection: SelectionMethod = SelectionMethod.MEDIAN
 
     coeffs: tuple[float, float] = (float("inf"), float("inf"))
+
+    @field_validator("percentile")
+    @classmethod
+    def check_percentile(cls, p: tuple[int, int]) -> tuple[int, int]:
+        if (p[0] > p[1]) or (0 > p[0]) or (p[0] >= 100) or (0 >= p[1]) or (p[1] > 100):
+            raise ValueError("Percentile must be an interval between [0,100]")
+        return p
+
+    @field_validator("interval_nb")
+    @classmethod
+    def check_interval_nb(cls, nb: int) -> int:
+        if (nb <= 0) or (nb > 1000):
+            raise ValueError("Number of intervals must be between 1 and 1000")
+        return nb
 
     def get(self, var: npt.ArrayLike) -> npt.NDArray:
         """
