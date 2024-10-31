@@ -24,6 +24,13 @@ class IntervalType(Enum):
     DENSITY = "density"
 
 
+class EdgeConfig(BaseModel):
+    """Configuration of a edge"""
+
+    type: str
+    config: dict
+
+
 class SelectionMethod(Enum):
     """Method used to select point for the regression"""
 
@@ -46,7 +53,7 @@ class Edge(BaseModel, ABC):
     model_config = ConfigDict(allow_inf_nan=True, ser_json_inf_nan="strings")
 
     @abstractmethod
-    def fit(self, var: npt.NDArray, lst: npt.NDArray) -> None:
+    def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
         """
         Description
         -----------
@@ -54,9 +61,9 @@ class Edge(BaseModel, ABC):
 
         Parameters
         ----------
-        lst : np.array
+        lst : np.array_like
             Land surface temperature
-        var : np.array
+        var : np.array_like
             Variable used versus temperature (ex: Albedo)
         """
         pass
@@ -70,7 +77,7 @@ class Edge(BaseModel, ABC):
 
         Parameters
         ----------
-        var : float or np.ndarray
+        var : np.array_like
             Variable
         """
         pass
@@ -87,7 +94,7 @@ class Edge(BaseModel, ABC):
             Land surface temperature
         var : np.array
             Variable used versus temperature (ex: Albedo)
-        return: df. DataFrame
+        return: DataFrame
         """
         assert var.shape == lst.shape
         return (
@@ -112,6 +119,17 @@ class LinearEdge(Edge):
     @field_validator("percentile")
     @classmethod
     def check_percentile(cls, p: tuple[int, int]) -> tuple[int, int]:
+        """
+        Description
+        -----------
+        Check the consistency of the percentile interval
+
+        Parameters
+        ----------
+        p : tuple[int,int]
+            Percentile interval
+        return: tuple[int,int]
+        """
         if (p[0] > p[1]) or (0 > p[0]) or (p[0] >= 100) or (0 >= p[1]) or (p[1] > 100):
             raise ValueError("Percentile must be an interval between [0,100]")
         return p
@@ -131,12 +149,12 @@ class LinearEdge(Edge):
 
         Parameters
         ----------
-        var : float or np.ndarray
+        var : np.array_like
             Variable
         """
         return self.coeffs[0] * np.array(var) + self.coeffs[1]
 
-    def fit(self, var: npt.NDArray, lst: npt.NDArray) -> None:
+    def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
         """
         Description
         -----------
@@ -148,16 +166,16 @@ class LinearEdge(Edge):
 
         Parameters
         ----------
-        lst : np.array
+        lst : np.array_like
             Land surface temperature
-        var : np.array
+        var : np.array_like
             Variable used versus temperature (ex: Albedo)
         """
         # Init
-        assert var.shape == lst.shape
+        assert np.array(var).shape == np.array(lst).shape
         var_values = []
         lst_values = []
-        df = self._prepare(var, lst)
+        df = self._prepare(np.array(var), np.array(lst))
         intervals = self._get_intervals(df["var"])
 
         # Compute point coordinates for regression
@@ -171,7 +189,7 @@ class LinearEdge(Edge):
             )
 
         # Linear regression
-        self.coeffs = np.polyfit(var_values, lst_values, 1)
+        self.coeffs = tuple(np.polyfit(var_values, lst_values, 1))
 
     def _get_intervals(self, values: pd.Series) -> pd.Series:
         """
@@ -239,12 +257,12 @@ class FlatEdge(Edge):
 
         Parameters
         ----------
-        var : float or np.ndarray
+        var : np.array_like
             Variable
         """
         return self.value * np.ones_like(np.array(var))
 
-    def fit(self, var: npt.NDArray, lst: npt.NDArray) -> None:
+    def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
         """
         Description
         -----------
@@ -252,15 +270,15 @@ class FlatEdge(Edge):
 
         Parameters
         ----------
-        lst : np.array
+        lst : np.array_like
             Land surface temperature
-        var : np.array
+        var : np.array_like
             Variable used versus temperature (ex: Albedo)
         """
         if self.selection == SelectionFlatMethod.MAX:
-            self.value = np.nanmax(lst)
+            self.value = np.nanmax(np.array(lst))
         elif self.selection == SelectionFlatMethod.MIN:
-            self.value = np.nanmin(lst)
+            self.value = np.nanmin(np.array(lst))
 
 
 def create_edge(name: str, config: dict):

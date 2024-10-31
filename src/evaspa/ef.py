@@ -3,22 +3,31 @@
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
 from dataclasses import dataclass
+from enum import Enum
 import numpy as np
 import numpy.typing as npt
+import xarray as xr
 
 from pydantic import BaseModel, ValidationError
 
-from .edge import Edge, create_edge, EdgeError
+from .edge import Edge, create_edge, EdgeError, EdgeConfig
 
 
-class EdgeConfig(BaseModel):
-    type: str
-    config: dict
+class MergeMethod(Enum):
+    """Method for merge EF mdoels"""
+
+    AVERAGE = "average"
 
 
 class EFModelConfig(BaseModel):
+    """
+    Configuration of a EF model
+    """
+
+    name: str
     dry_edge: EdgeConfig
     wet_edge: EdgeConfig
+    var: str
 
 
 class EFConfigError(Exception):
@@ -33,33 +42,90 @@ class EFModelError(Exception):
 class EFModel:
     """Class for evaporative fraction model"""
 
+    name: str
     wet_edge: Edge
     dry_edge: Edge
+    var: str
 
-    def fit(self, var: npt.NDArray, lst: npt.NDArray) -> None:
+    def fit(self, data: xr.Dataset, mask: str | None = None) -> None:
         """
-        Method to compute dry and wet edges
+        Description
+        -----------
+        Method to estimate dry and wet edges.
+        data is a xarray.Dataset which must conatin "lst"
+        and "var" as data varaibles.
+
+        Parameters
+        ----------
+        data : xr.Datset
+            Dataset containing the data
+        mask : str
+            Name of the data variables used for masking
         """
-        self.wet_edge.fit(var, lst)
-        self.dry_edge.fit(var, lst)
+        assert self.var in data.data_vars
+        assert "lst" in data.data_vars
+        if mask is not None:
+            assert mask in data.data_vars
+            data_masked = data.where(data[mask], drop=True)
+        else:
+            data_masked = data
+        self.wet_edge.fit(data_masked[self.var], data_masked["lst"])
+        self.dry_edge.fit(data_masked[self.var], data_masked["lst"])
 
     def tdry(self, var: npt.ArrayLike) -> npt.NDArray:
         """
+        Description
+        -----------
         Compute dry temperature
+
+        Parameters
+        ----------
+        var : np.array_like
+            Data
+        return: np.array
         """
         return self.dry_edge.get(var)
 
     def twet(self, var: npt.ArrayLike) -> npt.NDArray:
         """
+        Description
+        -----------
         Compute wet temperature
+
+        Parameters
+        ----------
+        var : np.array_like
+            Data
+        return: np.array
         """
         return self.wet_edge.get(var)
 
-    def compute(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> npt.NDArray:
+    def compute(self, data: xr.Dataset, mask: str | None = None) -> npt.NDArray:
         """
+        Description
+        -----------
         Method to compute evaporative fraction
+
+        Parameters
+        ----------
+        data : xr.Datset
+            Dataset containing the data
+        mask : str
+            Name of the data variables used for masking
+        var : np.array_like
+            Data
+        return: np.array
         """
-        ef = (self.tdry(var) - np.array(lst)) / (self.tdry(var) - self.twet(var))
+        assert self.var in data.data_vars
+        assert "lst" in data.data_vars
+        if mask is not None:
+            assert mask in data.data_vars
+            data_masked = data.where(data[mask], drop=True)
+        else:
+            data_masked = data
+        ef = (self.tdry(data_masked[self.var]) - np.array(data_masked["lst"])) / (
+            self.tdry(data_masked[self.var]) - self.twet(data_masked[self.var])
+        )
         ef = np.where(ef > 1, 1, ef)
         ef = np.where(ef < 0, 0, ef)
         return ef
@@ -67,9 +133,9 @@ class EFModel:
     def to_json(self) -> dict:
         """
         Return an dictionary
-        model_dump_json
         """
         return {
+            "name": self.name,
             "dry_edge": {
                 "type": self.dry_edge.__class__,
                 "config": self.dry_edge.model_dump_json(),
@@ -78,6 +144,7 @@ class EFModel:
                 "type": self.wet_edge.__class__,
                 "config": self.wet_edge.model_dump_json(),
             },
+            "var": self.var,
         }
 
     def __str__(self) -> str:
@@ -85,8 +152,8 @@ class EFModel:
         String conversion
         """
         return (
-            f"Model(dry_edge={self.dry_edge.__class__},"
-            f"wet_edge={self.wet_edge.__class__})"
+            f"Model({self.name},dry_edge={self.dry_edge.__class__},"
+            f"wet_edge={self.wet_edge.__class__},var={self.var})"
         )
 
     def __repr__(self) -> str:
@@ -94,13 +161,24 @@ class EFModel:
         For print method
         """
         return (
-            "Model:\n" f"dry edge = {self.dry_edge}\n" f"wet edge = {self.wet_edge}\n"
+            f"Model: {self.name}\n"
+            f" - dry edge = {self.dry_edge}\n"
+            f" - wet edge = {self.wet_edge}\n"
+            f" - var = {self.var}"
         )
 
 
 def check_efmodel(config: dict) -> EFModelConfig:
     """
     Description
+    -----------
+    Check an EF model configuration
+
+    Parameters
+    ----------
+    config : dict
+        Configuration for EF model
+    return: EFModelConfig
     """
     try:
         efconfig = EFModelConfig.model_validate(config)
@@ -112,6 +190,14 @@ def check_efmodel(config: dict) -> EFModelConfig:
 def create_efmodel(config: dict) -> EFModel:
     """
     Description
+    -----------
+    Create an EF model from a configuration
+
+    Parameters
+    ----------
+    config : dict
+        Configuration for EF model
+    return: EFModel
     """
     # Read configuration
     efconfig = check_efmodel(config)
@@ -128,4 +214,36 @@ def create_efmodel(config: dict) -> EFModel:
     except EdgeError as e:
         raise EFModelError("Error in wet edge creation") from e
 
-    return EFModel(dry_edge=dry_edge, wet_edge=wet_edge)
+    return EFModel(
+        name=efconfig.name, dry_edge=dry_edge, wet_edge=wet_edge, var=efconfig.var
+    )
+
+
+def check_variability(lst: npt.ArrayLike) -> bool:
+    """
+    Description
+    -----------
+    Check variability of Land Surface Temperature
+
+    Parameters
+    ----------
+    lst : np.array_like
+        Land surface temperature
+    return: bool
+    """
+    return True
+
+
+def initialize(config: dict):
+    """
+    Description
+    -----------
+    Check variability of Land Surface Temperature
+
+    Parameters
+    ----------
+    lst : np.array_like
+        Land surface temperature
+    return: bool
+    """
+    pass
