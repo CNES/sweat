@@ -8,7 +8,7 @@ import pandas as pd
 
 from pydantic import ValidationError
 
-from evaspa.edge import FlatEdge, LinearEdge, create_edge, EdgeError
+from evaspa.edge import FlatEdge, LinearEdge, Edge, EdgeError
 
 
 def setup_data(
@@ -169,7 +169,7 @@ def test_create_edge(name, config) -> None:
     """
     Test LinearEdge
     """
-    create_edge(name, config)
+    Edge.create(name, config)
 
 
 @pytest.mark.parametrize(
@@ -196,4 +196,4 @@ def test_create_edge_error(name, config) -> None:
     Test LinearEdge
     """
     with pytest.raises(EdgeError):
-        create_edge(name, config)
+        Edge.create(name, config)
