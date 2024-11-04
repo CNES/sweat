@@ -2,6 +2,8 @@
 # coding: utf8
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
+from __future__ import annotations
+
 import json
 import numpy as np
 import numpy.typing as npt
@@ -82,6 +84,12 @@ class Edge(BaseModel, ABC):
         """
         pass
 
+    def to_dict(self) -> dict:
+        """
+        Export to a dictionary
+        """
+        return self.model_dump()
+
     def _prepare(self, var: npt.NDArray, lst: npt.NDArray) -> pd.DataFrame:
         """
         Description
@@ -103,6 +111,31 @@ class Edge(BaseModel, ABC):
             .sort_values(by="var")
             .reset_index(drop=True)
         )
+
+    @classmethod
+    def create(cls, name: str, config: dict) -> Edge:
+        """
+        Description
+        -----------
+        Function to create an edge based on the
+        name of the edge (edge class) and a configuration
+
+        Parameters
+        ----------
+            : np.array
+            Land surface temperature
+        var : np.array
+            Variable used versus temperature (ex: Albedo)
+        """
+        # Init
+        try:
+            return getattr(sys.modules[__name__], name).model_validate_json(
+                json.dumps(config)
+            )
+        except KeyError as e:
+            raise EdgeError(f"Class {name} is not defined") from e
+        except ValidationError as e:
+            raise EdgeError("Error in edge configuration") from e
 
 
 class LinearEdge(Edge):
@@ -241,6 +274,18 @@ class LinearEdge(Edge):
             f"coeffs={self.coeffs})"
         )
 
+    def to_dict(self) -> dict:
+        """
+        Export to a dictionary
+        """
+        return {
+            "percentile": self.percentile,
+            "interval_type": self.interval_type.value,
+            "interval_nb": self.interval_nb,
+            "selection": self.selection.value,
+            "coeffs": self.coeffs,
+        }
+
 
 class FlatEdge(Edge):
     """Class for flat edge"""
@@ -280,27 +325,11 @@ class FlatEdge(Edge):
         elif self.selection == SelectionFlatMethod.MIN:
             self.value = np.nanmin(np.array(lst))
 
-
-def create_edge(name: str, config: dict):
-    """
-    Description
-    -----------
-    Function to create an edge based on the
-    name of the edge (edge class) and a configuration
-
-    Parameters
-    ----------
-        : np.array
-        Land surface temperature
-    var : np.array
-        Variable used versus temperature (ex: Albedo)
-    """
-    # Init
-    try:
-        return getattr(sys.modules[__name__], name).model_validate_json(
-            json.dumps(config)
-        )
-    except KeyError as e:
-        raise EdgeError(f"Class {name} is not defined") from e
-    except ValidationError as e:
-        raise EdgeError("Error in edge configuration") from e
+    def to_dict(self) -> dict:
+        """
+        Export to a dictionary
+        """
+        return {
+            "selection": self.selection.value,
+            "value": self.value,
+        }

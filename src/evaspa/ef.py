@@ -2,21 +2,25 @@
 # coding: utf8
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any
 import numpy as np
 import numpy.typing as npt
 import xarray as xr
 
+
 from pydantic import BaseModel, ValidationError
 
-from .edge import Edge, create_edge, EdgeError, EdgeConfig
+from .edge import Edge, EdgeError, EdgeConfig
 
 
 class MergeMethod(Enum):
     """Method for merge EF mdoels"""
 
-    AVERAGE = "average"
+    MEAN = "mean"
 
 
 class EFModelConfig(BaseModel):
@@ -28,6 +32,25 @@ class EFModelConfig(BaseModel):
     dry_edge: EdgeConfig
     wet_edge: EdgeConfig
     var: str
+
+
+class EFOptionsConfig(BaseModel):
+    """
+    Options for EF processing
+    """
+
+    selection: bool
+    merging: MergeMethod
+    keep: bool
+
+
+class EFConfig(BaseModel):
+    """
+    Configuration for EF processing
+    """
+
+    models: list[EFModelConfig]
+    options: EFOptionsConfig
 
 
 class EFConfigError(Exception):
@@ -62,8 +85,10 @@ class EFModel:
         mask : str
             Name of the data variables used for masking
         """
-        assert self.var in data.data_vars
-        assert "lst" in data.data_vars
+        if self.var not in data.data_vars:
+            raise EFModelError(f"{self.var} not in the dataset")
+        if "lst" not in data.data_vars:
+            raise EFModelError("lst not in the dataset")
         if mask is not None:
             assert mask in data.data_vars
             data_masked = data.where(data[mask], drop=True)
@@ -100,7 +125,7 @@ class EFModel:
         """
         return self.wet_edge.get(var)
 
-    def compute(self, data: xr.Dataset, mask: str | None = None) -> npt.NDArray:
+    def compute(self, data: xr.Dataset, mask: str | None = None) -> xr.DataArray:
         """
         Description
         -----------
@@ -116,8 +141,10 @@ class EFModel:
             Data
         return: np.array
         """
-        assert self.var in data.data_vars
-        assert "lst" in data.data_vars
+        if self.var not in data.data_vars:
+            raise EFModelError(f"{self.var} not in the dataset")
+        if "lst" not in data.data_vars:
+            raise EFModelError("lst not in the dataset")
         if mask is not None:
             assert mask in data.data_vars
             data_masked = data.where(data[mask], drop=True)
@@ -128,21 +155,26 @@ class EFModel:
         )
         ef = np.where(ef > 1, 1, ef)
         ef = np.where(ef < 0, 0, ef)
-        return ef
+        return xr.DataArray(
+            data=ef,
+            dims=data.dims,
+            coords=data.coords.copy(),
+            attrs=self.to_dict(),
+        )
 
-    def to_json(self) -> dict:
+    def to_dict(self) -> dict:
         """
         Return an dictionary
         """
         return {
             "name": self.name,
             "dry_edge": {
-                "type": self.dry_edge.__class__,
-                "config": self.dry_edge.model_dump_json(),
+                "type": self.dry_edge.__class__.__name__,
+                "config": self.dry_edge.to_dict(),
             },
             "wet_edge": {
-                "type": self.wet_edge.__class__,
-                "config": self.wet_edge.model_dump_json(),
+                "type": self.wet_edge.__class__.__name__,
+                "config": self.wet_edge.to_dict(),
             },
             "var": self.var,
         }
@@ -167,83 +199,213 @@ class EFModel:
             f" - var = {self.var}"
         )
 
+    @classmethod
+    def check(cls, config: dict) -> EFModelConfig:
+        """
+        Description
+        -----------
+        Check an EF model configuration
 
-def check_efmodel(config: dict) -> EFModelConfig:
-    """
-    Description
-    -----------
-    Check an EF model configuration
+        Parameters
+        ----------
+        config : dict
+            Configuration for EF model
+        return: EFModelConfig
+        """
+        try:
+            efconfig = EFModelConfig.model_validate(config)
+        except ValidationError as e:
+            raise EFConfigError("Error in model configuration") from e
+        return efconfig
 
-    Parameters
-    ----------
-    config : dict
-        Configuration for EF model
-    return: EFModelConfig
-    """
-    try:
-        efconfig = EFModelConfig.model_validate(config)
-    except ValidationError as e:
-        raise EFConfigError("Error in model configuration") from e
-    return efconfig
+    @classmethod
+    def create(cls, config: dict) -> EFModel:
+        """
+        Description
+        -----------
+        Create an EF model from a configuration.
+        Evaporative fraction EF represents the ratio of latent heat flux
+        to available energy is computed from the position of
+        the surface temperature value respectively
+        to the dry edge and the wet edges.
+        A EF model is defined by:
+        - a name
+        - the variable to consider: for instance, albedo or fcover
+        - the method to compute the dry edge
+        - the method to compute the wet edge
+
+        Parameters
+        ----------
+        config : dict
+            Configuration for EF model
+        return: EFModel
+        """
+        # Read configuration
+        efconfig = cls.check(config)
+
+        # Dry edge
+        try:
+            dry_edge = Edge.create(efconfig.dry_edge.type, efconfig.dry_edge.config)
+        except EdgeError as e:
+            raise EFModelError("Error in dry edge creation") from e
+
+        # Wet edge
+        try:
+            wet_edge = Edge.create(efconfig.wet_edge.type, efconfig.wet_edge.config)
+        except EdgeError as e:
+            raise EFModelError("Error in wet edge creation") from e
+
+        return cls(
+            name=efconfig.name, dry_edge=dry_edge, wet_edge=wet_edge, var=efconfig.var
+        )
 
 
-def create_efmodel(config: dict) -> EFModel:
-    """
-    Description
-    -----------
-    Create an EF model from a configuration
-
-    Parameters
-    ----------
-    config : dict
-        Configuration for EF model
-    return: EFModel
-    """
-    # Read configuration
-    efconfig = check_efmodel(config)
-
-    # Dry edge
-    try:
-        dry_edge = create_edge(efconfig.dry_edge.type, efconfig.dry_edge.config)
-    except EdgeError as e:
-        raise EFModelError("Error in dry edge creation") from e
-
-    # Wet edge
-    try:
-        wet_edge = create_edge(efconfig.wet_edge.type, efconfig.wet_edge.config)
-    except EdgeError as e:
-        raise EFModelError("Error in wet edge creation") from e
-
-    return EFModel(
-        name=efconfig.name, dry_edge=dry_edge, wet_edge=wet_edge, var=efconfig.var
-    )
-
-
-def check_variability(lst: npt.ArrayLike) -> bool:
+def check_variability(
+    lst: npt.ArrayLike, mask: npt.ArrayLike | None = None, threshold: float = 2.0
+) -> bool:
     """
     Description
     -----------
     Check variability of Land Surface Temperature
+    To be applicable, EVASPA requires a certain
+    variability in the input data (surface temperature,
+    albedo, fraction cover) in order to be able to
+    define the edges correctly.
+    If variability is insufficient, this method returns False.
 
     Parameters
     ----------
     lst : np.array_like
         Land surface temperature
+    mask : np.array_like
+        Mask (valid not 0)
+    threshold : float
+        Threshold value to check variablity
     return: bool
     """
+    t = np.array(lst)
+    if mask is None:
+        m = np.ones_like(t)
+    else:
+        m = np.array(mask)
+        assert t.shape == m.shape
+    t = np.where(np.array(m) > 0, t, np.nan)
+    # Compute the minimum and maximum values
+    # of the relative difference from land surface temperature
+    # and its median
+    t_median = np.nanmedian(t)
+    if abs(t_median) < 1.0:
+        t_median = 1.0
+    if ((np.nanmax(t) - np.nanmin(t)) / t_median) <= threshold:
+        return False
     return True
 
 
-def initialize(config: dict):
+def initialize(config: dict) -> tuple[list[EFModel], dict[str, Any]]:
     """
     Description
     -----------
-    Check variability of Land Surface Temperature
+    Initialize a list of EF models and processing options from a
+    configuration
 
     Parameters
     ----------
-    lst : np.array_like
-        Land surface temperature
-    return: bool
+    config: dict
+        Configuration
+    return: list[EFModel],dict
     """
-    pass
+    try:
+        efconfig = EFConfig.model_validate(config)
+    except ValidationError as e:
+        raise EFConfigError("Error in EF configuration") from e
+    models = [EFModel.create(cfg.model_dump()) for cfg in efconfig.models]
+    return (models, efconfig.options.model_dump())
+
+
+def compute(models: list[EFModel], data: xr.Dataset) -> xr.Dataset:
+    """
+    Description
+    -----------
+    Compute evaporative fraction of a list of EF models
+
+    Parameters
+    ----------
+    models : list[EFModel]
+        List of EF models
+    data : xr. Dataset
+        Data
+    return: xr.Dataset
+    """
+    # TODO handle mask
+    ef = {}
+    for m in models:
+        m.fit(data)
+        ef[m.name] = m.compute(data)
+    return xr.Dataset(ef)
+
+
+def select(ef: xr.Dataset) -> xr.Dataset:
+    """
+    Description
+    -----------
+    Select evaporative fraction from a list
+
+    Parameters
+    ----------
+    ef : xr. Dataset
+        Evaporative Fraction Data
+    return: xr.Dataset
+    """
+    return ef
+
+
+def merge(
+    ef: xr.Dataset, keep: bool = False, method: MergeMethod = MergeMethod.MEAN
+) -> xr.Dataset:
+    """
+    Description
+    -----------
+    Merge evaporative fraction from a list
+
+    Parameters
+    ----------
+    ef : xr. Dataset
+        Evaporative Fraction Data
+    return: xr.Dataset
+    """
+    if method == MergeMethod.MEAN:
+        ef_merged = ef.to_array(dim="new").mean("new")
+    else:
+        raise EFModel("Merge method unknown")
+    if keep:
+        return ef.assign(ef=ef_merged)
+    else:
+        return xr.Dataset(
+            data_vars=dict(ef=ef_merged), coords=ef.coords.copy(), attrs=ef.attrs.copy()
+        )
+
+
+def run(
+    models: list[EFModel],
+    data: xr.Dataset,
+    selection: bool = False,
+    keep: bool = False,
+    merging: MergeMethod = MergeMethod.MEAN,
+) -> xr.Dataset:
+    """
+    Description
+    -----------
+    Merge evaporative fraction from a list
+
+    Parameters
+    ----------
+    ef : xr. Dataset
+        Evaporative Fraction Data
+    return: xr.Dataset
+    """
+    # TODO Handle mask
+    ef = compute(models, data)
+    if selection:
+        ef = select(ef)
+    ef = merge(ef, keep=keep, method=merging)
+    return ef

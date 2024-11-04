@@ -7,7 +7,18 @@ import numpy as np
 import numpy.typing as npt
 import xarray as xr
 
-from evaspa.ef import create_efmodel, EFModelError, EFConfigError, check_efmodel
+from evaspa.ef import (
+    EFModel,
+    EFModelError,
+    EFConfigError,
+    MergeMethod,
+    check_variability,
+    initialize,
+    compute,
+    select,
+    merge,
+    run,
+)
 
 
 def setup_data(
@@ -63,12 +74,63 @@ def setup_data(
     ds = xr.Dataset(
         data_vars=data_vars,
         coords=dict(
-            lon=("loc", lon),
-            lat=("loc", lat),
+            lon=("lon", lon),
+            lat=("lat", lat),
         ),
         attrs=dict(description="Test data"),
     )
     return ds
+
+
+def setup_models() -> list[EFModel]:
+    """
+    Setup a model list
+    """
+    config_models = [
+        {
+            "name": "model1",
+            "dry_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "percentile": (98, 100),
+                    "interval_type": "size",
+                    "interval_nb": 20,
+                    "selection": "median",
+                    "coeffs": (np.inf, np.inf),
+                },
+            },
+            "wet_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "percentile": (0, 2),
+                    "interval_type": "size",
+                    "interval_nb": 20,
+                    "selection": "median",
+                    "coeffs": (np.inf, np.inf),
+                },
+            },
+            "var": "fcover",
+        },
+        {
+            "name": "model2",
+            "dry_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "percentile": (95, 100),
+                    "interval_type": "density",
+                    "interval_nb": 20,
+                    "selection": "median",
+                    "coeffs": (np.inf, np.inf),
+                },
+            },
+            "wet_edge": {
+                "type": "FlatEdge",
+                "config": {"selection": "min", "value": np.inf},
+            },
+            "var": "albedo",
+        },
+    ]
+    return [EFModel.create(cfg) for cfg in config_models]
 
 
 @pytest.mark.parametrize(
@@ -173,12 +235,12 @@ def test_create_model(config, check_ef) -> None:
         albedo=(0.0, 0.6), valid=(0.0, 1.0), dry=(330.0, -10.0), wet=(300.0, 15.0)
     )
     # Create model
-    model = create_efmodel(config)
+    model = EFModel.create(config)
     model.fit(data)
     np.testing.assert_allclose(model.tdry(0.0), 330.0, atol=5)
     np.testing.assert_allclose(model.twet(0.0), 300.0, atol=5)
     if check_ef:
-        np.testing.assert_allclose(model.compute(data), data["ef_albedo"], atol=0.3)
+        xr.testing.assert_allclose(model.compute(data), data["ef_albedo"], atol=0.3)
 
 
 @pytest.mark.parametrize(
@@ -280,7 +342,7 @@ def test_create_model_error(config) -> None:
     Test model creation with error
     """
     with pytest.raises((EFConfigError, EFModelError)):
-        create_efmodel(config)
+        EFModel.create(config)
 
 
 @pytest.mark.parametrize(
@@ -368,7 +430,7 @@ def test_check_model_config(config) -> None:
     """
     Test check model configuration
     """
-    check_efmodel(config)
+    EFModel.check(config)
 
 
 @pytest.mark.parametrize(
@@ -431,4 +493,258 @@ def test_check_config_model_error(config) -> None:
     Test check model config with error
     """
     with pytest.raises(EFConfigError):
-        check_efmodel(config)
+        EFModel.check(config)
+
+
+@pytest.mark.parametrize(
+    "lst,mask,expected",
+    [
+        pytest.param(np.ones((100, 100)), None, False),
+        pytest.param(np.random.normal(10.0, 5.0, (100, 100)), None, True),
+        pytest.param(np.random.normal(0.0, 5.0, (100, 100)), None, True),
+        pytest.param(np.random.normal(15.0, 1.0, (100, 100)), None, False),
+        pytest.param(
+            np.random.normal(10.0, 1.0, (100, 100)),
+            np.random.choice([0, 1], (100, 100)),
+            False,
+        ),
+    ],
+)
+def test_check_variability(lst, mask, expected) -> None:
+    """
+    Test check variability function
+    """
+    assert check_variability(lst=lst, mask=mask) == expected
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        {
+            "models": [
+                {
+                    "name": "model1",
+                    "dry_edge": {
+                        "type": "LinearEdge",
+                        "config": {
+                            "interval_type": "size",
+                            "interval_nb": 20,
+                            "percentile": [98, 100],
+                            "selection": "median",
+                        },
+                    },
+                    "wet_edge": {
+                        "type": "LinearEdge",
+                        "config": {
+                            "interval_type": "size",
+                            "interval_nb": 20,
+                            "percentile": [0, 2],
+                            "selection": "median",
+                        },
+                    },
+                    "var": "fcover",
+                },
+                {
+                    "name": "model2",
+                    "dry_edge": {
+                        "type": "LinearEdge",
+                        "config": {
+                            "interval_type": "density",
+                            "interval_nb": 20,
+                            "percentile": [95, 100],
+                            "selection": "median",
+                        },
+                    },
+                    "wet_edge": {
+                        "type": "FlatEdge",
+                        "config": {"selection": "min"},
+                    },
+                    "var": "albedo",
+                },
+            ],
+            "options": {
+                "selection": False,
+                "keep": False,
+                "merging": "mean",
+            },
+        },
+    ],
+)
+def test_initialize(config) -> None:
+    """
+    Test initialize function
+    """
+    models, options = initialize(config)
+    assert len(models) == 2
+    assert not options["selection"]
+    assert not options["keep"]
+    assert options["merging"].value == "mean"
+
+
+def test_compute() -> None:
+    """
+    Test compute function
+    """
+    # Generate models
+    models = setup_models()
+    # Generate data
+    data = setup_data(
+        albedo=(0.0, 0.6),
+        fcover=(0, 1.0),
+        valid=(0.0, 1.0),
+        dry=(330.0, -10.0),
+        wet=(300.0, 15.0),
+    )
+    # Compute EF
+    ef = compute(models, data)
+    assert ef
+    assert len(ef.data_vars) == 2
+
+
+def test_select() -> None:
+    """
+    Test select function
+    """
+    ef = xr.Dataset(
+        data_vars=dict(
+            model1=(["y", "x"], np.random.normal(0.5, 0.2, (100, 100))),
+            model2=(["y", "x"], np.random.normal(0.5, 0.24, (100, 100))),
+        ),
+        coords=dict(
+            y=("y", np.linspace(0, 99, num=100)),
+            x=("x", np.linspace(0, 99, num=100)),
+        ),
+        attrs=dict(description="EF models"),
+    )
+    selected = select(ef)
+    xr.testing.assert_identical(ef, selected)
+
+
+@pytest.mark.parametrize(
+    "keep,method,expected",
+    [
+        pytest.param(True, MergeMethod.MEAN, 0.4),
+        pytest.param(False, MergeMethod.MEAN, 0.4),
+    ],
+)
+def test_merge(keep, method, expected) -> None:
+    """
+    Test merge function
+    """
+    ef = xr.Dataset(
+        data_vars=dict(
+            model1=(["y", "x"], np.random.normal(0.5, 0.1, (100, 100))),
+            model2=(["y", "x"], np.random.normal(0.3, 0.1, (100, 100))),
+        ),
+        coords=dict(
+            y=("y", np.linspace(0, 99, num=100)),
+            x=("x", np.linspace(0, 99, num=100)),
+        ),
+        attrs=dict(description="EF models"),
+    )
+    merged = merge(ef, keep=keep, method=method)
+    expected_size = 1 if not keep else (1 + len(ef.data_vars))
+    assert len(merged.data_vars) == expected_size
+    np.testing.assert_almost_equal(merged["ef"].mean(), expected, decimal=1)
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        {
+            "selection": False,
+            "keep": False,
+            "merging": MergeMethod.MEAN,
+        },
+        {
+            "selection": True,
+            "keep": False,
+            "merging": MergeMethod.MEAN,
+        },
+        {
+            "selection": False,
+            "keep": True,
+            "merging": MergeMethod.MEAN,
+        },
+    ],
+)
+def test_run(options) -> None:
+    """
+    Test run function
+    """
+    # Generate models
+    models = setup_models()
+    # Generate data
+    data = setup_data(
+        albedo=(0.0, 0.6),
+        fcover=(0, 1.0),
+        valid=(0.0, 1.0),
+        dry=(330.0, -10.0),
+        wet=(300.0, 15.0),
+    )
+    run(models, data, **options)
+
+
+def test_all() -> None:
+    """
+    Test complete
+    """
+    # Configuration
+    config = {
+        "models": [
+            {
+                "name": "model1",
+                "dry_edge": {
+                    "type": "LinearEdge",
+                    "config": {
+                        "interval_type": "size",
+                        "interval_nb": 20,
+                        "percentile": [98, 100],
+                        "selection": "median",
+                    },
+                },
+                "wet_edge": {
+                    "type": "LinearEdge",
+                    "config": {
+                        "interval_type": "size",
+                        "interval_nb": 20,
+                        "percentile": [0, 2],
+                        "selection": "median",
+                    },
+                },
+                "var": "fcover",
+            },
+            {
+                "name": "model2",
+                "dry_edge": {
+                    "type": "LinearEdge",
+                    "config": {
+                        "interval_type": "density",
+                        "interval_nb": 20,
+                        "percentile": [95, 100],
+                        "selection": "median",
+                    },
+                },
+                "wet_edge": {
+                    "type": "FlatEdge",
+                    "config": {"selection": "min"},
+                },
+                "var": "albedo",
+            },
+        ],
+        "options": {
+            "selection": False,
+            "keep": False,
+            "merging": "mean",
+        },
+    }
+    # Generate data
+    data = setup_data(
+        albedo=(0.0, 0.6),
+        fcover=(0, 1.0),
+        valid=(0.0, 1.0),
+        dry=(330.0, -10.0),
+        wet=(300.0, 15.0),
+    )
+    models, options = initialize(config)
+    run(models, data)
