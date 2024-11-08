@@ -31,7 +31,7 @@ dependencies = [
   "rasterio",
   "scikit-image",
   "shapely",
-  "sensorsio @ git+https://framagit.org/esarrazin/sensorsio.git",
+  "sensorsio",
   "pydantic>=2.8",
 ]
 
