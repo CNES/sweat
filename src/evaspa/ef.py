@@ -107,7 +107,11 @@ class EFModel:
         ----------
         var : np.array_like
             Data
-        return: np.array
+
+        Returns
+        -------
+        tdry: np.array
+            Temperature for dry edge
         """
         return self.dry_edge.get(var)
 
@@ -121,7 +125,11 @@ class EFModel:
         ----------
         var : np.array_like
             Data
-        return: np.array
+
+        Returns
+        -------
+        twet: np.array
+            Temperature for wet edge
         """
         return self.wet_edge.get(var)
 
@@ -139,7 +147,11 @@ class EFModel:
             Name of the data variables used for masking
         var : np.array_like
             Data
-        return: np.array
+
+        Returns
+        -------
+        ef: np.array
+            Evaporative Fraction
         """
         if self.var not in data.data_vars:
             raise EFModelError(f"{self.var} not in the dataset")
@@ -210,7 +222,11 @@ class EFModel:
         ----------
         config : dict
             Configuration for EF model
-        return: EFModelConfig
+
+        Returns
+        -------
+        efconfig: EFModelConfig
+            Validated configuration for EF model
         """
         try:
             efconfig = EFModelConfig.model_validate(config)
@@ -238,7 +254,11 @@ class EFModel:
         ----------
         config : dict
             Configuration for EF model
-        return: EFModel
+
+        Returns
+        -------
+        model: EFModel
+            Validated EF model
         """
         # Read configuration
         efconfig = cls.check(config)
@@ -281,7 +301,10 @@ def check_variability(
         Mask (valid not 0)
     threshold : float
         Threshold value to check variablity
-    return: bool
+
+    Returns
+    -------
+    check: bool
     """
     t = np.array(lst)
     if mask is None:
@@ -312,7 +335,11 @@ def initialize(config: dict) -> tuple[list[EFModel], dict[str, Any]]:
     ----------
     config: dict
         Configuration
+
+    Returns
+    -------
     return: list[EFModel],dict
+        List of EF models and configuration
     """
     try:
         efconfig = EFConfig.model_validate(config)
@@ -334,7 +361,11 @@ def compute(models: list[EFModel], data: xr.Dataset) -> xr.Dataset:
         List of EF models
     data : xr. Dataset
         Data
-    return: xr.Dataset
+
+    Returns
+    -------
+    ef: xr.Dataset
+        Evaporative fraction
     """
     # TODO handle mask
     ef = {}
@@ -349,12 +380,17 @@ def select(ef: xr.Dataset) -> xr.Dataset:
     Description
     -----------
     Select evaporative fraction from a list
+    TODO: Implement selection
 
     Parameters
     ----------
     ef : xr. Dataset
-        Evaporative Fraction Data
+        Evaporative Fraction
+
+    Returns
+    -------
     return: xr.Dataset
+        Selected evaporative fraction
     """
     return ef
 
@@ -371,7 +407,11 @@ def merge(
     ----------
     ef : xr. Dataset
         Evaporative Fraction Data
+
+    Returns
+    -------
     return: xr.Dataset
+        Merged evaporative fraction
     """
     if method == MergeMethod.MEAN:
         ef_merged = ef.to_array(dim="new").mean("new")
@@ -395,13 +435,25 @@ def run(
     """
     Description
     -----------
-    Merge evaporative fraction from a list
+    Compute evaporative fraction using models.
 
     Parameters
     ----------
+    models : list[EFModel]
+        List of EF models
+    data : xr. Dataset
+        Data
+    selection : bool
+        Flag to apply selection
+    keep : bool
+        Flag to keep intermediate computations
+    merging : MergeMethod
+        Method used for merging
+
+    Returns
+    -------
     ef : xr. Dataset
-        Evaporative Fraction Data
-    return: xr.Dataset
+        Evaporative fraction
     """
     # TODO Handle mask
     ef = compute(models, data)

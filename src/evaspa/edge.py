@@ -81,6 +81,11 @@ class Edge(BaseModel, ABC):
         ----------
         var : np.array_like
             Variable
+
+        Returns
+        -------
+        temperature : np.array
+            Temperature at the edge
         """
         pass
 
@@ -102,7 +107,11 @@ class Edge(BaseModel, ABC):
             Land surface temperature
         var : np.array
             Variable used versus temperature (ex: Albedo)
-        return: DataFrame
+
+        Returns
+        -------
+        data: DataFrame
+            Prepared data in a dataframe format
         """
         assert var.shape == lst.shape
         return (
@@ -126,6 +135,11 @@ class Edge(BaseModel, ABC):
             Land surface temperature
         var : np.array
             Variable used versus temperature (ex: Albedo)
+
+        Returns
+        -------
+        edge: Edge
+            Edge from the configuration
         """
         # Init
         try:
@@ -161,7 +175,11 @@ class LinearEdge(Edge):
         ----------
         p : tuple[int,int]
             Percentile interval
-        return: tuple[int,int]
+
+        Returns
+        -------
+        percentile: tuple[int,int]
+            Validated percentile interval
         """
         if (p[0] > p[1]) or (0 > p[0]) or (p[0] >= 100) or (0 >= p[1]) or (p[1] > 100):
             raise ValueError("Percentile must be an interval between [0,100]")
@@ -170,6 +188,21 @@ class LinearEdge(Edge):
     @field_validator("interval_nb")
     @classmethod
     def check_interval_nb(cls, nb: int) -> int:
+        """
+        Description
+        -----------
+        Check the consistency of the interval number
+
+        Parameters
+        ----------
+        nb : int
+            Interval number
+
+        Returns
+        -------
+        interval_nb: int
+            Validated interval number
+        """
         if (nb <= 0) or (nb > 1000):
             raise ValueError("Number of intervals must be between 1 and 1000")
         return nb
@@ -184,6 +217,11 @@ class LinearEdge(Edge):
         ----------
         var : np.array_like
             Variable
+
+        Returns
+        -------
+        temperature : np.array
+            Temperature at the edge
         """
         return self.coeffs[0] * np.array(var) + self.coeffs[1]
 
@@ -233,7 +271,11 @@ class LinearEdge(Edge):
         Parameters
         ----------
         values: pd.Series
-        return: pd.Series
+
+        Returns
+        -------
+        intervals: pd.Series
+            Intervals to consider
         """
         if self.interval_type == IntervalType.DENSITY:
             # Intervals with the same number of elements
@@ -304,6 +346,11 @@ class FlatEdge(Edge):
         ----------
         var : np.array_like
             Variable
+
+        Returns
+        -------
+        temperature : np.array
+            Temperature at the edge
         """
         return self.value * np.ones_like(np.array(var))
 
