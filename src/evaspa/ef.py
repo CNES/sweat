@@ -268,7 +268,6 @@ class EFModel:
             dry_edge = Edge.create(efconfig.dry_edge.type, efconfig.dry_edge.config)
         except EdgeError as e:
             raise EFModelError("Error in dry edge creation") from e
-
         # Wet edge
         try:
             wet_edge = Edge.create(efconfig.wet_edge.type, efconfig.wet_edge.config)
@@ -349,7 +348,9 @@ def initialize(config: dict) -> tuple[list[EFModel], dict[str, Any]]:
     return (models, efconfig.options.model_dump())
 
 
-def compute(models: list[EFModel], data: xr.Dataset) -> xr.Dataset:
+def compute(
+    models: list[EFModel], data: xr.Dataset, mask: str | None = None
+) -> xr.Dataset:
     """
     Description
     -----------
@@ -370,8 +371,8 @@ def compute(models: list[EFModel], data: xr.Dataset) -> xr.Dataset:
     # TODO handle mask
     ef = {}
     for m in models:
-        m.fit(data)
-        ef[m.name] = m.compute(data)
+        m.fit(data, mask)
+        ef[m.name] = m.compute(data, mask)
     return xr.Dataset(ef)
 
 
@@ -428,6 +429,7 @@ def merge(
 def run(
     models: list[EFModel],
     data: xr.Dataset,
+    mask: str | None = None,
     selection: bool = False,
     keep: bool = False,
     merging: MergeMethod = MergeMethod.MEAN,
@@ -456,7 +458,7 @@ def run(
         Evaporative fraction
     """
     # TODO Handle mask
-    ef = compute(models, data)
+    ef = compute(models, data, mask)
     if selection:
         ef = select(ef)
     ef = merge(ef, keep=keep, method=merging)

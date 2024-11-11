@@ -251,13 +251,13 @@ class LinearEdge(Edge):
 
         # Compute point coordinates for regression
         for i, group in df.groupby(intervals):
-            var_values.append(group["var"].median())
-            lst_values.append(
-                group["lst"][
-                    (group["lst"] > np.percentile(group["lst"], self.percentile[0]))
-                    & (group["lst"] <= np.percentile(group["lst"], self.percentile[1]))
-                ].agg(self.selection.value)
-            )
+            value = group["lst"][
+                (group["lst"] > np.percentile(group["lst"], self.percentile[0]))
+                & (group["lst"] <= np.percentile(group["lst"], self.percentile[1]))
+            ].agg(self.selection.value)
+            if not np.isnan(value):
+                var_values.append(group["var"].median())
+                lst_values.append(value)
 
         # Linear regression
         self.coeffs = tuple(np.polyfit(var_values, lst_values, 1))
@@ -378,5 +378,5 @@ class FlatEdge(Edge):
         """
         return {
             "selection": self.selection.value,
-            "value": self.value,
+            "value": float(self.value),
         }
