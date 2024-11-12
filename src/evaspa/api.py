@@ -72,12 +72,11 @@ def generate_tiles(
     tiles = tiles[tiles.land > land_percentage]
     # Adjacent tiles
     adjs = tiling.generate_adjacents(tiles, land)
+    logger.info(f"Number of tiles = {len(tiles)}")
     return tiles, adjs
 
 
-def regroup_tiles(
-    tiles: gpd.GeoDataFrame, adjs: pd.DataFrame, threshold: int = 300000
-):
+def regroup_tiles(tiles: gpd.GeoDataFrame, adjs: pd.DataFrame, threshold: int = 300000):
     """
     Regroup tiles
 
@@ -99,7 +98,15 @@ def regroup_tiles(
     tile_df, group_df = tiling.regroup(tile_df, adjs, group_df, threshold, land)
     logger.info(f"Number of groups = {len(group_df)}")
     group_df["group_size"] = group_df.apply(lambda x: len(x.name.split(",")), axis=1)
-    logger.info(group_df["group_size"].value_counts())
     for i, nb in group_df["group_size"].value_counts().items():
         logger.info(f"Group size : {i} - Number : {nb}")
     return group_df
+
+
+def run_evaspa(input, output, config):
+    """
+    Run
+    """
+    logger.info(f"Input: {input}")
+    logger.info(f"Output: {output}")
+    logger.info(f"Config: {config}")

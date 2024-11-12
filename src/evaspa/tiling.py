@@ -528,20 +528,19 @@ def write_regroup(
     columns: List[str]
         List of columns to write
     """
-
-    def get_polygon_from_tiles(tile_ids: List[str]) -> None:
-        mgrs_grid = gpd.read_file(
-            "/vsizip/"
-            + os.path.join(
-                os.path.dirname(os.path.abspath(mgrs.__file__)),
-                "data/sentinel2/mgrs_tiles.gpkg.zip",
-                "mgrs_tiles.gpkg",
-            )
+    mgrs_grid = gpd.read_file(
+        "/vsizip/"
+        + os.path.join(
+            os.path.dirname(os.path.abspath(mgrs.__file__)),
+            "data/sentinel2/mgrs_tiles.gpkg.zip",
+            "mgrs_tiles.gpkg",
         )
-        return unary_union(mgrs_grid[mgrs_grid.Name.isin(tile_ids)].geometry.values)
-
+    )
     geometry: pd.Series = df.apply(
-        lambda x: get_polygon_from_tiles(str(x.group).split(",")), axis=1
+        lambda x: unary_union(
+            mgrs_grid[mgrs_grid.Name.isin(str(x.group).split(","))].geometry.values
+        ),
+        axis=1,
     )
     gdf = gpd.GeoDataFrame(df[columns], crs="EPSG:4326", geometry=geometry)
     gdf.to_file(filename, driver="ESRI Shapefile")
