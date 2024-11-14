@@ -1,0 +1,63 @@
+{
+    "input":{
+        "path":"tests/data/modis_20180222.tif"
+    },
+    "output":{
+        "path":"out"
+    },
+    "params":{
+        "filtering":{
+        },
+        "check_variability":{
+            "threshold": 0.02
+        },
+        "efconfig":{
+            "models": [
+            {
+                "name": "model1",
+                "dry_edge": {
+                    "type": "LinearEdge",
+                    "config": {
+                        "interval_type": "size",
+                        "interval_nb": 20,
+                        "percentile": [98, 100],
+                        "selection": "median"
+                    }
+                },
+                "wet_edge": {
+                    "type": "LinearEdge",
+                    "config": {
+                        "interval_type": "size",
+                        "interval_nb": 20,
+                        "percentile": [0, 2],
+                        "selection": "median"
+                    }
+                },
+                "var": "albedo"
+            },
+            {
+                "name": "model2",
+                "dry_edge": {
+                    "type": "LinearEdge",
+                    "config": {
+                        "interval_type": "density",
+                        "interval_nb": 20,
+                        "percentile": [95, 100],
+                        "selection": "median"
+                    }
+                },
+                "wet_edge": {
+                    "type": "FlatEdge",
+                    "config": {"selection": "min"}
+                },
+                "var": "lai"
+            }
+            ],
+            "options":{
+                "selection": false,
+                "keep": true,
+                "merging": "mean"
+            }
+        }
+    }
+}

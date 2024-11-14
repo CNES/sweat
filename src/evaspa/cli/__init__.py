@@ -2,12 +2,14 @@
 # coding: utf8
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
+import json
 import logging
 
 import click
 
 from evaspa.__about__ import __version__
 from evaspa.api import run_evaspa, generate_tiles, regroup_tiles
+from evaspa.configuration import InputFile
 from evaspa.logging import LoggerManager
 from evaspa.tiling import write_regroup
 
@@ -72,10 +74,29 @@ def evaspa_tiling(debug, roi, orbit, land_percentage, orbit_percentage, threshol
 
 @click.command(context_settings=dict(help_option_names=["-h", "--help"]))
 @click.option("--debug/--no-debug", default=False, help="Debug mode")
-@click.option("-i", "--input", required=True, type=str, help="Input file path")
-@click.option("-o", "--output", required=True, type=str, help="Output directory path")
-@click.option("-c", "--conf", required=False, type=str, help="Configuration file path")
+@click.argument(
+    "input_file", type=click.Path(exists=True, file_okay=True, readable=True)
+)
 @click.version_option(version=__version__, prog_name="evaspa")
-def evaspa(debug, input, output, conf):
+def evaspa(debug, input_file):
+    # Configure logging
+    log_level = logging.INFO
+    if debug:
+        log_level = logging.DEBUG
+    LoggerManager.set_level(log_level)
+    # Set configuration
+    logger.debug(f"Configuration file: {input_file}")
+    with open(input_file) as json_file:
+        json_data = json.load(json_file)
+    config = InputFile.model_validate(json_data)
+    # Run
     logger.info("Run evaspa...")
-    run_evaspa(input, output, conf)
+    ef = run_evaspa(
+        config.input,
+        config.output,
+        config.params,
+    )
+    # Write results
+    if ef is not None:
+        logger.info("Write results")
+        # TODO

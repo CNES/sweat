@@ -5,13 +5,20 @@
 Module containing the API for EVASPA
 """
 
+import os
+
 from typing import Tuple
 
 import geopandas as gpd
 import pandas as pd
+import xarray as xr
 
 import evaspa.tiling as tiling
 import evaspa.trishna as trishna
+import evaspa.io as io
+import evaspa.ef as ef
+import evaspa.filter as filter
+from evaspa.configuration import InputConfig, OutputConfig, ParamsConfig
 
 from .logging import LoggerManager
 
@@ -103,10 +110,49 @@ def regroup_tiles(tiles: gpd.GeoDataFrame, adjs: pd.DataFrame, threshold: int = 
     return group_df
 
 
-def run_evaspa(input, output, config):
+def run_evaspa(input: dict, output: dict, params: dict) -> xr.Dataset | None:
     """
-    Run
+    Run EVASPA
+
+    Parameters
+    ----------
+    input: dict
+        Input configuration
+    output: dict
+        Output configuration
+    params: dict
+        Parameter configuration
+
+    Return
+    ------
+    ef: xr.Dataset
+        Evaporative fraction)
     """
-    logger.info(f"Input: {input}")
-    logger.info(f"Output: {output}")
-    logger.info(f"Config: {config}")
+    logger.debug(f"Input: {input}")
+    logger.debug(f"Output: {output}")
+    logger.debug(f"Config: {params}")
+    # Validate output config
+    OutputConfig.model_validate(output)
+    # Validate input config
+    input_config = InputConfig.model_validate(input)
+    # Validate parameters config
+    params_config = ParamsConfig.model_validate(params)
+    # Read input data
+    if os.path.isfile(input_config.path):
+        data = io.read_data_from_file(input_config.path)
+    else:
+        data = io.read_data(input_config.path)
+    # Filter data
+    data["valid"] = filter.determine_valid_pixels(data, **params_config.filtering)
+    # Check variablity
+    if not ef.check_variability(
+        data["lst"], mask=data["valid"], **params_config.check_variability
+    ):
+        logger.error("Variability criteria not respected")
+        return None
+    # Compute EF
+    models, options = ef.initialize(params_config.efconfig.model_dump())
+    xr_ef = ef.run(
+        models, data, mask="valid", **params_config.efconfig.options.model_dump()
+    )
+    return xr_ef

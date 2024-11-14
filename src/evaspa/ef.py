@@ -4,23 +4,31 @@
 
 from __future__ import annotations
 
+import os
+import json
+
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any
+from typing import Any, List
+from typing_extensions import Annotated
 import numpy as np
 import numpy.typing as npt
 import xarray as xr
 
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ValidationError, BeforeValidator
 
 from .edge import Edge, EdgeError, EdgeConfig
+from evaspa.logging import LoggerManager
+
+logger = LoggerManager.get_logger(__name__)
 
 
 class MergeMethod(Enum):
     """Method for merge EF mdoels"""
 
     MEAN = "mean"
+    MEDIAN = "median"
 
 
 class EFModelConfig(BaseModel):
@@ -44,12 +52,31 @@ class EFOptionsConfig(BaseModel):
     keep: bool
 
 
+def update_efconfig(v: Any) -> List[EFModel]:
+    config_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "conf",
+    )
+    if isinstance(v, str):
+        filename = os.path.join(config_path, f"{v}.json")
+        if not os.path.isfile(filename):
+            raise IOError("No config file")
+        # Read config file
+        with open(filename) as json_file:
+            conf = json.load(json_file)
+        return conf["models"]
+    return v
+
+
+EFModels = Annotated[list[EFModelConfig], BeforeValidator(update_efconfig)]
+
+
 class EFConfig(BaseModel):
     """
     Configuration for EF processing
     """
 
-    models: list[EFModelConfig]
+    models: EFModels
     options: EFOptionsConfig
 
 
@@ -319,6 +346,8 @@ def check_variability(
     if abs(t_median) < 1.0:
         t_median = 1.0
     if ((np.nanmax(t) - np.nanmin(t)) / t_median) <= threshold:
+        value = (np.nanmax(t) - np.nanmin(t)) / t_median
+        logger.debug(f"Value = {value} / Threshold = {threshold}")
         return False
     return True
 
@@ -414,10 +443,12 @@ def merge(
     return: xr.Dataset
         Merged evaporative fraction
     """
-    if method == MergeMethod.MEAN:
+    if method.value == MergeMethod.MEAN.value:
         ef_merged = ef.to_array(dim="new").mean("new")
+    elif method.value == MergeMethod.MEDIAN.value:
+        ef_merged = ef.to_array(dim="new").median("new")
     else:
-        raise EFModel("Merge method unknown")
+        raise EFModelError(f"Merge method unknown: {method}")
     if keep:
         return ef.assign(ef=ef_merged)
     else:
