@@ -52,7 +52,7 @@ def _open_rasterio(filename: str) -> xr.Dataset:
             xarr = xr.Dataset(
                 data_vars=data,
                 coords={"x": xcoords, "y": ycoords},
-                attrs={"crs": ds.crs},
+                attrs={"crs": ds.crs, "transform": ds.transform},
             )
     return xarr
 

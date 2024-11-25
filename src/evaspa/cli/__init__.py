@@ -4,6 +4,7 @@
 
 import json
 import logging
+from pathlib import Path
 
 import click
 
@@ -12,6 +13,7 @@ from evaspa.api import run_evaspa, generate_tiles, regroup_tiles
 from evaspa.configuration import InputFile
 from evaspa.logging import LoggerManager
 from evaspa.tiling import write_regroup
+from evaspa.ef import write_ef
 
 logger = LoggerManager.get_logger(__name__)
 
@@ -98,15 +100,21 @@ def evaspa(debug, input_file):
     logger.debug(f"Configuration file: {input_file}")
     with open(input_file) as json_file:
         json_data = json.load(json_file)
+    # TODO verify config and manage default parameters
     config = InputFile.model_validate(json_data)
     # Run
     logger.info("Run evaspa...")
     ef = run_evaspa(
         config.input,
-        config.output,
         config.params,
     )
     # Write results
+    output_dir = Path(config.output.path)
+    # Save configuration
+    with open(output_dir / "config.json", "w") as f:
+        json.dump(config.model_dump(), f, indent=4, default=lambda x: x.value)
     if ef is not None:
-        logger.info("Write results")
-        # TODO
+        # Write Evaporative farction
+        filename = output_dir / "ef.tif"
+        write_ef(ef, filename=filename)
+    logger.info("Writing results: OK")

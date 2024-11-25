@@ -21,9 +21,9 @@ class InputFile(BaseModel):
     Class describing the format of the input file
     """
 
-    input: dict
-    output: dict
-    params: dict
+    input: InputConfig
+    output: OutputConfig
+    params: ParamsConfig
 
 
 class InputConfig(BaseModel):

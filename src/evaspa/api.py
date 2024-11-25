@@ -18,7 +18,7 @@ import evaspa.trishna as trishna
 import evaspa.io as io
 import evaspa.ef as ef
 import evaspa.filter as filter
-from evaspa.configuration import InputConfig, OutputConfig, ParamsConfig
+from evaspa.configuration import InputConfig, ParamsConfig
 
 from .logging import LoggerManager
 
@@ -110,7 +110,7 @@ def regroup_tiles(tiles: gpd.GeoDataFrame, adjs: pd.DataFrame, threshold: int = 
     return group_df
 
 
-def run_evaspa(input: dict, output: dict, params: dict) -> xr.Dataset | None:
+def run_evaspa(input: dict, params: dict) -> xr.Dataset | None:
     """
     Run EVASPA
 
@@ -118,8 +118,6 @@ def run_evaspa(input: dict, output: dict, params: dict) -> xr.Dataset | None:
     ----------
     input: dict
         Input configuration
-    output: dict
-        Output configuration
     params: dict
         Parameter configuration
 
@@ -129,10 +127,7 @@ def run_evaspa(input: dict, output: dict, params: dict) -> xr.Dataset | None:
         Evaporative fraction)
     """
     logger.debug(f"Input: {input}")
-    logger.debug(f"Output: {output}")
     logger.debug(f"Config: {params}")
-    # Validate output config
-    OutputConfig.model_validate(output)
     # Validate input config
     input_config = InputConfig.model_validate(input)
     # Validate parameters config

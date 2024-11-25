@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import os
 import json
+import warnings
 
 from dataclasses import dataclass
 from enum import Enum
@@ -14,7 +15,7 @@ from typing_extensions import Annotated
 import numpy as np
 import numpy.typing as npt
 import xarray as xr
-
+import rasterio as rio
 
 from pydantic import BaseModel, ValidationError, BeforeValidator
 
@@ -494,3 +495,46 @@ def run(
         ef = select(ef)
     ef = merge(ef, keep=keep, method=merging)
     return ef
+
+
+def write_ef(
+    ef: xr.Dataset,
+    filename: str = "ef.tif",
+) -> None:
+    """
+    Description
+    -----------
+    Write evaporative fraction dataset
+
+    Parameters
+    ----------
+    ef : xr. Dataset
+        Evaporative fraction
+    filename : str
+        Path to the filename
+    """
+    if len(ef.data_vars) == 0:
+        raise ValueError("EF dataset empty")
+    bands = [i for i in ef.data_vars]
+    col = ef.sizes["x"]
+    row = ef.sizes["y"]
+    crs = ef.attrs.get("crs", None)
+    if crs is None:
+        transform = rio.Affine(1, 0, 0, 0, 1, 0)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=rio.errors.NotGeoreferencedWarning)
+        with rio.open(
+            filename,
+            mode="w+",
+            driver="GTiff",
+            width=col,
+            height=row,
+            count=len(bands),
+            dtype=rio.dtypes.float32,
+            nodata=np.nan,
+            crs=crs,
+            transform=transform,
+        ) as source_ds:
+            for id, band in enumerate(bands, start=1):
+                source_ds.write_band(id, ef[band].data)
+                source_ds.set_band_description(id, band)
