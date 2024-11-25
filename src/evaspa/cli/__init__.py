@@ -49,8 +49,18 @@ logger = LoggerManager.get_logger(__name__)
     show_default=True,
     help="Threshold on number of valid pixels",
 )
+@click.option(
+    "--output",
+    required=False,
+    type=str,
+    default="group.shp",
+    show_default=True,
+    help="Path to the output file",
+)
 @click.version_option(version=__version__, prog_name="evaspa-tiling")
-def evaspa_tiling(debug, roi, orbit, land_percentage, orbit_percentage, threshold):
+def evaspa_tiling(
+    debug, roi, orbit, land_percentage, orbit_percentage, threshold, output
+):
     # Configure logging
     log_level = logging.INFO
     if debug:
@@ -68,7 +78,7 @@ def evaspa_tiling(debug, roi, orbit, land_percentage, orbit_percentage, threshol
     group = regroup_tiles(roi_tiles, adjs, threshold=threshold)
     logger.info("Title association: OK")
     # Write results
-    write_regroup(group.reset_index())
+    write_regroup(group.reset_index(), filename=output)
     logger.info("Writing results: OK")
 
 
