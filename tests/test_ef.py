@@ -518,64 +518,78 @@ def test_check_variability(lst, mask, expected) -> None:
 
 
 @pytest.mark.parametrize(
-    "config",
+    "config,expected",
     [
-        {
-            "models": [
-                {
-                    "name": "model1",
-                    "dry_edge": {
-                        "type": "LinearEdge",
-                        "config": {
-                            "interval_type": "size",
-                            "interval_nb": 20,
-                            "percentile": [98, 100],
-                            "selection": "median",
+        pytest.param(
+            {
+                "models": [
+                    {
+                        "name": "model1",
+                        "dry_edge": {
+                            "type": "LinearEdge",
+                            "config": {
+                                "interval_type": "size",
+                                "interval_nb": 20,
+                                "percentile": [98, 100],
+                                "selection": "median",
+                            },
                         },
-                    },
-                    "wet_edge": {
-                        "type": "LinearEdge",
-                        "config": {
-                            "interval_type": "size",
-                            "interval_nb": 20,
-                            "percentile": [0, 2],
-                            "selection": "median",
+                        "wet_edge": {
+                            "type": "LinearEdge",
+                            "config": {
+                                "interval_type": "size",
+                                "interval_nb": 20,
+                                "percentile": [0, 2],
+                                "selection": "median",
+                            },
                         },
+                        "var": "fcover",
                     },
-                    "var": "fcover",
+                    {
+                        "name": "model2",
+                        "dry_edge": {
+                            "type": "LinearEdge",
+                            "config": {
+                                "interval_type": "density",
+                                "interval_nb": 20,
+                                "percentile": [95, 100],
+                                "selection": "median",
+                            },
+                        },
+                        "wet_edge": {
+                            "type": "FlatEdge",
+                            "config": {"selection": "min"},
+                        },
+                        "var": "albedo",
+                    },
+                ],
+                "options": {
+                    "selection": False,
+                    "keep": False,
+                    "merging": "mean",
                 },
-                {
-                    "name": "model2",
-                    "dry_edge": {
-                        "type": "LinearEdge",
-                        "config": {
-                            "interval_type": "density",
-                            "interval_nb": 20,
-                            "percentile": [95, 100],
-                            "selection": "median",
-                        },
-                    },
-                    "wet_edge": {
-                        "type": "FlatEdge",
-                        "config": {"selection": "min"},
-                    },
-                    "var": "albedo",
-                },
-            ],
-            "options": {
-                "selection": False,
-                "keep": False,
-                "merging": "mean",
             },
-        },
+            2,
+        ),
+        pytest.param(
+            {
+                "models": "default_evaspa",
+                "options": {
+                    "selection": False,
+                    "keep": False,
+                    "merging": "mean",
+                },
+            },
+            2,
+        ),
     ],
 )
-def test_initialize(config) -> None:
+def test_initialize(config, expected) -> None:
     """
     Test initialize function
     """
     models, options = initialize(config)
-    assert len(models) == 2
+    assert len(models) == expected
     assert not options["selection"]
     assert not options["keep"]
     assert options["merging"].value == "mean"

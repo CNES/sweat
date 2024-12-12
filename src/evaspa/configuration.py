@@ -11,8 +11,9 @@ import os
 
 from typing_extensions import Annotated
 
-from pydantic import BaseModel, AfterValidator, field_validator
+from pydantic import BaseModel, AfterValidator, field_validator, Field
 
+from evaspa.__about__ import __version__
 from evaspa.ef import EFConfig
 
 
@@ -24,6 +25,12 @@ class InputFile(BaseModel):
     input: InputConfig
     output: OutputConfig
     params: ParamsConfig
+    version: str = Field(default=str(__version__))
+
+    @field_validator("version")
+    @classmethod
+    def update_version(cls, v: str) -> str:
+        return str(__version__)
 
 
 class InputConfig(BaseModel):

@@ -100,7 +100,7 @@ def evaspa(debug, input_file):
     logger.debug(f"Configuration file: {input_file}")
     with open(input_file) as json_file:
         json_data = json.load(json_file)
-    # TODO verify config and manage default parameters
+    # Verify config and manage default parameters
     config = InputFile.model_validate(json_data)
     # Run
     logger.info("Run evaspa...")

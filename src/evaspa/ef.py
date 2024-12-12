@@ -61,7 +61,7 @@ def update_efconfig(v: Any) -> List[EFModel]:
     if isinstance(v, str):
         filename = os.path.join(config_path, f"{v}.json")
         if not os.path.isfile(filename):
-            raise IOError("No config file")
+            raise IOError(f"No config file: {filename}")
         # Read config file
         with open(filename) as json_file:
             conf = json.load(json_file)
