@@ -1,6 +1,6 @@
 {
     "input":{
-        "path":"tests/data/modis_20180222.tif"
+        "path":"tests/data/modis_test.tif"
     },
     "output":{
         "path":"out"

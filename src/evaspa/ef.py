@@ -28,6 +28,8 @@ logger = LoggerManager.get_logger(__name__)
 class MergeMethod(Enum):
     """Method for merge EF mdoels"""
 
+    # TODO Add method to compute uncertainty depending on the merge method used
+
     MEAN = "mean"
     MEDIAN = "median"
 
@@ -50,7 +52,6 @@ class EFOptionsConfig(BaseModel):
 
     selection: bool
     merging: MergeMethod
-    keep: bool
 
 
 def update_efconfig(v: Any) -> List[EFModel]:
@@ -463,9 +464,9 @@ def run(
     data: xr.Dataset,
     mask: str | None = None,
     selection: bool = False,
-    keep: bool = False,
+    keep: bool = True,
     merging: MergeMethod = MergeMethod.MEAN,
-) -> xr.Dataset:
+) -> tuple[xr.Dataset, xr.Dataset]:
     """
     Description
     -----------
@@ -487,14 +488,15 @@ def run(
     Returns
     -------
     ef : xr. Dataset
-        Evaporative fraction
+        Evaporative fraction for all the models
+    ef_merged : xr. Dataset
+        Evaporative fraction merged
     """
     # TODO Handle mask
     ef = compute(models, data, mask)
     if selection:
         ef = select(ef)
-    ef = merge(ef, keep=keep, method=merging)
-    return ef
+    return ef, merge(ef, keep=False, method=merging)
 
 
 def write_ef(

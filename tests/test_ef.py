@@ -565,7 +565,6 @@ def test_check_variability(lst, mask, expected) -> None:
                 ],
                 "options": {
                     "selection": False,
-                    "keep": False,
                     "merging": "mean",
                 },
             },
@@ -576,7 +575,6 @@ def test_check_variability(lst, mask, expected) -> None:
                 "models": "default_evaspa",
                 "options": {
                     "selection": False,
-                    "keep": False,
                     "merging": "mean",
                 },
             },
@@ -591,7 +589,6 @@ def test_initialize(config, expected) -> None:
     models, options = initialize(config)
     assert len(models) == expected
     assert not options["selection"]
-    assert not options["keep"]
     assert options["merging"].value == "mean"
 
 
@@ -667,17 +664,14 @@ def test_merge(keep, method, expected) -> None:
     [
         {
             "selection": False,
-            "keep": False,
             "merging": MergeMethod.MEAN,
         },
         {
             "selection": True,
-            "keep": False,
             "merging": MergeMethod.MEAN,
         },
         {
             "selection": False,
-            "keep": True,
             "merging": MergeMethod.MEAN,
         },
     ],
@@ -748,7 +742,6 @@ def test_all() -> None:
         ],
         "options": {
             "selection": False,
-            "keep": False,
             "merging": "mean",
         },
     }

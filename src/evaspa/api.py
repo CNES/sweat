@@ -147,7 +147,8 @@ def run_evaspa(input: dict, params: dict) -> xr.Dataset | None:
         return None
     # Compute EF
     models, options = ef.initialize(params_config.efconfig.model_dump())
-    xr_ef = ef.run(
+    ef_xr, efinst_xr = ef.run(
         models, data, mask="valid", **params_config.efconfig.options.model_dump()
     )
-    return xr_ef
+    ef_xr = ef_xr.merge(efinst_xr)
+    return ef_xr

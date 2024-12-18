@@ -19,3 +19,6 @@ Untitled*.ipynb
 
 report/
 out/
+
+# Test
+!tests/data/modis_test.tif
