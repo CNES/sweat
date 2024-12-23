@@ -8,15 +8,18 @@ import numpy.typing as npt
 import xarray as xr
 
 from evaspa.ef import (
+    EFOptionsConfig,
+    EFCheckConfig,
+    EFConfig,
     EFModel,
     EFModelError,
     EFConfigError,
     MergeMethod,
+    get_available_configuration,
     check_variability,
     initialize,
     compute,
     select,
-    merge,
     run,
 )
 
@@ -60,17 +63,17 @@ def setup_data(
         dry_edge(albedo_arr) - wet_edge(albedo_arr)
     )
     data_vars = dict(
-        albedo=(["lon", "lat"], albedo_arr),
-        lst=(["lon", "lat"], lst_arr),
-        valid=(["lon", "lat"], valid_arr),
-        ef_albedo=(["lon", "lat"], ef_albedo_arr),
+        albedo=(["lat", "lon"], albedo_arr),
+        lst=(["lat", "lon"], lst_arr),
+        valid=(["lat", "lon"], valid_arr),
+        ef_albedo=(["lat", "lon"], ef_albedo_arr),
     )
     if fcover is not None:
         ef_fcover_arr = (dry_edge(fcover_arr) - lst_arr) / (
             dry_edge(fcover_arr) - wet_edge(fcover_arr)
         )
-        data_vars["fcover"] = (["lon", "lat"], fcover_arr)
-        data_vars["ef_fcover"] = (["lon", "lat"], ef_fcover_arr)
+        data_vars["fcover"] = (["lat", "lon"], fcover_arr)
+        data_vars["ef_fcover"] = (["lat", "lon"], ef_fcover_arr)
     ds = xr.Dataset(
         data_vars=data_vars,
         coords=dict(
@@ -632,34 +635,6 @@ def test_select() -> None:
 
 
 @pytest.mark.parametrize(
-    "keep,method,expected",
-    [
-        pytest.param(True, MergeMethod.MEAN, 0.4),
-        pytest.param(False, MergeMethod.MEAN, 0.4),
-    ],
-)
-def test_merge(keep, method, expected) -> None:
-    """
-    Test merge function
-    """
-    ef = xr.Dataset(
-        data_vars=dict(
-            model1=(["y", "x"], np.random.normal(0.5, 0.1, (100, 100))),
-            model2=(["y", "x"], np.random.normal(0.3, 0.1, (100, 100))),
-        ),
-        coords=dict(
-            y=("y", np.linspace(0, 99, num=100)),
-            x=("x", np.linspace(0, 99, num=100)),
-        ),
-        attrs=dict(description="EF models"),
-    )
-    merged = merge(ef, keep=keep, method=method)
-    expected_size = 1 if not keep else (1 + len(ef.data_vars))
-    assert len(merged.data_vars) == expected_size
-    np.testing.assert_almost_equal(merged["ef"].mean(), expected, decimal=1)
-
-
-@pytest.mark.parametrize(
     "options",
     [
         {
@@ -755,3 +730,91 @@ def test_all() -> None:
     )
     models, options = initialize(config)
     run(models, data)
+
+
+@pytest.mark.parametrize(
+    "config,selection_expected,merging_expected",
+    [
+        pytest.param({}, False, "median"),
+        pytest.param({"selection": True}, True, "median"),
+        pytest.param({"merging": "mean"}, False, "mean"),
+        pytest.param({"selection": False, "merging": "median"}, False, "median"),
+        pytest.param({"selection": True, "merging": "mean"}, True, "mean"),
+    ],
+)
+def test_efoptionsconfig(config, selection_expected, merging_expected) -> None:
+    """
+    Test EFOptionsConfig
+    """
+    options = EFOptionsConfig.model_validate(config)
+    assert options.selection == selection_expected
+    assert options.merging.value == merging_expected
+
+
+@pytest.mark.parametrize(
+    "config,expected",
+    [
+        pytest.param({}, 0.02),
+        pytest.param({"threshold": 2}, 2),
+    ],
+)
+def test_efcheckconfig(config, expected) -> None:
+    """
+    Test EFCheckConfig
+    """
+    check = EFCheckConfig.model_validate(config)
+    assert check.threshold == expected
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        {
+            "models": [
+                {
+                    "name": "model1",
+                    "dry_edge": {
+                        "type": "LinearEdge",
+                        "config": {
+                            "interval_type": "size",
+                            "interval_nb": 20,
+                            "percentile": [98, 100],
+                            "selection": "median",
+                        },
+                    },
+                    "wet_edge": {
+                        "type": "LinearEdge",
+                        "config": {
+                            "interval_type": "size",
+                            "interval_nb": 20,
+                            "percentile": [0, 2],
+                            "selection": "median",
+                        },
+                    },
+                    "var": "fcover",
+                }
+            ]
+        },
+        {"models": "default_evaspa"},
+        {"check": {"threshold": 10}, "models": "default_evaspa"},
+        {
+            "check": {"threshold": 10},
+            "models": "default_evaspa",
+            "options": {"selection": True},
+        },
+    ],
+)
+def test_efconfig(config) -> None:
+    """
+    Test EFCheckConfig
+    """
+    cfg = EFConfig.model_validate(config)
+    assert cfg
+
+
+def test_get_available_configuration() -> None:
+    """
+    Test get_available_configuration method
+    """
+    names = get_available_configuration()
+    assert names == ["default_evaspa"]

@@ -6,7 +6,7 @@ import pytest
 import numpy as np
 import xarray as xr
 
-from evaspa.filter import determine_valid_pixels, mask
+from evaspa.filter import determine_valid_pixels, mask, FilterParams, FilterConfig
 
 
 @pytest.mark.parametrize(
@@ -125,3 +125,33 @@ def test_determine_valid_pixels_config(config, expected) -> None:
     )
     valid = determine_valid_pixels(data, cloud="cloud", cover="cover", config=config)
     np.testing.assert_equal(valid.data, expected)
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        {},
+        {"cloud": 1},
+        {"cloud": 1, "zones": 1},
+    ],
+)
+def test_filterparams(config) -> None:
+    """
+    Test FilterParams
+    """
+    assert FilterParams.model_validate(config)
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        {},
+        {"cloud": "cloud_mask"},
+        {"cloud": "cloud_mask", "config": {"cloud": 1}},
+    ],
+)
+def test_filterconfig(config) -> None:
+    """
+    Test FilterConfig
+    """
+    assert FilterConfig.model_validate(config)
