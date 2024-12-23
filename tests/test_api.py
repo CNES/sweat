@@ -47,3 +47,13 @@ def test_regroup() -> None:
     assert len(group) == 9
     group = api.regroup_tiles(tiles, adjs, threshold=1000000)
     assert len(group) == 5
+
+
+def test_run_evaspa() -> None:
+    """
+    Test run EVASPA
+    """
+    input = {"path": "tests/data/modis_test.tif"}
+    params = {"ef": {"check": {"threshold": 0.02}, "models": "default_evaspa"}}
+    res = api.run_evaspa(input, params)
+    assert res

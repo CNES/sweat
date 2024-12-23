@@ -6,18 +6,8 @@
         "path":"out"
     },
     "params":{
-        "filtering":{
-        },
-        "check_variability":{
-            "threshold": 0.02
-        },
-        "efconfig":{
-            "models": "default_evaspa",
-            "options":{
-                "selection": false,
-                "keep": true,
-                "merging": "mean"
-            }
+        "ef":{
+            "models": "default_evaspa"
         }
     }
 }
