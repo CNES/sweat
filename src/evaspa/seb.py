@@ -367,6 +367,12 @@ def run(
     le: xr.Dataset
         Latent heat flux dataset
     """
+    # Correct shortwave radiation with topo
+    if use_topo:
+        logger.warning("No topography correction implemented yet")
+    # Compute net radiation
     rn_xr = create_net_radiation(data)
+    # Compute G flux
     g_xr = create_gflux(data, rn_xr, g_models=g_models)
+    # Compute latent heat flux
     return create_le(ef, rn_xr, g_xr)
