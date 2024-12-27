@@ -17,8 +17,10 @@ import evaspa.tiling as tiling
 import evaspa.trishna as trishna
 import evaspa.io as io
 import evaspa.ef as ef
+import evaspa.merging as merging
+import evaspa.seb as seb
 import evaspa.filter as filter
-from evaspa.configuration import InputConfig, ParamsConfig
+from evaspa.config import InputConfig, ParamsConfig
 
 from .logging import LoggerManager
 
@@ -112,6 +114,8 @@ def regroup_tiles(tiles: gpd.GeoDataFrame, adjs: pd.DataFrame, threshold: int = 
 
 def run_evaspa(input: dict, params: dict) -> xr.Dataset | None:
     """
+    Description
+    -----------
     Run EVASPA
 
     Parameters
@@ -124,7 +128,9 @@ def run_evaspa(input: dict, params: dict) -> xr.Dataset | None:
     Return
     ------
     ef: xr.Dataset
-        Evaporative fraction)
+        Instant evaporative fraction
+    le: xr.Dataset
+        Instant latent heat flux
     """
     logger.debug(f"Input: {input}")
     logger.debug(f"Config: {params}")
@@ -138,16 +144,21 @@ def run_evaspa(input: dict, params: dict) -> xr.Dataset | None:
     else:
         data = io.read_data(input_config.path)
     # Filter data
-    data["valid"] = filter.determine_valid_pixels(data, **params_config.filtering)
+    data["valid"] = filter.determine_valid_pixels(
+        data, **params_config.filtering.model_dump()
+    )
     # Check variablity
     if not ef.check_variability(
-        data["lst"], mask=data["valid"], **params_config.check_variability
+        data["lst"], mask=data["valid"], **params_config.ef.check.model_dump()
     ):
         logger.error("Variability criteria not respected")
         return None
     # Compute EF
-    models, options = ef.initialize(params_config.efconfig.model_dump())
-    xr_ef = ef.run(
-        models, data, mask="valid", **params_config.efconfig.options.model_dump()
+    models, options = ef.initialize(params_config.ef.model_dump())
+    ef_xr, inst_xr = ef.run(
+        models, data, mask="valid", **params_config.ef.options.model_dump()
     )
-    return xr_ef
+    # Compute LE
+    le_xr = seb.run(data, ef_xr, **params_config.seb.model_dump())
+    inst_xr["le"] = merging.merge(le_xr, method=merging.MergeMethod.MEAN)
+    return inst_xr

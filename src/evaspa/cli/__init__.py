@@ -2,7 +2,6 @@
 # coding: utf8
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
-import json
 import logging
 from pathlib import Path
 
@@ -10,10 +9,10 @@ import click
 
 from evaspa.__about__ import __version__
 from evaspa.api import run_evaspa, generate_tiles, regroup_tiles
-from evaspa.configuration import InputFile
+from evaspa.config import InputFile, read_config, write_config
 from evaspa.logging import LoggerManager
 from evaspa.tiling import write_regroup
-from evaspa.ef import write_ef
+from evaspa.io import write_dataset
 
 logger = LoggerManager.get_logger(__name__)
 
@@ -98,23 +97,21 @@ def evaspa(debug, input_file):
     LoggerManager.set_level(log_level)
     # Set configuration
     logger.debug(f"Configuration file: {input_file}")
-    with open(input_file) as json_file:
-        json_data = json.load(json_file)
+    dict_config = read_config(input_file)
     # Verify config and manage default parameters
-    config = InputFile.model_validate(json_data)
+    config = InputFile.model_validate(dict_config)
     # Run
     logger.info("Run evaspa...")
-    ef = run_evaspa(
+    res = run_evaspa(
         config.input,
         config.params,
     )
     # Write results
     output_dir = Path(config.output.path)
     # Save configuration
-    with open(output_dir / "config.json", "w") as f:
-        json.dump(config.model_dump(), f, indent=4, default=lambda x: x.value)
-    if ef is not None:
+    write_config(config.model_dump(), output_dir, format="json")
+    if res is not None:
         # Write Evaporative farction
-        filename = output_dir / "ef.tif"
-        write_ef(ef, filename=filename)
+        filename = "evaspa.tif"
+        write_dataset(res, filename=filename, directory=output_dir, separate=True)
     logger.info("Writing results: OK")

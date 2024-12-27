@@ -6,13 +6,40 @@ import numpy as np
 import numpy.typing as npt
 import xarray as xr
 
-default_config = {
-    "cloud": 0,
-    "water": 0,
-    "qa": 0b0000000000000000,
-    "zones": 0,
-    "cover": [10, 60, 80],  # TODO Find right values
-}
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class FilterParams(BaseModel):
+    """
+    Parameters for the filter.
+    The parameters correspond to the values used
+    for masking
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    cloud: int = Field(default=0)
+    water: int = Field(default=0)
+    qa: int = Field(default=0b0000000000000000)
+    zones: int = Field(default=0)
+    cover: list[int] = Field(default=[10, 60, 80])  # TODO TBC
+
+
+class FilterConfig(BaseModel):
+    """
+    Configuration for filtering pixels
+    The configuration contains names of the variables
+    for each mask and parameters for the filter
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    cloud: str | None = Field(default=None)
+    water: str | None = Field(default=None)
+    qa: str | None = Field(default=None)
+    zones: str | None = Field(default=None)
+    cover: str | None = Field(default=None)
+    config: FilterParams = Field(default=FilterParams())
 
 
 def determine_valid_pixels(
@@ -22,7 +49,7 @@ def determine_valid_pixels(
     qa: npt.ArrayLike | str | None = None,
     zones: npt.ArrayLike | str | None = None,
     cover: npt.ArrayLike | str | None = None,
-    config: dict = default_config,
+    config: dict = FilterParams().model_dump(),
 ) -> xr.DataArray:
     """
     Description
@@ -40,6 +67,7 @@ def determine_valid_pixels(
         Filtered data
     """
     # Mask configuration
+    default_config = FilterParams().model_dump()
     updated_config = default_config | config
     # Mask creation
     valid = np.ones_like(data["lst"].data)

@@ -6,30 +6,23 @@ from __future__ import annotations
 
 import os
 import json
-import warnings
 
 from dataclasses import dataclass
-from enum import Enum
 from typing import Any, List
 from typing_extensions import Annotated
+from pathlib import Path
+
 import numpy as np
 import numpy.typing as npt
 import xarray as xr
-import rasterio as rio
 
-from pydantic import BaseModel, ValidationError, BeforeValidator
+from pydantic import BaseModel, ValidationError, BeforeValidator, ConfigDict, Field
 
 from .edge import Edge, EdgeError, EdgeConfig
+from .merging import MergeMethod, merge_to_dataset
 from evaspa.logging import LoggerManager
 
 logger = LoggerManager.get_logger(__name__)
-
-
-class MergeMethod(Enum):
-    """Method for merge EF mdoels"""
-
-    MEAN = "mean"
-    MEDIAN = "median"
 
 
 class EFModelConfig(BaseModel):
@@ -48,12 +41,39 @@ class EFOptionsConfig(BaseModel):
     Options for EF processing
     """
 
-    selection: bool
-    merging: MergeMethod
-    keep: bool
+    model_config = ConfigDict(extra="forbid")
+
+    selection: bool = Field(default=False)
+    merging: MergeMethod = Field(default=MergeMethod.MEDIAN)
+
+
+class EFCheckConfig(BaseModel):
+    """
+    Check variablity for EF processing
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    threshold: float = Field(default=0.02)
 
 
 def update_efconfig(v: Any) -> List[EFModel]:
+    """
+    Description
+    -----------
+    Update EF models with a configuration file
+    stored in conf directory
+
+    Parameters
+    ----------
+    v: Any
+       Field
+
+    Returns
+    -------
+    models: List[EFModel]
+        List if EF Models
+    """
     config_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
         "conf",
@@ -69,6 +89,23 @@ def update_efconfig(v: Any) -> List[EFModel]:
     return v
 
 
+def get_available_configuration() -> List[str]:
+    """
+    Description
+    -----------
+    Return the names of available configuration
+    for preconfigured EF models
+
+    Returns
+    -------
+    config_list: list[str]
+        Names of available configuration
+    """
+    config_path = Path(os.path.dirname(os.path.abspath(__file__))) / "conf"
+    filenames = config_path.glob("*.json")
+    return [filename.stem for filename in filenames]
+
+
 EFModels = Annotated[list[EFModelConfig], BeforeValidator(update_efconfig)]
 
 
@@ -77,8 +114,11 @@ class EFConfig(BaseModel):
     Configuration for EF processing
     """
 
+    model_config = ConfigDict(extra="forbid")
+
     models: EFModels
-    options: EFOptionsConfig
+    options: EFOptionsConfig = Field(default=EFOptionsConfig())
+    check: EFCheckConfig = Field(default=EFCheckConfig())
 
 
 class EFConfigError(Exception):
@@ -426,46 +466,14 @@ def select(ef: xr.Dataset) -> xr.Dataset:
     return ef
 
 
-def merge(
-    ef: xr.Dataset, keep: bool = False, method: MergeMethod = MergeMethod.MEAN
-) -> xr.Dataset:
-    """
-    Description
-    -----------
-    Merge evaporative fraction from a list
-
-    Parameters
-    ----------
-    ef : xr. Dataset
-        Evaporative Fraction Data
-
-    Returns
-    -------
-    return: xr.Dataset
-        Merged evaporative fraction
-    """
-    if method.value == MergeMethod.MEAN.value:
-        ef_merged = ef.to_array(dim="new").mean("new")
-    elif method.value == MergeMethod.MEDIAN.value:
-        ef_merged = ef.to_array(dim="new").median("new")
-    else:
-        raise EFModelError(f"Merge method unknown: {method}")
-    if keep:
-        return ef.assign(ef=ef_merged)
-    else:
-        return xr.Dataset(
-            data_vars=dict(ef=ef_merged), coords=ef.coords.copy(), attrs=ef.attrs.copy()
-        )
-
-
 def run(
     models: list[EFModel],
     data: xr.Dataset,
     mask: str | None = None,
     selection: bool = False,
-    keep: bool = False,
+    keep: bool = True,
     merging: MergeMethod = MergeMethod.MEAN,
-) -> xr.Dataset:
+) -> tuple[xr.Dataset, xr.Dataset]:
     """
     Description
     -----------
@@ -487,54 +495,12 @@ def run(
     Returns
     -------
     ef : xr. Dataset
-        Evaporative fraction
+        Evaporative fraction for all the models
+    ef_merged : xr. Dataset
+        Evaporative fraction merged
     """
     # TODO Handle mask
     ef = compute(models, data, mask)
     if selection:
         ef = select(ef)
-    ef = merge(ef, keep=keep, method=merging)
-    return ef
-
-
-def write_ef(
-    ef: xr.Dataset,
-    filename: str = "ef.tif",
-) -> None:
-    """
-    Description
-    -----------
-    Write evaporative fraction dataset
-
-    Parameters
-    ----------
-    ef : xr. Dataset
-        Evaporative fraction
-    filename : str
-        Path to the filename
-    """
-    if len(ef.data_vars) == 0:
-        raise ValueError("EF dataset empty")
-    bands = [i for i in ef.data_vars]
-    col = ef.sizes["x"]
-    row = ef.sizes["y"]
-    crs = ef.attrs.get("crs", None)
-    if crs is None:
-        transform = rio.Affine(1, 0, 0, 0, 1, 0)
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=rio.errors.NotGeoreferencedWarning)
-        with rio.open(
-            filename,
-            mode="w+",
-            driver="GTiff",
-            width=col,
-            height=row,
-            count=len(bands),
-            dtype=rio.dtypes.float32,
-            nodata=np.nan,
-            crs=crs,
-            transform=transform,
-        ) as source_ds:
-            for id, band in enumerate(bands, start=1):
-                source_ds.write_band(id, ef[band].data)
-                source_ds.set_band_description(id, band)
+    return ef, merge_to_dataset(ef, method=merging, name="ef")

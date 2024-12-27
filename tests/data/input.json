@@ -1,6 +1,6 @@
 {
     "input":{
-        "path":"tests/data/modis_20180222.tif"
+        "path":"tests/data/modis_test.tif"
     },
     "output":{
         "path":"out"
@@ -8,10 +8,10 @@
     "params":{
         "filtering":{
         },
-        "check_variability":{
-            "threshold": 0.02
-        },
-        "efconfig":{
+        "ef":{
+            "check":{
+                "threshold": 0.02
+            },
             "models": [
             {
                 "name": "model1",
@@ -55,9 +55,12 @@
             ],
             "options":{
                 "selection": false,
-                "keep": true,
                 "merging": "mean"
             }
+        },
+        "seb":{
+            "use_topo": false,
+            "g_models": ["choudhury","kustas"]
         }
     }
 }

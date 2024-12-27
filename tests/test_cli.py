@@ -4,18 +4,23 @@
 
 import os
 import json
+import pytest
 
 from click.testing import CliRunner
 from evaspa import cli
 
 
-def test_command_evaspa(tmp_path):
+@pytest.mark.parametrize(
+    "filename",
+    ["input.json", "input_default.json"],
+)
+def test_command_evaspa(filename, tmp_path):
     """
     Test evaspa CLI
     """
     output_dir = tmp_path / "tmp_out"
     output_dir.mkdir()
-    input_file = os.path.join("tests", "data", "input.json")
+    input_file = os.path.join("tests", "data", filename)
     tmp_input_file = output_dir / "input.json"
     with open(input_file) as fi:
         input_data = json.load(fi)
