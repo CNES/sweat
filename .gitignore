@@ -22,3 +22,7 @@ out/
 
 # Test
 !tests/data/modis_test.tif
+
+# pixi environments
+.pixi
+*.egg-info

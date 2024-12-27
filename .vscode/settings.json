@@ -1,10 +1,10 @@
 {
-    "python.defaultInterpreterPath": "${userHome}/pyenvs/evaspa/bin/python3",
+    "python.defaultInterpreterPath": "./.pixi/envs/default/bin/python",
     "editor.defaultFormatter": "ms-python.black-formatter",
     "editor.formatOnPaste": true,
     "editor.formatOnSave": true,
     "python.testing.pytestEnabled": true,
-    "python.testing.pytestPath": "${userHome}/pyenvs/evaspa/bin/pytest",
+    "python.testing.pytestPath": ".pixi/envs/default/bin/pytest",
     "python.testing.unittestEnabled": false,
     "pylint.enabled": true,
     "pylint.args": [
