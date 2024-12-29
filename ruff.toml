@@ -552,6 +552,7 @@ select = [
   "TID252",
 ]
 "**/notebooks/*.ipynb" = ["T201","T203"]
+"**/raqrs/notebooks/*.ipynb" = ["T201","T203","PLR2004"]
 
 [lint.flake8-tidy-imports]
 ban-relative-imports = "all"
