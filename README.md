@@ -5,6 +5,8 @@
 **Table of Contents**
 
 - [Installation](#installation)
+- [Development](#Development)
+
 
 ## Installation
 
@@ -37,7 +39,16 @@ To use notebook
 pip install .[notebook]
 ```
 
+## Development
+
 For development
 ```console
 pip install -e .[dev,notebook]
+```
+
+```console
+hatch test # for pytest
+hatch test --cover # for coverage
+hatch fmt # for ruff
+hatch run types:check # for mypy
 ```
