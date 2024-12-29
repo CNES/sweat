@@ -39,6 +39,7 @@ dependencies = [
 dev = [
   "hatch",
   "pytest",
+  "pre-commit",
 ]
 notebook = [
   "matplotlib",
@@ -67,29 +68,24 @@ path = "src/evaspa/__about__.py"
 config-path = "none"
 dependencies = ["ruff==0.8.4"]
 
-[tool.hatch.envs.default]
+[tool.hatch.envs.hatch-test]
+default-args = ["tests"]
 dependencies = [
   "coverage[toml]>=6.5",
   "pytest",
 ]
-[tool.hatch.envs.default.scripts]
-test = "pytest {args:tests}"
-test-cov = "coverage run -m pytest {args:tests}"
-cov-report = [
-  "- coverage combine",
-  "coverage report",
-]
-cov = [
-  "test-cov",
-  "cov-report",
-]
+[tool.hatch.envs.hatch-test.scripts]
+run = "pytest{env:HATCH_TEST_ARGS:} {args}"
+run-cov = "coverage run -m pytest{env:HATCH_TEST_ARGS:} {args}"
+cov-combine = "coverage combine"
+cov-report = "coverage report"
 
 [tool.pytest.ini_options]
 markers = [
     "requires_test_data: Require additional test data. Use environment variables EVASPA_TEST_DATA_PATH.",
 ]
 
-[[tool.hatch.envs.all.matrix]]
+[[tool.hatch.envs.hatch-test.matrix]]
 python = ["3.10", "3.11", "3.12"]
 
 [tool.hatch.envs.types]

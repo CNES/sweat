@@ -45,10 +45,24 @@ For development
 ```console
 pip install -e .[dev,notebook]
 ```
+Run static analysis
+```console
+hatch fmt # for ruff
+hatch run types:check # for mypy
+```
 
+Run tests
 ```console
 hatch test # for pytest
 hatch test --cover # for coverage
-hatch fmt # for ruff
-hatch run types:check # for mypy
+```
+
+Install pre-commit scripts
+```console
+pre-commit install
+```
+
+Run pre-commit
+```console
+pre-commit run --all-files
 ```
