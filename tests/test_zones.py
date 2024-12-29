@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# coding: utf8
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
 import os
@@ -8,8 +6,7 @@ import affine
 import numpy as np
 from shapely.geometry import Polygon
 
-import evaspa.trishna as trishna
-import evaspa.zones as zones
+from evaspa import trishna, zones
 from evaspa.dem import get_dem_from_tiles
 
 
@@ -17,7 +14,9 @@ def get_test_data_path() -> str:
     """
     Get test data path for DEM tiles
     """
-    return os.path.join(os.environ["EVASPA_TEST_DATA_PATH"], "DEM_Copercinus_30m")
+    return os.path.join(
+        os.environ["EVASPA_TEST_DATA_PATH"], "DEM_Copercinus_30m"
+    )
 
 
 def test_compute_water_mask() -> None:
@@ -68,7 +67,9 @@ def test_polygonize_mask() -> None:
     identity = affine.Affine(1, 0, 0, 0, 1, 0)
     poly = zones.polygonize_mask(mask, identity)
     assert len(poly) == 1
-    assert poly[0] == Polygon([(40, 40), (40, 60), (60, 60), (60, 40), (40, 40)])
+    assert poly[0] == Polygon(
+        [(40, 40), (40, 60), (60, 60), (60, 40), (40, 40)]
+    )
 
 
 def test_define_valid_zones() -> None:

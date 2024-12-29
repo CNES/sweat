@@ -1,8 +1,7 @@
-#!/usr/bin/env python
-# coding: utf8
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
 from enum import Enum
+
 import xarray as xr
 
 from evaspa.logging import LoggerManager
@@ -13,13 +12,15 @@ logger = LoggerManager.get_logger(__name__)
 class MergeMethod(Enum):
     """Method for merge EF mdoels"""
 
-    # TODO Add method to compute uncertainty depending on the merge method used
+    # TODO: Add method to compute uncertainty depending on the merge method used
 
     MEAN = "mean"
     MEDIAN = "median"
 
 
-def merge(data: xr.Dataset, method: MergeMethod = MergeMethod.MEAN) -> xr.DataArray:
+def merge(
+    data: xr.Dataset, method: MergeMethod = MergeMethod.MEAN
+) -> xr.DataArray:
     """
     Description
     -----------
@@ -38,17 +39,20 @@ def merge(data: xr.Dataset, method: MergeMethod = MergeMethod.MEAN) -> xr.DataAr
         Merged data
     """
     if len(data.data_vars) == 0:
-        raise ValueError("Unable to merge, dataset is empty")
+        msg = "Unable to merge, dataset is empty"
+        raise ValueError(msg)
     if method.value == MergeMethod.MEAN.value:
         return data.to_array(dim="new").mean("new")
-    elif method.value == MergeMethod.MEDIAN.value:
+    if method.value == MergeMethod.MEDIAN.value:
         return data.to_array(dim="new").median("new")
-    else:
-        raise ValueError(f"Merge method unknown: {method}")
+    msg = f"Merge method unknown: {method}"
+    raise ValueError(msg)
 
 
 def merge_to_dataset(
-    data: xr.Dataset, method: MergeMethod = MergeMethod.MEAN, name: str = "merged"
+    data: xr.Dataset,
+    method: MergeMethod = MergeMethod.MEAN,
+    name: str = "merged",
 ) -> xr.Dataset:
     """
     Description

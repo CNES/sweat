@@ -1,18 +1,23 @@
-#!/usr/bin/env python
-# coding: utf8
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
-import pytest
 import numpy as np
+import pytest
 import xarray as xr
 
-from evaspa.filter import determine_valid_pixels, mask, FilterParams, FilterConfig
+from evaspa.filter import (
+    FilterConfig,
+    FilterParams,
+    determine_valid_pixels,
+    mask,
+)
 
 
 @pytest.mark.parametrize(
-    "data,values,invert,expected",
+    ("data", "values", "invert", "expected"),
     [
-        pytest.param([10, 0, 10, 5, 20], 0, False, [False, True, False, False, False]),
+        pytest.param(
+            [10, 0, 10, 5, 20], 0, False, [False, True, False, False, False]
+        ),
         pytest.param(
             [10, 0, 10, 5, 20], [0, 10], False, [True, True, True, False, False]
         ),
@@ -30,10 +35,16 @@ def test_mask(data, values, invert, expected):
 
 
 @pytest.mark.parametrize(
-    "params,expected",
+    ("params", "expected"),
     [
         pytest.param(
-            {"cloud": "cloud", "water": None, "qa": None, "zones": None, "cover": None},
+            {
+                "cloud": "cloud",
+                "water": None,
+                "qa": None,
+                "zones": None,
+                "cover": None,
+            },
             [0, 1, 1, 1, 0],
         ),
         pytest.param(
@@ -74,25 +85,25 @@ def test_determine_valid_pixels(params, expected) -> None:
     """
     # Generate data
     data = xr.Dataset(
-        data_vars=dict(
-            lst=(["x"], np.random.random(size=(5))),
-            cloud=(["x"], [1, 0, 0, 0, 1]),
-            water=(["x"], [0, 0, 1, 0, 1]),
-            qa=(["x"], [1, 0, 0, 0, 0]),
-            zones=(["x"], [0, 1, 0, 0, 0]),
-            cover=(["x"], [10, 20, 10, 10, 10]),
-        ),
-        coords=dict(
-            x=("x", np.linspace(0, 5, num=5)),
-        ),
-        attrs=dict(description="Test data."),
+        data_vars={
+            "lst": (["x"], np.random.random(size=(5))),
+            "cloud": (["x"], [1, 0, 0, 0, 1]),
+            "water": (["x"], [0, 0, 1, 0, 1]),
+            "qa": (["x"], [1, 0, 0, 0, 0]),
+            "zones": (["x"], [0, 1, 0, 0, 0]),
+            "cover": (["x"], [10, 20, 10, 10, 10]),
+        },
+        coords={
+            "x": ("x", np.linspace(0, 5, num=5)),
+        },
+        attrs={"description": "Test data."},
     )
     valid = determine_valid_pixels(data, **params)
     np.testing.assert_equal(valid.data, expected)
 
 
 @pytest.mark.parametrize(
-    "config,expected",
+    ("config", "expected"),
     [
         pytest.param(
             {"cloud": 1},
@@ -110,20 +121,22 @@ def test_determine_valid_pixels_config(config, expected) -> None:
     """
     # Generate data
     data = xr.Dataset(
-        data_vars=dict(
-            lst=(["x"], np.random.random(size=(5))),
-            cloud=(["x"], [1, 0, 0, 0, 1]),
-            water=(["x"], [0, 0, 1, 0, 1]),
-            qa=(["x"], [1, 0, 0, 0, 0]),
-            zones=(["x"], [0, 1, 0, 0, 0]),
-            cover=(["x"], [60, 20, 20, 20, 60]),
-        ),
-        coords=dict(
-            x=("x", np.linspace(0, 5, num=5)),
-        ),
-        attrs=dict(description="Test data."),
+        data_vars={
+            "lst": (["x"], np.random.random(size=(5))),
+            "cloud": (["x"], [1, 0, 0, 0, 1]),
+            "water": (["x"], [0, 0, 1, 0, 1]),
+            "qa": (["x"], [1, 0, 0, 0, 0]),
+            "zones": (["x"], [0, 1, 0, 0, 0]),
+            "cover": (["x"], [60, 20, 20, 20, 60]),
+        },
+        coords={
+            "x": ("x", np.linspace(0, 5, num=5)),
+        },
+        attrs={"description": "Test data."},
     )
-    valid = determine_valid_pixels(data, cloud="cloud", cover="cover", config=config)
+    valid = determine_valid_pixels(
+        data, cloud="cloud", cover="cover", config=config
+    )
     np.testing.assert_equal(valid.data, expected)
 
 

@@ -1,14 +1,11 @@
-#!/usr/bin/env python
-# coding: utf8
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
-import pytest
 import numpy as np
 import pandas as pd
-
+import pytest
 from pydantic import ValidationError
 
-from evaspa.edge import FlatEdge, LinearEdge, Edge, EdgeError
+from evaspa.edge import Edge, EdgeError, FlatEdge, LinearEdge
 
 
 def setup_data(
@@ -32,10 +29,15 @@ def setup_data(
 
     size = 125
     df = pd.DataFrame(
-        data={"var": np.random.uniform(low=var_min, high=var_max, size=size * size)}
+        data={
+            "var": np.random.uniform(
+                low=var_min, high=var_max, size=size * size
+            )
+        }
     )
     df["lst"] = df.apply(
-        lambda x: np.random.uniform(wet_edge(x["var"]), dry_edge(x["var"])), axis=1
+        lambda x: np.random.uniform(wet_edge(x["var"]), dry_edge(x["var"])),
+        axis=1,
     )
     df["ef"] = df.apply(
         lambda x: (dry_edge(x["var"]) - x["lst"])
@@ -50,7 +52,7 @@ def setup_data(
 
 
 @pytest.mark.parametrize(
-    "config,expected",
+    ("config", "expected"),
     [
         pytest.param('{"selection":"max"}', 330),
         pytest.param('{"selection":"min"}', 300),
@@ -62,13 +64,20 @@ def test_flat_edge(config, expected) -> None:
     """
     # Generate data
     var, lst, ef_ref = setup_data(
-        var_min=0.0, var_max=0.6, dry_c0=330.0, dry_c1=-13.0, wet_c0=300, wet_c1=30
+        var_min=0.0,
+        var_max=0.6,
+        dry_c0=330.0,
+        dry_c1=-13.0,
+        wet_c0=300,
+        wet_c1=30,
     )
     edge = FlatEdge.model_validate_json(config)
     edge.fit(var, lst)
     np.testing.assert_allclose(edge.value, expected, atol=1.0)
     np.testing.assert_allclose(edge.get(0.0), expected, atol=1.0)
-    np.testing.assert_allclose(edge.get(var), expected * np.ones_like(var), atol=1.0)
+    np.testing.assert_allclose(
+        edge.get(var), expected * np.ones_like(var), atol=1.0
+    )
 
 
 @pytest.mark.parametrize(
@@ -101,7 +110,12 @@ def test_linear_edge(config) -> None:
     """
     # Generate data
     var, lst, ef_ref = setup_data(
-        var_min=0.0, var_max=0.6, dry_c0=330.0, dry_c1=-13.0, wet_c0=300, wet_c1=30
+        var_min=0.0,
+        var_max=0.6,
+        dry_c0=330.0,
+        dry_c1=-13.0,
+        wet_c0=300,
+        wet_c1=30,
     )
     edge = LinearEdge.model_validate_json(config)
     edge.fit(var, lst)
@@ -131,7 +145,7 @@ def test_linear_edge_error(config) -> None:
 
 
 @pytest.mark.parametrize(
-    "name,config",
+    ("name", "config"),
     [
         pytest.param(
             "FlatEdge",
@@ -173,7 +187,7 @@ def test_create_edge(name, config) -> None:
 
 
 @pytest.mark.parametrize(
-    "name,config",
+    ("name", "config"),
     [
         pytest.param(
             "FlatEdge",

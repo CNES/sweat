@@ -1,30 +1,27 @@
-#!/usr/bin/env python
-# coding: utf8
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 """
 Module containing the API for EVASPA
 """
 
-import os
+from __future__ import annotations
 
-from typing import Tuple
+import os
+from typing import TYPE_CHECKING
 
 import geopandas as gpd
-import pandas as pd
-import xarray as xr
 
-import evaspa.tiling as tiling
-import evaspa.trishna as trishna
-import evaspa.io as io
-import evaspa.ef as ef
-import evaspa.merging as merging
-import evaspa.seb as seb
-import evaspa.filter as filter
+if TYPE_CHECKING:
+    import pandas as pd
+    import xarray as xr
+
+from evaspa import ef, filter, io, merging, seb, tiling, trishna
 from evaspa.config import InputConfig, ParamsConfig
-
-from .logging import LoggerManager
+from evaspa.logging import LoggerManager
 
 logger = LoggerManager.get_logger(__name__)
+
+ORBIT_NUMBER_MIN = 0
+ORBIT_NUMBER_MAX = 115
 
 
 def generate_tiles(
@@ -32,7 +29,7 @@ def generate_tiles(
     orbit_id: int | None = None,
     land_percentage: float = 10,
     orbit_percentage: float = 25,
-) -> Tuple[gpd.GeoDataFrame, pd.DataFrame]:
+) -> tuple[gpd.GeoDataFrame, pd.DataFrame]:
     """
     Generate tile list
 
@@ -59,17 +56,20 @@ def generate_tiles(
     if roi is not None:
         roi_gdf = gpd.read_file(roi)
         tiles = tiling.intersection(tiles[columns], roi_gdf)
-        tiles = tiles.rename(columns={"overlap_percentage": "roi_coverage"}).drop(
-            columns=["overlap_geometry"]
-        )
+        tiles = tiles.rename(
+            columns={"overlap_percentage": "roi_coverage"}
+        ).drop(columns=["overlap_geometry"])
         columns.append("roi_coverage")
     if orbit_id is not None:
-        if orbit_id < 0 or orbit_id > 115:
-            raise ValueError("Orbit ID must be between 0 and 114")
-        tiles = tiling.intersection(tiles[columns], orbits[orbits.orbit_id == orbit_id])
-        tiles = tiles.rename(columns={"overlap_percentage": "orbit_coverage"}).drop(
-            columns=["overlap_geometry"]
+        if orbit_id < ORBIT_NUMBER_MIN or orbit_id > ORBIT_NUMBER_MAX:
+            msg = "Orbit ID must be between 0 and 114"
+            raise ValueError(msg)
+        tiles = tiling.intersection(
+            tiles[columns], orbits[orbits.orbit_id == orbit_id]
         )
+        tiles = tiles.rename(
+            columns={"overlap_percentage": "orbit_coverage"}
+        ).drop(columns=["overlap_geometry"])
         columns.append("orbit_coverage")
         # Keep tile with enough orbit coverage
         tiles = tiles[tiles.orbit_coverage > orbit_percentage]
@@ -81,11 +81,14 @@ def generate_tiles(
     tiles = tiles[tiles.land > land_percentage]
     # Adjacent tiles
     adjs = tiling.generate_adjacents(tiles, land)
-    logger.info(f"Number of tiles = {len(tiles)}")
+    msg = f"Number of tiles = {len(tiles)}"
+    logger.info(msg)
     return tiles, adjs
 
 
-def regroup_tiles(tiles: gpd.GeoDataFrame, adjs: pd.DataFrame, threshold: int = 300000):
+def regroup_tiles(
+    tiles: gpd.GeoDataFrame, adjs: pd.DataFrame, threshold: int = 300000
+):
     """
     Regroup tiles
 
@@ -105,14 +108,18 @@ def regroup_tiles(tiles: gpd.GeoDataFrame, adjs: pd.DataFrame, threshold: int = 
     land = trishna.get_land_mask()
     tile_df, group_df = tiling.initialize_regroup(tiles, land)
     tile_df, group_df = tiling.regroup(tile_df, adjs, group_df, threshold, land)
-    logger.info(f"Number of groups = {len(group_df)}")
-    group_df["group_size"] = group_df.apply(lambda x: len(x.name.split(",")), axis=1)
+    msg = f"Number of groups = {len(group_df)}"
+    logger.info(msg)
+    group_df["group_size"] = group_df.apply(
+        lambda x: len(x.name.split(",")), axis=1
+    )
     for i, nb in group_df["group_size"].value_counts().items():
-        logger.info(f"Group size : {i} - Number : {nb}")
+        msg = f"Group size : {i} - Number : {nb}"
+        logger.info(msg)
     return group_df
 
 
-def run_evaspa(input: dict, params: dict) -> xr.Dataset | None:
+def run_evaspa(entry: dict, params: dict) -> xr.Dataset | None:
     """
     Description
     -----------
@@ -120,7 +127,7 @@ def run_evaspa(input: dict, params: dict) -> xr.Dataset | None:
 
     Parameters
     ----------
-    input: dict
+    entry: dict
         Input configuration
     params: dict
         Parameter configuration
@@ -132,10 +139,12 @@ def run_evaspa(input: dict, params: dict) -> xr.Dataset | None:
     le: xr.Dataset
         Instant latent heat flux
     """
-    logger.debug(f"Input: {input}")
-    logger.debug(f"Config: {params}")
+    msg = f"Input: {entry}"
+    logger.debug(msg)
+    msg = f"Config: {params}"
+    logger.debug(msg)
     # Validate input config
-    input_config = InputConfig.model_validate(input)
+    input_config = InputConfig.model_validate(entry)
     # Validate parameters config
     params_config = ParamsConfig.model_validate(params)
     # Read input data

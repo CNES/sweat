@@ -1,14 +1,14 @@
-#!/usr/bin/env python
-# coding: utf8
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
+
+from __future__ import annotations
 
 import numpy as np
 import numpy.typing as npt
 import xarray as xr
-from scipy.constants import c, h, k, pi
 from pydantic import BaseModel, ConfigDict, Field
+from scipy.constants import c, h, k, pi
 
-from .logging import LoggerManager
+from evaspa.logging import LoggerManager
 
 logger = LoggerManager.get_logger(__name__)
 
@@ -92,17 +92,19 @@ def create_net_radiation(data: xr.Dataset) -> xr.Dataset:
     # Check if several rsd/rld are available
     rsd_data: list[str] = [str(v) for v in data.data_vars if "rsd" in str(v)]
     if len(rsd_data) == 0:
-        raise ValueError("No RSD data available")
+        msg = "No RSD data available"
+        raise ValueError(msg)
     rld_data: list[str] = [str.replace(v, "rsd", "rld", 1) for v in rsd_data]
     for v in rld_data:
         if v not in data.data_vars:
-            raise ValueError(
+            msg = (
                 f"No RLD data ({v}) associated to RSD"
                 f" data ({str.replace(v,'rld','rsd')})"
             )
+            raise ValueError(msg)
     # Compute rn for all rsd/rld available
     rn = {}
-    for rsd, rld in zip(rsd_data, rld_data):
+    for rsd, rld in zip(rsd_data, rld_data, strict=False):
         name = str.replace(rsd, "rsd", "rn", 1)
         rn[name] = xr.DataArray(
             data=compute_rn(
@@ -153,7 +155,10 @@ def compute_g_kustas(
 
 
 def compute_g_su(
-    rn: npt.ArrayLike, fcover: npt.ArrayLike, c1: float = 0.315, c2: float = 0.05
+    rn: npt.ArrayLike,
+    fcover: npt.ArrayLike,
+    c1: float = 0.315,
+    c2: float = 0.05,
 ) -> npt.NDArray:
     """
     Description
@@ -163,7 +168,7 @@ def compute_g_su(
 
     Su Z., 2002. The surface energy balance system
     (SEBS) for estimation of turbulent fluxes.
-    Hydrol. Earth Syst. Sci., 6, 85–99.
+    Hydrol. Earth Syst. Sci., 6, 85-99.
 
     Parameters
     ----------
@@ -221,7 +226,7 @@ def compute_g_choudhury(
 def create_gflux(
     data: xr.Dataset,
     rn: xr.Dataset,
-    g_models: list[str] = ["kustas", "su", "choudhury"],
+    g_models: list[str] | None = None,
 ) -> xr.Dataset:
     """
     Description
@@ -239,6 +244,8 @@ def create_gflux(
     rn: xr.Dataset
         Net radiation dataset
     """
+    if g_models is None:
+        g_models = ["kustas", "su", "choudhury"]
     g = {}
     for var in rn.data_vars:
         for model in g_models:
@@ -320,12 +327,12 @@ def create_le(ef: xr.Dataset, rn: xr.Dataset, gflux: xr.Dataset) -> xr.Dataset:
     le: xr.Dataset
         Latent heat flux dataset
     """
-    vars = {}
+    data_vars = {}
     for ef_model in ef.data_vars:
         for rn_model in rn.data_vars:
             for g_model in gflux.data_vars:
                 name = f"{ef_model}_{rn_model}_{g_model}"
-                vars[name] = xr.DataArray(
+                data_vars[name] = xr.DataArray(
                     data=compute_le(ef[ef_model], rn[rn_model], gflux[g_model]),
                     dims=ef.dims,
                     coords=ef.coords.copy(),
@@ -336,7 +343,7 @@ def create_le(ef: xr.Dataset, rn: xr.Dataset, gflux: xr.Dataset) -> xr.Dataset:
         "crs": ef.attrs.get("crs", None),
         "transform": ef.attrs.get("transform", None),
     }
-    return xr.Dataset(data_vars=vars, coords=ef.coords.copy(), attrs=attrs)
+    return xr.Dataset(data_vars=data_vars, coords=ef.coords.copy(), attrs=attrs)
 
 
 def run(

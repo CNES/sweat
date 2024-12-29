@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# coding: utf8
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
 import logging
@@ -8,16 +6,16 @@ from pathlib import Path
 import click
 
 from evaspa.__about__ import __version__
-from evaspa.api import run_evaspa, generate_tiles, regroup_tiles
+from evaspa.api import generate_tiles, regroup_tiles, run_evaspa
 from evaspa.config import InputFile, read_config, write_config
+from evaspa.io import write_dataset
 from evaspa.logging import LoggerManager
 from evaspa.tiling import write_regroup
-from evaspa.io import write_dataset
 
 logger = LoggerManager.get_logger(__name__)
 
 
-@click.command(context_settings=dict(help_option_names=["-h", "--help"]))
+@click.command(context_settings={"help_option_names": ["-h", "--help"]})
 @click.option(
     "--debug/--no-debug",
     default=False,
@@ -83,7 +81,7 @@ def evaspa_tiling(
     logger.info("Writing results: OK")
 
 
-@click.command(context_settings=dict(help_option_names=["-h", "--help"]))
+@click.command(context_settings={"help_option_names": ["-h", "--help"]})
 @click.option("--debug/--no-debug", default=False, help="Debug mode")
 @click.argument(
     "input_file", type=click.Path(exists=True, file_okay=True, readable=True)
@@ -96,7 +94,8 @@ def evaspa(debug, input_file):
         log_level = logging.DEBUG
     LoggerManager.set_level(log_level)
     # Set configuration
-    logger.debug(f"Configuration file: {input_file}")
+    msg = f"Configuration file: {input_file}"
+    logger.debug(msg)
     dict_config = read_config(input_file)
     # Verify config and manage default parameters
     config = InputFile.model_validate(dict_config)
@@ -109,9 +108,11 @@ def evaspa(debug, input_file):
     # Write results
     output_dir = Path(config.output.path)
     # Save configuration
-    write_config(config.model_dump(), output_dir, format="json")
+    write_config(config.model_dump(), output_dir, fmt="json")
     if res is not None:
         # Write Evaporative farction
         filename = "evaspa.tif"
-        write_dataset(res, filename=filename, directory=output_dir, separate=True)
+        write_dataset(
+            res, filename=filename, directory=output_dir, separate=True
+        )
     logger.info("Writing results: OK")

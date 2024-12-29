@@ -1,11 +1,10 @@
-#!/usr/bin/env python
-# coding: utf8
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
+
+from __future__ import annotations
 
 import numpy as np
 import numpy.typing as npt
 import xarray as xr
-
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -22,7 +21,7 @@ class FilterParams(BaseModel):
     water: int = Field(default=0)
     qa: int = Field(default=0b0000000000000000)
     zones: int = Field(default=0)
-    cover: list[int] = Field(default=[10, 60, 80])  # TODO TBC
+    cover: list[int] = Field(default=[10, 60, 80])  # TODO: TBC
 
 
 class FilterConfig(BaseModel):
@@ -49,7 +48,7 @@ def determine_valid_pixels(
     qa: npt.ArrayLike | str | None = None,
     zones: npt.ArrayLike | str | None = None,
     cover: npt.ArrayLike | str | None = None,
-    config: dict = FilterParams().model_dump(),
+    config: dict | None = None,
 ) -> xr.DataArray:
     """
     Description
@@ -68,6 +67,8 @@ def determine_valid_pixels(
     """
     # Mask configuration
     default_config = FilterParams().model_dump()
+    if config is None:
+        config = default_config
     updated_config = default_config | config
     # Mask creation
     valid = np.ones_like(data["lst"].data)
@@ -75,12 +76,16 @@ def determine_valid_pixels(
     if cloud is not None:
         if isinstance(cloud, str):
             cloud = data[cloud]
-        valid = np.logical_and(valid, mask(cloud, values=updated_config["cloud"]))
+        valid = np.logical_and(
+            valid, mask(cloud, values=updated_config["cloud"])
+        )
     # Identify no water pixels
     if water is not None:
         if isinstance(water, str):
             water = data[water]
-        valid = np.logical_and(valid, mask(water, values=updated_config["water"]))
+        valid = np.logical_and(
+            valid, mask(water, values=updated_config["water"])
+        )
     # Identify pixels computed correctly form previous step
     if qa is not None:
         if isinstance(qa, str):
@@ -90,12 +95,16 @@ def determine_valid_pixels(
     if zones is not None:
         if isinstance(zones, str):
             zones = data[zones]
-        valid = np.logical_and(valid, mask(zones, values=updated_config["zones"]))
+        valid = np.logical_and(
+            valid, mask(zones, values=updated_config["zones"])
+        )
     # Select pixels with land use / land cover
     if cover is not None:
         if isinstance(cover, str):
             cover = data[cover]
-        valid = np.logical_and(valid, mask(cover, values=updated_config["cover"]))
+        valid = np.logical_and(
+            valid, mask(cover, values=updated_config["cover"])
+        )
     return xr.DataArray(
         data=valid,
         dims=data.dims,
@@ -103,7 +112,11 @@ def determine_valid_pixels(
     )
 
 
-def mask(data: npt.ArrayLike, values: npt.ArrayLike, invert=False) -> npt.NDArray:
+def mask(
+    data: npt.ArrayLike,
+    values: npt.ArrayLike,
+    invert=False,
+) -> npt.NDArray:
     """
     Description
     -----------
@@ -117,7 +130,7 @@ def mask(data: npt.ArrayLike, values: npt.ArrayLike, invert=False) -> npt.NDArra
         Values used for masking
     invert : bool
         If True, an element is the returned array is equal to True
-        if the element in daat array is equal to one of the values.
+        if the element in data array is equal to one of the values.
         Default is True.
 
     Returns

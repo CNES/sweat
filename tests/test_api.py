@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# coding: utf8
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
 import os
@@ -7,8 +5,7 @@ import os
 import geopandas as gpd
 import pytest
 
-import evaspa.api as api
-import evaspa.tiling as tiling
+from evaspa import api, tiling
 
 
 def get_data_path() -> str:
@@ -26,10 +23,12 @@ def test_generate_tiles() -> None:
     tiles, adjs = api.generate_tiles(os.path.join(data_path, "roi.gpkg"))
     assert len(tiles) == 8
     assert len(adjs) == 8
-    tiles, adjs = api.generate_tiles(os.path.join(data_path, "roi.gpkg"), orbit_id=110)
+    tiles, adjs = api.generate_tiles(
+        os.path.join(data_path, "roi.gpkg"), orbit_id=110
+    )
     assert tiles.empty
     assert adjs.empty
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Orbit ID must be between 0 and 114"):
         tiles, adjs = api.generate_tiles(
             os.path.join(data_path, "roi.gpkg"), orbit_id=210
         )
@@ -53,7 +52,7 @@ def test_run_evaspa() -> None:
     """
     Test run EVASPA
     """
-    input = {"path": "tests/data/modis_test.tif"}
+    entry = {"path": "tests/data/modis_test.tif"}
     params = {"ef": {"check": {"threshold": 0.02}, "models": "default_evaspa"}}
-    res = api.run_evaspa(input, params)
+    res = api.run_evaspa(entry, params)
     assert res

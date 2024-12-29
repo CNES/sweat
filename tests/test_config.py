@@ -1,9 +1,8 @@
-#!/usr/bin/env python
-# coding: utf8
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
-import pytest
 from pathlib import Path
+
+import pytest
 from pydantic import ValidationError
 
 import evaspa.config as cfg
@@ -15,7 +14,7 @@ def test_read_config() -> None:
     Test read configuration
     """
     p = Path(".") / "tests" / "data" / "input.json"
-    config = cfg.read_config(p)
+    config = cfg.read_config(str(p))
     assert config
 
 
@@ -23,25 +22,25 @@ def test_read_config_exc() -> None:
     """
     Test read configuration (with exception)
     """
-    with pytest.raises(IOError):
-        p = Path(".") / "tests" / "data" / "input.yaml"
-        cfg.read_config(p)
+    p = Path(".") / "tests" / "data" / "input.yaml"
+    with pytest.raises(OSError, match="Unable to read configuration file"):
+        cfg.read_config(str(p))
 
 
 @pytest.mark.parametrize(
-    "format",
+    "fmt",
     [
         "json",
         "JSON",
     ],
 )
-def test_write_config(format, tmp_path) -> None:
+def test_write_config(fmt, tmp_path) -> None:
     """
     Test write configuration
     """
     p = Path(tmp_path)
     config = {"input": "foo", "output": "foo", "params": "foo"}
-    cfg.write_config(config, p, format=format)
+    cfg.write_config(config, str(p), fmt=fmt)
     p = p / "config.json"
     assert p.exists()
 
@@ -50,33 +49,37 @@ def test_write_config_exc(tmp_path) -> None:
     """
     Test read configuration (with exception)
     """
-    with pytest.raises(ValueError):
-        p = Path(tmp_path)
-        config = {"input": "foo", "output": "foo", "params": "foo"}
-        cfg.write_config(config, p, format="yaml")
+    p = Path(tmp_path)
+    config = {"input": "foo", "output": "foo", "params": "foo"}
+    with pytest.raises(
+        ValueError, match="Unsupported format for configuration file"
+    ):
+        cfg.write_config(config, str(p), fmt="yaml")
 
 
 def test_inputconfig() -> None:
     """
     Test InputConfig
     """
-    input = {"path": "tests/data/modis_test.tif"}
-    cfg.InputConfig.model_validate(input)
+    entry = {"path": "tests/data/modis_test.tif"}
+    cfg.InputConfig.model_validate(entry)
 
 
 @pytest.mark.parametrize(
-    "input,exception",
+    ("entry", "exception"),
     [
         pytest.param({"foo": "foo"}, pytest.raises(ValidationError)),
-        pytest.param({"path": "foo"}, pytest.raises(IOError)),
+        pytest.param(
+            {"path": "foo"}, pytest.raises(OSError, match="Path not found")
+        ),
     ],
 )
-def test_inputconfig_exc(input, exception) -> None:
+def test_inputconfig_exc(entry, exception) -> None:
     """
     Test InputConfig with error
     """
     with exception:
-        cfg.InputConfig.model_validate(input)
+        cfg.InputConfig.model_validate(entry)
 
 
 def test_outputconfig(tmp_path) -> None:
@@ -122,36 +125,35 @@ def test_version(version, tmp_path) -> None:
     Test version in InputFile
     """
     d = Path(tmp_path) / "out"
-    config = dict(
-        input={"path": "tests/data/modis_test.tif"},
-        output={"path": str(d)},
-        params={
+    config = {
+        "input": {"path": "tests/data/modis_test.tif"},
+        "output": {"path": str(d)},
+        "params": {
             "ef": {
                 "check": {"threshold": 10},
                 "models": "default_evaspa",
             }
         },
-    )
+    }
     if version is not None:
         config["version"] = version
-    print(config)
-    input = cfg.InputFile.model_validate(config)
-    assert input.version == __version__
+    entry = cfg.InputFile.model_validate(config)
+    assert entry.version == __version__
 
 
 def test_check() -> None:
     """
     Test check method
     """
-    config = dict(
-        input={"path": "tests/data/modis_test.tif"},
-        output={"path": "out"},
-        params={
+    config = {
+        "input": {"path": "tests/data/modis_test.tif"},
+        "output": {"path": "out"},
+        "params": {
             "ef": {
                 "check": {"threshold": 10},
                 "models": "default_evaspa",
                 "options": {"merging": "mean"},
             },
         },
-    )
+    }
     assert cfg.check_config(config)

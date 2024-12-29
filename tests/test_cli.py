@@ -1,12 +1,11 @@
-#!/usr/bin/env python
-# coding: utf8
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
-import os
 import json
-import pytest
+import os
 
+import pytest
 from click.testing import CliRunner
+
 from evaspa import cli
 
 

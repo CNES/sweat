@@ -1,27 +1,30 @@
 {
     "python.defaultInterpreterPath": "./.pixi/envs/default/bin/python",
-    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.defaultFormatter": "charliermarsh.ruff",
     "editor.formatOnPaste": true,
     "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit",
+    },
+    "notebook.formatOnSave.enabled": true,
+      "notebook.codeActionsOnSave": {
+    "notebook.source.organizeImports": "explicit",
+    },
+    "pylint.enabled": false,
+    "flake8.enabled": false,
     "python.testing.pytestEnabled": true,
-    "python.testing.pytestPath": ".pixi/envs/default/bin/pytest",
+    "python.testing.pytestPath": "./.pixi/envs/default/bin/pytest",
     "python.testing.unittestEnabled": false,
-    "pylint.enabled": true,
-    "pylint.args": [
-        "logging-format-style=fstr",
-    ],
     "mypy-type-checker.args": [
         "--ignore-missing-imports",
         "--follow-imports=silent",
         "--show-column-numbers"
     ],
-    "flake8.args": [
-        "--max-line-length=120",
-    ],
     "files.watcherExclude": {
         "**/.git/objects/**": true,
         "**/.git/subtree-cache/**": true,
-        "**/venv/**": true,
+        "**/.pixi/**": true,
     },
-    "python.envFile": "${workspaceFolder}/.env",
+    "ruff.enable": true,
+    "ruff.configuration": "./ruff.toml"
 }

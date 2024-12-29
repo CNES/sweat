@@ -1,22 +1,20 @@
-#!/usr/bin/env python
-# coding: utf8
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
-import pytest
 import numpy as np
+import pytest
 import xarray as xr
 
 from evaspa.seb import (
     CST_SB,
     SEBConfig,
+    compute_g_choudhury,
     compute_g_kustas,
     compute_g_su,
-    compute_g_choudhury,
-    compute_rn,
     compute_le,
-    create_net_radiation,
+    compute_rn,
     create_gflux,
     create_le,
+    create_net_radiation,
     run,
 )
 
@@ -41,7 +39,9 @@ def setup_data(
     ndvi_arr = np.random.uniform(low=-1.0, high=1.0, size=(size, size))
     lai_arr = np.random.uniform(low=0, high=10.0, size=(size, size))
     fcover_arr = np.random.uniform(low=0, high=1.0, size=(size, size))
-    valid_arr = np.random.choice([0, 1], size=(size, size), p=[1 - valid, valid])
+    valid_arr = np.random.choice(
+        [0, 1], size=(size, size), p=[1 - valid, valid]
+    )
     if nan:
         lst_arr = np.where(valid_arr == 1, lst_arr, np.nan)
         emis_arr = np.where(valid_arr == 1, emis_arr, np.nan)
@@ -59,54 +59,57 @@ def setup_data(
             rld_tmp = np.where(valid_arr == 1, rld_tmp, np.nan)
         rsd_arr.append(rsd_tmp)
         rld_arr.append(rld_tmp)
-    data_vars = dict(
-        albedo=(["lat", "lon"], albedo_arr),
-        lst=(["lat", "lon"], lst_arr),
-        emis=(["lat", "lon"], emis_arr),
-        ndvi=(["lat", "lon"], ndvi_arr),
-        lai=(["lat", "lon"], lai_arr),
-        fcover=(["lat", "lon"], fcover_arr),
-        valid=(["lat", "lon"], valid_arr),
-    )
+    data_vars = {
+        "albedo": (["lat", "lon"], albedo_arr),
+        "lst": (["lat", "lon"], lst_arr),
+        "emis": (["lat", "lon"], emis_arr),
+        "ndvi": (["lat", "lon"], ndvi_arr),
+        "lai": (["lat", "lon"], lai_arr),
+        "fcover": (["lat", "lon"], fcover_arr),
+        "valid": (["lat", "lon"], valid_arr),
+    }
     data_vars["rsd"] = (["lat", "lon"], rsd_arr[0])
     data_vars["rld"] = (["lat", "lon"], rld_arr[0])
     for i in np.arange(1, nb):
         data_vars[f"rsd_{i}"] = (["lat", "lon"], rsd_arr[i])
         data_vars[f"rld_{i}"] = (["lat", "lon"], rld_arr[i])
-    ds = xr.Dataset(
+    return xr.Dataset(
         data_vars=data_vars,
-        coords=dict(
-            lon=("lon", lon),
-            lat=("lat", lat),
-        ),
-        attrs=dict(description="Test data"),
+        coords={
+            "lon": ("lon", lon),
+            "lat": ("lat", lat),
+        },
+        attrs={"description": "Test data"},
     )
-    return ds
 
 
 def setup_dataset(
-    vars: list[str], min: float = 0.0, max: float = 1.0, size: int = 125, seed: int = 0
+    variables: list[str],
+    min_value: float = 0.0,
+    max_value: float = 1.0,
+    size: int = 125,
+    seed: int = 0,
 ):
     """
     Create a rondom dataset
     """
-    assert len(vars) > 0
+    assert len(variables) > 0
     np.random.seed(seed)
     lon = np.linspace(start=1.0, stop=2.0, num=size, dtype=np.float32)
     lat = np.linspace(start=43.0, stop=44.0, num=size, dtype=np.float32)
     data_vars = {}
-    for var in vars:
+    for var in variables:
         data_vars[var] = (
             ["lat", "lon"],
-            np.random.uniform(low=min, high=max, size=(size, size)),
+            np.random.uniform(low=min_value, high=max_value, size=(size, size)),
         )
     return xr.Dataset(
         data_vars=data_vars,
-        coords=dict(
-            lon=("lon", lon),
-            lat=("lat", lat),
-        ),
-        attrs=dict(description="Test data"),
+        coords={
+            "lon": ("lon", lon),
+            "lat": ("lat", lat),
+        },
+        attrs={"description": "Test data"},
     )
 
 
@@ -134,7 +137,7 @@ def test_compute_rn() -> None:
 
 
 @pytest.mark.parametrize(
-    "params,expected",
+    ("params", "expected"),
     [
         pytest.param({"nb": 1}, 1),
         pytest.param({"nb": 3}, 3),
@@ -209,8 +212,8 @@ def test_create_le() -> None:
     Test create LE dataset
     """
     ef = setup_dataset(["m1", "m2", "m3"])
-    rn = setup_dataset(["rn1", "rn2"], min=200, max=250)
-    gflux = setup_dataset(["g1", "g2", "g3"], min=100, max=150)
+    rn = setup_dataset(["rn1", "rn2"], min_value=200, max_value=250)
+    gflux = setup_dataset(["g1", "g2", "g3"], min_value=100, max_value=150)
     le = create_le(ef, rn, gflux)
     assert len(le.data_vars) == 18
 

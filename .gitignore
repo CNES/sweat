@@ -10,6 +10,7 @@ __pycache__/
 # Notebooks
 .ipynb_checkpoints/
 Untitled*.ipynb
+notebooks/groups.*
 
 # Data
 *.tif

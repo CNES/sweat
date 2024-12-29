@@ -1,13 +1,12 @@
-#!/usr/bin/env python
-# coding: utf8
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 """
 Module to manage valid zones for EVASPA
 """
 
-from typing import List, Tuple
+from __future__ import annotations
 
-import affine
+from typing import TYPE_CHECKING
+
 import geopandas as gpd
 import numpy as np
 import rasterio as rio
@@ -19,8 +18,13 @@ from shapely.geometry import MultiPolygon, Polygon, shape
 
 from evaspa.dem import get_dem_from_tiles
 
+if TYPE_CHECKING:
+    import affine
 
-def compute_water_mask(xrds: xr.Dataset, land: gpd.GeoDataFrame) -> xr.DataArray:
+
+def compute_water_mask(
+    xrds: xr.Dataset, land: gpd.GeoDataFrame
+) -> xr.DataArray:
     """
     Compute the water on a ROI
 
@@ -36,7 +40,9 @@ def compute_water_mask(xrds: xr.Dataset, land: gpd.GeoDataFrame) -> xr.DataArray
     water: xarray.DataArray
     """
     bounds = rio.coords.BoundingBox(
-        *rio.transform.array_bounds(xrds.sizes["y"], xrds.sizes["x"], xrds.transform)
+        *rio.transform.array_bounds(
+            xrds.sizes["y"], xrds.sizes["x"], xrds.transform
+        )
     )
     wgs84_bounds = sio_utils.compute_latlon_bbox_from_region(bounds, xrds.crs)
     roi_poly = Polygon(
@@ -47,9 +53,11 @@ def compute_water_mask(xrds: xr.Dataset, land: gpd.GeoDataFrame) -> xr.DataArray
             [wgs84_bounds[2], wgs84_bounds[1]],
         ]
     )
-    roi = gpd.GeoDataFrame(data={"id": ["roi"]}, crs="EPSG:4326", geometry=[roi_poly])
+    roi = gpd.GeoDataFrame(
+        data={"id": ["roi"]}, crs="EPSG:4326", geometry=[roi_poly]
+    )
     overlap = gpd.overlay(land, roi)
-    water_mask = xr.DataArray(
+    return xr.DataArray(
         rio_features.geometry_mask(
             overlap["geometry"].to_crs(xrds.crs),
             out_shape=(xrds.sizes["y"], xrds.sizes["x"]),
@@ -58,11 +66,10 @@ def compute_water_mask(xrds: xr.Dataset, land: gpd.GeoDataFrame) -> xr.DataArray
         coords=xrds.coords,
         dims=("y", "x"),
     )
-    return water_mask
 
 
 def multi_erosion(
-    im: np.ndarray, num: int = 2, footprint: np.ndarray = skm.square(3)
+    im: np.ndarray, num: int = 2, footprint: np.ndarray | None = None
 ) -> np.ndarray:
     """
     Perform multiple erosion on a binary image
@@ -80,15 +87,19 @@ def multi_erosion(
     -------
     eroded_im: np.ndarray
     """
-    assert num > 0
+    if footprint is None:
+        footprint = skm.footprint_rectangle((3, 3))
+    if num <= 0:
+        msg = "num must be greater than 0"
+        raise ValueError(msg)
     eroded_im = np.copy(im)
-    for i in range(num):
+    for _ in range(num):
         eroded_im = skm.binary_erosion(eroded_im, footprint=footprint)
     return eroded_im
 
 
 def multi_dilatation(
-    im: np.ndarray, num: int = 2, footprint: np.ndarray = skm.square(3)
+    im: np.ndarray, num: int = 2, footprint: np.ndarray | None = None
 ) -> np.ndarray:
     """
     Perform multiple dilation on a binary image
@@ -106,9 +117,13 @@ def multi_dilatation(
     -------
     dilated_im: np.ndarray
     """
-    assert num > 0
+    if footprint is None:
+        footprint = skm.footprint_rectangle((3, 3))
+    if num <= 0:
+        msg = "num must be greater than 0"
+        raise ValueError(msg)
     dilated_im = np.copy(im)
-    for i in range(num):
+    for _ in range(num):
         dilated_im = skm.binary_dilation(dilated_im, footprint=footprint)
     return dilated_im
 
@@ -148,7 +163,9 @@ def compute_valid_mask(
     valid = xrds_dem["height"]
     # Filter with water_mask
     if "water_mask" in xrds_dem.variables:
-        valid = xr.where(xrds_dem["water_mask"] == 0, xrds_dem["height"], np.nan)
+        valid = xr.where(
+            xrds_dem["water_mask"] == 0, xrds_dem["height"], np.nan
+        )
 
     # Filtre with slope
     valid = xr.where(xrds_dem["slope"] < slope_threshold, valid, np.nan)
@@ -168,10 +185,14 @@ def compute_valid_mask(
         range_max = bins[-1]
     else:
         range_max = bins[ind + window_size]
-    valid = xr.where((range_min < valid) & (valid < range_max), 1, 0).astype("uint8")
+    valid = xr.where((range_min < valid) & (valid < range_max), 1, 0).astype(
+        "uint8"
+    )
     # Simplify
     if simplify:
-        clean_valid = multi_dilatation(valid.data, 2, footprint=skm.square(3))
+        clean_valid = multi_dilatation(
+            valid.data, 2, footprint=skm.footprint_rectangle((3, 3))
+        )
         clean_valid = skm.remove_small_holes(
             clean_valid, area_threshold=200, connectivity=2
         )
@@ -185,7 +206,7 @@ def define_valid_pixels(
     slope_threshold: float = 30,
     range_threshold: int = 300,
     simplify: bool = True,
-) -> Tuple[float, xr.Dataset]:
+) -> tuple[float, xr.Dataset]:
     """
     For a dem, compute water mask and
     valid pixels by applying the
@@ -233,7 +254,7 @@ def polygonize_mask(
     mask: np.ndarray,
     transform: affine.Affine,
     label: int = 1,
-) -> List[Polygon]:
+) -> list[Polygon]:
     """
     Polygonize a mask
 
@@ -261,13 +282,13 @@ def polygonize_mask(
 
 
 def define_valid_zones(
-    tiles: List[str],
+    tiles: list[str],
     land: gpd.GeoDataFrame | None = None,
     slope_threshold: float = 30,
     range_threshold: int = 300,
     simplify: bool = True,
     poly_simplify: int = 0,
-) -> Tuple[float, int, MultiPolygon]:
+) -> tuple[float, int, MultiPolygon]:
     """
     For a list of tile IDs, read DEM,
     compute water mask and
@@ -333,4 +354,4 @@ def define_valid_zones(
     # Compute number and percentage of valid pixels
     nbvalid = (valid.data == 1).sum()
     pvalid = (valid.data == 1).sum() / valid.data.size
-    return pvalid, nbvalid, MultiPolygon([poly for poly in gpd_polys.geometry])
+    return pvalid, nbvalid, MultiPolygon(list(gpd_polys.geometry))

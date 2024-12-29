@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# coding: utf8
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
 import os
@@ -9,7 +7,7 @@ import numpy as np
 import pandas as pd
 from shapely.geometry import MultiPolygon, Polygon
 
-import evaspa.tiling as tiling
+from evaspa import tiling
 
 
 def get_data_path() -> str:
@@ -104,7 +102,9 @@ def test_get_adjacent_tiles() -> None:
     adjs = tiling.get_adjacent_tiles("33SWD", tiles, land)
     assert adjs
     np.testing.assert_array_equal(adjs, ["33SWC", "33SXD", "33TWE"])
-    adjs = tiling.get_adjacent_tiles("33SWD", tiles, land, orbit_id=7, orbit=orbits)
+    adjs = tiling.get_adjacent_tiles(
+        "33SWD", tiles, land, orbit_id=7, orbit=orbits
+    )
     assert adjs
     np.testing.assert_array_equal(adjs, ["33SWC", "33TWE"])
 
@@ -183,9 +183,13 @@ def test_regroup() -> None:
     adjs = tiling.generate_adjacents(roi_tiles, land)
     regroup_threshold = 100
     tile_df, group_df = tiling.initialize_regroup(roi_tiles, land)
-    tile_df, group_df = tiling.regroup(tile_df, adjs, group_df, regroup_threshold, land)
+    tile_df, group_df = tiling.regroup(
+        tile_df, adjs, group_df, regroup_threshold, land
+    )
     assert len(group_df) == 9
     regroup_threshold = 1000000
     tile_df, group_df = tiling.initialize_regroup(roi_tiles, land)
-    tile_df, group_df = tiling.regroup(tile_df, adjs, group_df, regroup_threshold, land)
+    tile_df, group_df = tiling.regroup(
+        tile_df, adjs, group_df, regroup_threshold, land
+    )
     assert len(group_df) == 4

@@ -1,15 +1,14 @@
-#!/usr/bin/env python
-# coding: utf8
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
 import os
-import pytest
+
 import numpy as np
-import xarray as xr
+import pytest
 import rasterio as rio
+import xarray as xr
 from pyproj import CRS
 
-import evaspa.io as io
+from evaspa import io
 
 
 def get_test_data_dir() -> str:
@@ -17,7 +16,8 @@ def get_test_data_dir() -> str:
     Get directory path for test data
     """
     if os.environ["EVASPA_TEST_DATA_PATH"] is None:
-        raise Exception("Variable EVASPA_TEST_DATA_PATH must be set")
+        msg = "Variable EVASPA_TEST_DATA_PATH must be set"
+        raise ValueError(msg)
     return os.environ["EVASPA_TEST_DATA_PATH"]
 
 
@@ -30,24 +30,22 @@ def test_read_data_from_file() -> None:
     xarr = io.read_data_from_file(input_path)
     assert xarr.sizes["x"] == 1832
     assert xarr.sizes["y"] == 1832
-    assert set([i for i in xarr.data_vars]) == set(
-        [
-            "qa",
-            "ndvi",
-            "rld",
-            "emis",
-            "red",
-            "blue",
-            "cloud",
-            "lai",
-            "albedo",
-            "green",
-            "lst",
-            "water",
-            "rsd",
-            "nir",
-        ]
-    )
+    assert set(xarr.data_vars) == {
+        "qa",
+        "ndvi",
+        "rld",
+        "emis",
+        "red",
+        "blue",
+        "cloud",
+        "lai",
+        "albedo",
+        "green",
+        "lst",
+        "water",
+        "rsd",
+        "nir",
+    }
 
 
 @pytest.mark.requires_test_data
@@ -59,24 +57,22 @@ def test_read_data() -> None:
     xarr = io.read_data(input_path)
     assert xarr.sizes["x"] == 1832
     assert xarr.sizes["y"] == 1832
-    assert set([i for i in xarr.data_vars]) == set(
-        [
-            "qa",
-            "ndvi",
-            "rld",
-            "emis",
-            "red",
-            "blue",
-            "cloud",
-            "lai",
-            "albedo",
-            "green",
-            "lst",
-            "water",
-            "rsd",
-            "nir",
-        ]
-    )
+    assert set(xarr.data_vars) == {
+        "qa",
+        "ndvi",
+        "rld",
+        "emis",
+        "red",
+        "blue",
+        "cloud",
+        "lai",
+        "albedo",
+        "green",
+        "lst",
+        "water",
+        "rsd",
+        "nir",
+    }
 
 
 def setup_data(georef: bool = False) -> xr.Dataset:
@@ -89,15 +85,21 @@ def setup_data(georef: bool = False) -> xr.Dataset:
     crs = CRS(4326)
     transform = rio.transform.from_bounds(0.5, 42.0, 1.5, 43.0, 11, 11)
     data = xr.Dataset(
-        data_vars=dict(
-            band1=(["lat", "lon"], np.random.uniform(low=0, high=10, size=(11, 9))),
-            band2=(["lat", "lon"], np.random.uniform(low=0, high=1, size=(11, 9))),
-        ),
-        coords=dict(
-            lon=("lon", lon),
-            lat=("lat", lat),
-        ),
-        attrs=dict(description="Test data"),
+        data_vars={
+            "band1": (
+                ["lat", "lon"],
+                np.random.uniform(low=0, high=10, size=(11, 9)),
+            ),
+            "band2": (
+                ["lat", "lon"],
+                np.random.uniform(low=0, high=1, size=(11, 9)),
+            ),
+        },
+        coords={
+            "lon": ("lon", lon),
+            "lat": ("lat", lat),
+        },
+        attrs={"description": "Test data"},
     )
     if georef:
         data = data.assign_attrs({"crs": crs, "transform": transform})
@@ -105,7 +107,7 @@ def setup_data(georef: bool = False) -> xr.Dataset:
 
 
 @pytest.mark.parametrize(
-    "georef,separated,expected",
+    ("georef", "separated", "expected"),
     [
         pytest.param(True, False, 1),
         pytest.param(True, True, 2),

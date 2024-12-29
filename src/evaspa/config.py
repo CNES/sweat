@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# coding: utf8
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 """
 Module for configuration management
@@ -10,15 +8,24 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+from typing import Annotated
 
-from typing_extensions import Annotated
-
-from pydantic import BaseModel, AfterValidator, field_validator, Field, ConfigDict
+from packaging.version import Version
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+)
 
 from evaspa.__about__ import __version__
+from evaspa.ef import EFConfig  # noqa TC001
 from evaspa.filter import FilterConfig
-from evaspa.ef import EFConfig
+from evaspa.logging import LoggerManager
 from evaspa.seb import SEBConfig
+
+logger = LoggerManager.get_logger(__name__)
 
 
 class InputFile(BaseModel):
@@ -34,6 +41,9 @@ class InputFile(BaseModel):
     @field_validator("version")
     @classmethod
     def update_version(cls, v: str) -> str:
+        if Version(v) > Version(__version__):
+            msg = "File generated with a newer version"
+            logger.warning(msg)
         return str(__version__)
 
 
@@ -50,7 +60,8 @@ class InputConfig(BaseModel):
     @classmethod
     def test_path(cls, v: str) -> str:
         if not os.path.exists(v):
-            raise IOError(f"Path not found: {v}")
+            msg = f"Path not found: {v}"
+            raise OSError(msg)
         return v
 
 
@@ -103,13 +114,13 @@ def read_config(path: str) -> dict:
     suffix = Path(path).suffix
     if suffix == ".json":
         with open(path) as json_file:
-            json_data = json.load(json_file)
-            return json_data
+            return json.load(json_file)
     else:
-        raise IOError("Unable to read configuration file (unknown format)")
+        msg = "Unable to read configuration file (unknown format)"
+        raise OSError(msg)
 
 
-def write_config(config: dict, path: str, format: str = "json") -> None:
+def write_config(config: dict, path: str, fmt: str = "json") -> None:
     """
     Description
     -----------
@@ -121,15 +132,16 @@ def write_config(config: dict, path: str, format: str = "json") -> None:
         Dictionary containing the configuration parameters
     path: str
         Directory path
-    format: str
+    fmt: str
         Configuration file format (default=JSON)
     """
     output_dir = Path(path)
-    if format.lower() == "json":
+    if fmt.lower() == "json":
         with open(output_dir / "config.json", "w") as f:
             json.dump(config, f, indent=4, default=lambda x: x.value)
     else:
-        raise ValueError(f"Unsupported format for configuration file ({format})")
+        msg = f"Unsupported format for configuration file ({fmt})"
+        raise ValueError(msg)
 
 
 def check_config(config: dict) -> dict:

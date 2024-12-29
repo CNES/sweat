@@ -1,12 +1,11 @@
-#!/usr/bin/env python
-# coding: utf8
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 """
 Module for DEM management
 """
 
+from __future__ import annotations
+
 import os
-from typing import Dict, List, Tuple
 
 import numpy as np
 import rasterio as rio
@@ -15,11 +14,14 @@ from rasterio.merge import merge as rio_merge
 from sensorsio import mgrs
 from sensorsio.regulargrid import read_as_numpy
 
+ASPECT_MIN = 0
+ASPECT_MAX = 90
+
 
 def get_dem_from_tile(
     tile_id: str,
     resolution: float = 60,
-    base_dir: str = os.path.join(os.environ["MNT_PATH"], "DEM_Copercinus_30m/"),
+    base_dir: str | None = None,
 ):
     """
     Read one tile for DEM Copernicus
@@ -40,8 +42,12 @@ def get_dem_from_tile(
     -------
     xarr: xarray.Dataset
     """
+    if base_dir is None:
+        base_dir = os.path.join(os.environ["MNT_PATH"], "DEM_Copercinus_30m/")
     file_name = os.path.join(base_dir, f"COP-DEM_GLO-30-DGED_{tile_id}.tif")
-    assert os.path.isfile(file_name)
+    if not os.path.isfile(file_name):
+        msg = f"DEM file not found: {file_name}"
+        raise OSError(msg)
     elevation, xcoords, ycoords, crs = read_as_numpy(
         [file_name],
         resolution=resolution,
@@ -54,21 +60,21 @@ def get_dem_from_tile(
     # Aspect unfolding rules from
     # https://github.com/r-barnes/richdem/blob/603cd9d16164393e49ba8e37322fe82653ed5046/include/richdem/methods/terrain_attributes.hpp#L236
     aspect = np.rad2deg(np.arctan2(x, -y))
-    lt_0 = aspect < 0
-    gt_90 = aspect > 90
-    remaining = np.logical_and(aspect >= 0, aspect <= 90)
-    aspect[lt_0] = 90 - aspect[lt_0]
-    aspect[gt_90] = 360 - aspect[gt_90] + 90
-    aspect[remaining] = 90 - aspect[remaining]
+    lt_0 = aspect < ASPECT_MIN
+    gt_90 = aspect > ASPECT_MAX
+    remaining = np.logical_and(aspect >= ASPECT_MIN, aspect <= ASPECT_MAX)
+    aspect[lt_0] = ASPECT_MAX - aspect[lt_0]
+    aspect[gt_90] = 360 - aspect[gt_90] + ASPECT_MAX
+    aspect[remaining] = ASPECT_MAX - aspect[remaining]
     left = np.min(xcoords) - resolution / 2
     top = np.max(ycoords) + resolution / 2
     transform = rio.Affine(resolution, 0.0, left, 0.0, -resolution, top)
-    vars: Dict[str, Tuple[List[str], np.ndarray]] = {}
-    vars["height"] = (["y", "x"], elevation)
-    vars["slope"] = (["y", "x"], slope)
-    vars["aspect"] = (["y", "x"], aspect)
-    xarr = xr.Dataset(
-        vars,
+    data_vars: dict[str, tuple[list[str], np.ndarray]] = {}
+    data_vars["height"] = (["y", "x"], elevation)
+    data_vars["slope"] = (["y", "x"], slope)
+    data_vars["aspect"] = (["y", "x"], aspect)
+    return xr.Dataset(
+        data_vars,
         coords={"x": xcoords, "y": ycoords},
         attrs={
             "crs": crs,
@@ -76,13 +82,10 @@ def get_dem_from_tile(
             "transform": transform,
         },
     )
-    return xarr
 
 
 def get_dem_from_tiles(
-    tile_ids: List[str],
-    resolution: float = 60,
-    base_dir=os.path.join(os.environ["MNT_PATH"], "DEM_Copercinus_30m/"),
+    tile_ids: list[str], resolution: float = 60, base_dir: str | None = None
 ) -> xr.Dataset:
     """
     Read several tiles for DEM Copernicus
@@ -104,7 +107,11 @@ def get_dem_from_tiles(
     -------
     xarr: xarray.Dataset
     """
-    assert len(tile_ids) > 0
+    if base_dir is None:
+        base_dir = os.path.join(os.environ["MNT_PATH"], "DEM_Copercinus_30m/")
+    if len(tile_ids) == 0:
+        msg = "No DEM tiles requested"
+        raise ValueError(msg)
     # Get CRS from first tile
     crs = f"EPSG:{mgrs.get_crs_mgrs_tile(tile_ids[0]).to_epsg()}"
     # Get file paths
@@ -137,21 +144,21 @@ def get_dem_from_tiles(
     # Aspect unfolding rules from
     # https://github.com/r-barnes/richdem/blob/603cd9d16164393e49ba8e37322fe82653ed5046/include/richdem/methods/terrain_attributes.hpp#L236
     aspect = np.rad2deg(np.arctan2(x, -y))
-    lt_0 = aspect < 0
-    gt_90 = aspect > 90
-    remaining = np.logical_and(aspect >= 0, aspect <= 90)
-    aspect[lt_0] = 90 - aspect[lt_0]
-    aspect[gt_90] = 360 - aspect[gt_90] + 90
-    aspect[remaining] = 90 - aspect[remaining]
+    lt_0 = aspect < ASPECT_MIN
+    gt_90 = aspect > ASPECT_MAX
+    remaining = np.logical_and(aspect >= ASPECT_MIN, aspect <= ASPECT_MAX)
+    aspect[lt_0] = ASPECT_MAX - aspect[lt_0]
+    aspect[gt_90] = 360 - aspect[gt_90] + ASPECT_MAX
+    aspect[remaining] = ASPECT_MAX - aspect[remaining]
     left = np.min(xcoords) - resolution / 2
     top = np.max(ycoords) + resolution / 2
     transform = rio.Affine(resolution, 0.0, left, 0.0, -resolution, top)
-    vars: Dict[str, Tuple[List[str], np.ndarray]] = {}
-    vars["height"] = (["y", "x"], elevation)
-    vars["slope"] = (["y", "x"], slope)
-    vars["aspect"] = (["y", "x"], aspect)
-    xarr = xr.Dataset(
-        vars,
+    data_vars: dict[str, tuple[list[str], np.ndarray]] = {}
+    data_vars["height"] = (["y", "x"], elevation)
+    data_vars["slope"] = (["y", "x"], slope)
+    data_vars["aspect"] = (["y", "x"], aspect)
+    return xr.Dataset(
+        data_vars,
         coords={"x": xcoords, "y": ycoords},
         attrs={
             "crs": crs,
@@ -159,4 +166,3 @@ def get_dem_from_tiles(
             "transform": transform,
         },
     )
-    return xarr

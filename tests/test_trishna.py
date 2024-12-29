@@ -1,9 +1,7 @@
-#!/usr/bin/env python
-# coding: utf8
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
 
-import evaspa.trishna as trishna
+from evaspa import trishna
 
 
 def test_get_trishna_tiles() -> None:

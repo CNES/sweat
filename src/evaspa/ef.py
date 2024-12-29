@@ -1,26 +1,27 @@
-#!/usr/bin/env python
-# coding: utf8
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
 from __future__ import annotations
 
-import os
 import json
-
+import os
 from dataclasses import dataclass
-from typing import Any, List
-from typing_extensions import Annotated
 from pathlib import Path
+from typing import Annotated, Any
 
 import numpy as np
 import numpy.typing as npt
 import xarray as xr
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    ValidationError,
+)
 
-from pydantic import BaseModel, ValidationError, BeforeValidator, ConfigDict, Field
-
-from .edge import Edge, EdgeError, EdgeConfig
-from .merging import MergeMethod, merge_to_dataset
+from evaspa.edge import Edge, EdgeConfig, EdgeError
 from evaspa.logging import LoggerManager
+from evaspa.merging import MergeMethod, merge_to_dataset
 
 logger = LoggerManager.get_logger(__name__)
 
@@ -57,7 +58,7 @@ class EFCheckConfig(BaseModel):
     threshold: float = Field(default=0.02)
 
 
-def update_efconfig(v: Any) -> List[EFModel]:
+def update_efconfig(v: Any) -> list[EFModel]:
     """
     Description
     -----------
@@ -81,7 +82,8 @@ def update_efconfig(v: Any) -> List[EFModel]:
     if isinstance(v, str):
         filename = os.path.join(config_path, f"{v}.json")
         if not os.path.isfile(filename):
-            raise IOError(f"No config file: {filename}")
+            msg = f"No config file: {filename}"
+            raise OSError(msg)
         # Read config file
         with open(filename) as json_file:
             conf = json.load(json_file)
@@ -89,7 +91,7 @@ def update_efconfig(v: Any) -> List[EFModel]:
     return v
 
 
-def get_available_configuration() -> List[str]:
+def get_available_configuration() -> list[str]:
     """
     Description
     -----------
@@ -154,11 +156,15 @@ class EFModel:
             Name of the data variables used for masking
         """
         if self.var not in data.data_vars:
-            raise EFModelError(f"{self.var} not in the dataset")
+            msg = f"{self.var} not in the dataset"
+            raise EFModelError(msg)
         if "lst" not in data.data_vars:
-            raise EFModelError("lst not in the dataset")
+            msg = "lst not in the dataset"
+            raise EFModelError(msg)
         if mask is not None:
-            assert mask in data.data_vars
+            if mask not in data.data_vars:
+                msg = f"No mask {mask}"
+                raise ValueError(msg)
             data_masked = data.where(data[mask], drop=True)
         else:
             data_masked = data
@@ -201,7 +207,9 @@ class EFModel:
         """
         return self.wet_edge.get(var)
 
-    def compute(self, data: xr.Dataset, mask: str | None = None) -> xr.DataArray:
+    def compute(
+        self, data: xr.Dataset, mask: str | None = None
+    ) -> xr.DataArray:
         """
         Description
         -----------
@@ -222,15 +230,21 @@ class EFModel:
             Evaporative Fraction
         """
         if self.var not in data.data_vars:
-            raise EFModelError(f"{self.var} not in the dataset")
+            msg = f"{self.var} not in the dataset"
+            raise EFModelError(msg)
         if "lst" not in data.data_vars:
-            raise EFModelError("lst not in the dataset")
+            msg = "lst not in the dataset"
+            raise EFModelError(msg)
         if mask is not None:
-            assert mask in data.data_vars
+            if mask not in data.data_vars:
+                msg = f"No mask {mask}"
+                raise ValueError(msg)
             data_masked = data.where(data[mask], drop=True)
         else:
             data_masked = data
-        ef = (self.tdry(data_masked[self.var]) - np.array(data_masked["lst"])) / (
+        ef = (
+            self.tdry(data_masked[self.var]) - np.array(data_masked["lst"])
+        ) / (
             self.tdry(data_masked[self.var]) - self.twet(data_masked[self.var])
         )
         ef = np.where(ef > 1, 1, ef)
@@ -299,7 +313,8 @@ class EFModel:
         try:
             efconfig = EFModelConfig.model_validate(config)
         except ValidationError as e:
-            raise EFConfigError("Error in model configuration") from e
+            msg = "Error in model configuration"
+            raise EFConfigError(msg) from e
         return efconfig
 
     @classmethod
@@ -333,22 +348,33 @@ class EFModel:
 
         # Dry edge
         try:
-            dry_edge = Edge.create(efconfig.dry_edge.type, efconfig.dry_edge.config)
+            dry_edge = Edge.create(
+                efconfig.dry_edge.type, efconfig.dry_edge.config
+            )
         except EdgeError as e:
-            raise EFModelError("Error in dry edge creation") from e
+            msg = "Error in dry edge creation"
+            raise EFModelError(msg) from e
         # Wet edge
         try:
-            wet_edge = Edge.create(efconfig.wet_edge.type, efconfig.wet_edge.config)
+            wet_edge = Edge.create(
+                efconfig.wet_edge.type, efconfig.wet_edge.config
+            )
         except EdgeError as e:
-            raise EFModelError("Error in wet edge creation") from e
+            msg = "Error in wet edge creation"
+            raise EFModelError(msg) from e
 
         return cls(
-            name=efconfig.name, dry_edge=dry_edge, wet_edge=wet_edge, var=efconfig.var
+            name=efconfig.name,
+            dry_edge=dry_edge,
+            wet_edge=wet_edge,
+            var=efconfig.var,
         )
 
 
 def check_variability(
-    lst: npt.ArrayLike, mask: npt.ArrayLike | None = None, threshold: float = 2.0
+    lst: npt.ArrayLike,
+    mask: npt.ArrayLike | None = None,
+    threshold: float = 2.0,
 ) -> bool:
     """
     Description
@@ -378,7 +404,9 @@ def check_variability(
         m = np.ones_like(t)
     else:
         m = np.array(mask)
-        assert t.shape == m.shape
+        if t.shape != m.shape:
+            msg = "LST and mask are not the same size"
+            raise ValueError(msg)
     t = np.where(np.array(m) > 0, t, np.nan)
     # Compute the minimum and maximum values
     # of the relative difference from land surface temperature
@@ -388,7 +416,8 @@ def check_variability(
         t_median = 1.0
     if ((np.nanmax(t) - np.nanmin(t)) / t_median) <= threshold:
         value = (np.nanmax(t) - np.nanmin(t)) / t_median
-        logger.debug(f"Value = {value} / Threshold = {threshold}")
+        msg = f"Value = {value} / Threshold = {threshold}"
+        logger.debug(msg)
         return False
     return True
 
@@ -413,7 +442,8 @@ def initialize(config: dict) -> tuple[list[EFModel], dict[str, Any]]:
     try:
         efconfig = EFConfig.model_validate(config)
     except ValidationError as e:
-        raise EFConfigError("Error in EF configuration") from e
+        msg = "Error in EF configuration"
+        raise EFConfigError(msg) from e
     models = [EFModel.create(cfg.model_dump()) for cfg in efconfig.models]
     return (models, efconfig.options.model_dump())
 
@@ -438,7 +468,7 @@ def compute(
     ef: xr.Dataset
         Evaporative fraction
     """
-    # TODO handle mask
+    # TODO: handle mask
     ef = {}
     for m in models:
         m.fit(data, mask)
@@ -471,7 +501,6 @@ def run(
     data: xr.Dataset,
     mask: str | None = None,
     selection: bool = False,
-    keep: bool = True,
     merging: MergeMethod = MergeMethod.MEAN,
 ) -> tuple[xr.Dataset, xr.Dataset]:
     """
@@ -499,7 +528,7 @@ def run(
     ef_merged : xr. Dataset
         Evaporative fraction merged
     """
-    # TODO Handle mask
+    # TODO: Handle mask
     ef = compute(models, data, mask)
     if selection:
         ef = select(ef)

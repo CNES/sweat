@@ -1,12 +1,11 @@
-#!/usr/bin/env python
-# coding: utf8
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 """
 Module for tiling management
 """
 
+from __future__ import annotations
+
 import os
-from typing import List, Optional, Tuple
 
 import geopandas as gpd
 import numpy as np
@@ -15,14 +14,15 @@ from sensorsio import mgrs
 from shapely.geometry import MultiPolygon
 from shapely.ops import unary_union
 
+from evaspa.logging import LoggerManager
 from evaspa.zones import define_valid_zones
-
-from .logging import LoggerManager
 
 logger = LoggerManager.get_logger(__name__)
 
 
-def groupby_multipolygon(df: gpd.GeoDataFrame, by: str = "id") -> gpd.GeoDataFrame:
+def groupby_multipolygon(
+    df: gpd.GeoDataFrame, by: str = "id"
+) -> gpd.GeoDataFrame:
     """
     Regroup multipolygons issued from the
     intersection result
@@ -50,18 +50,21 @@ def groupby_multipolygon(df: gpd.GeoDataFrame, by: str = "id") -> gpd.GeoDataFra
         for poly in block.values:
             if isinstance(poly, MultiPolygon):
                 for p in poly.geoms:
-                    polys.append(p)
+                    polys.append(p)  # noqa PERF402
             else:
                 polys.append(poly)
         return MultiPolygon(polys)
 
-    g = df.groupby(by=by, group_keys=False)["overlap_geometry"].agg(merge_geometries)
+    g = df.groupby(by=by, group_keys=False)["overlap_geometry"].agg(
+        merge_geometries
+    )
 
     # Aggregate
-    aggregated = gpd.GeoDataFrame(aggregated_data, geometry="geometry", crs=df.crs)
+    aggregated = gpd.GeoDataFrame(
+        aggregated_data, geometry="geometry", crs=df.crs
+    )
     # Recombine
-    aggregated = aggregated.join(g).reset_index(drop=True)
-    return aggregated
+    return aggregated.join(g).reset_index(drop=True)
 
 
 def intersection(
@@ -83,7 +86,9 @@ def intersection(
     inter: GeoDataFrame
     """
     inter = gpd.GeoDataFrame(
-        gpd.overlay(gdf1[[by, "geometry"]], gdf2[["geometry"]], how="intersection")
+        gpd.overlay(
+            gdf1[[by, "geometry"]], gdf2[["geometry"]], how="intersection"
+        )
         .merge(gdf1, how="inner", on=by, suffixes=("_overlap", "_grid"))
         .rename(
             columns={
@@ -96,7 +101,8 @@ def intersection(
         inter["overlap_percentage"] = pd.Series(dtype="float")
         return inter
     inter["overlap_percentage"] = inter.apply(
-        lambda tile: 100 * tile.overlap_geometry.area / tile.geometry.area, axis=1
+        lambda tile: 100 * tile.overlap_geometry.area / tile.geometry.area,
+        axis=1,
     )
     return groupby_multipolygon(inter, by=by)
 
@@ -111,7 +117,7 @@ def get_adjacent_tiles(
     neighbors_overlap: float = 5.0,
     land_overlap: float = 2.0,
     orbit_overlap: float = 25.0,
-) -> Optional[List[str]]:
+) -> list[str] | None:
     """
     Compute adjacent tiles
 
@@ -151,26 +157,36 @@ def get_adjacent_tiles(
     poly = grid.loc[tile_id].geometry
 
     # Transform polygon from tile to a GeoDataFrame
-    roi = gpd.GeoDataFrame(data={"roi": [1], "geometry": [poly]}, crs="EPSG:4326")
+    roi = gpd.GeoDataFrame(
+        data={"roi": [1], "geometry": [poly]}, crs="EPSG:4326"
+    )
 
     # Find tiles in the same UTM zone that overlap the tile polygon
     tiles = gpd.GeoDataFrame(
         gpd.overlay(subgrid[["id", "geometry"]], roi, how="intersection")
-        .merge(subgrid[["id", "geometry"]], how="inner", on="id", suffixes=("_roi", ""))
+        .merge(
+            subgrid[["id", "geometry"]],
+            how="inner",
+            on="id",
+            suffixes=("_roi", ""),
+        )
         .rename(columns={"geometry_roi": "overlap_geometry"})
     )
     if len(tiles) == 0:
         return None
-    logger.debug("UTM ", tiles.id.values)
+    msg = f"UTM: {tiles.id.values}"
+    logger.debug(msg)
 
     # Compute overlap and keep only 4 connected neighbors
     tiles["overlap_percentage"] = tiles.apply(
-        lambda tile: 100 * tile.overlap_geometry.area / tile.geometry.area, axis=1
+        lambda tile: 100 * tile.overlap_geometry.area / tile.geometry.area,
+        axis=1,
     )
     tiles = tiles[tiles["overlap_percentage"] > neighbors_overlap]
     if len(tiles) == 0:
         return None
-    logger.debug("4-conn ", tiles.id.values)
+    msg = f"4-conn {tiles.id.values}"
+    logger.debug(msg)
 
     # Take the orbit number into account
     if orbit_id is not None and orbit is not None:
@@ -182,25 +198,33 @@ def get_adjacent_tiles(
                 how="intersection",
             )
             .merge(
-                tiles[["id", "geometry"]], how="inner", on="id", suffixes=("_roi", "")
+                tiles[["id", "geometry"]],
+                how="inner",
+                on="id",
+                suffixes=("_roi", ""),
             )
             .rename(columns={"geometry_roi": "overlap_geometry"})
         )
         if len(orbit_tiles) == 0:
             return None
         orbit_tiles["overlap_percentage"] = orbit_tiles.apply(
-            lambda tile: 100 * tile.overlap_geometry.area / tile.geometry.area, axis=1
+            lambda tile: 100 * tile.overlap_geometry.area / tile.geometry.area,
+            axis=1,
         )
-        orbit_tiles = orbit_tiles[orbit_tiles["overlap_percentage"] > orbit_overlap]
+        orbit_tiles = orbit_tiles[
+            orbit_tiles["overlap_percentage"] > orbit_overlap
+        ]
         if len(orbit_tiles) == 0:
             return None
         tiles = tiles[tiles.id.isin(orbit_tiles.id)]
-        logger.debug("orbit ", tiles.id.values)
+        msg = f"orbit: {tiles.id.values}"
+        logger.debug(msg)
 
     # Remove tile with overlap in water
     tiles = tiles.reset_index(drop=True)
     overlap = gpd.GeoDataFrame(
-        data={"id": tiles.id, "geometry": tiles.overlap_geometry}, crs="EPSG:4326"
+        data={"id": tiles.id, "geometry": tiles.overlap_geometry},
+        crs="EPSG:4326",
     )
     tiles = gpd.GeoDataFrame(
         gpd.overlay(overlap, land[["geometry"]], how="intersection")
@@ -211,18 +235,24 @@ def get_adjacent_tiles(
     if len(tiles) == 0:
         return None
     tiles["land_percentage"] = tiles.apply(
-        lambda tile: 100 * tile.overlap_geometry.area / tile.geometry.area, axis=1
+        lambda tile: 100 * tile.overlap_geometry.area / tile.geometry.area,
+        axis=1,
     )
     tiles = tiles[tiles["land_percentage"] > land_overlap]
     if len(tiles) == 0:
         return None
-    logger.debug("water ", tiles.id.values)
+    msg = f"water : {tiles.id.values}"
+    logger.debug(msg)
 
     # List of land polygon id on the overlap
     poly_ids = gpd.GeoDataFrame(
-        gpd.overlay(land[["id", "geometry"]], overlap[["geometry"]], how="intersection")
+        gpd.overlay(
+            land[["id", "geometry"]], overlap[["geometry"]], how="intersection"
+        )
     ).id.unique()
-    poly_overlap = gpd.overlay(land[land["id"].isin(poly_ids)], roi, how="intersection")
+    poly_overlap = gpd.overlay(
+        land[land["id"].isin(poly_ids)], roi, how="intersection"
+    )
     poly_overlap = poly_overlap.to_crs(epsg)
     poly_overlap["area"] = poly_overlap.area
     poly_overlap = poly_overlap.sort_values(by="area", ascending=False)
@@ -231,7 +261,9 @@ def get_adjacent_tiles(
     tiles = groupby_multipolygon(
         gpd.GeoDataFrame(
             gpd.overlay(
-                tiles[["id", "geometry"]], poly[["geometry"]], how="intersection"
+                tiles[["id", "geometry"]],
+                poly[["geometry"]],
+                how="intersection",
             )
             .merge(subgrid, how="inner", on="id", suffixes=("_roi", ""))
             .rename(columns={"geometry_roi": "overlap_geometry"})
@@ -277,23 +309,36 @@ def generate_adjacents(
     -------
     adjs: DataFrame
     """
-    assert "id" in tiles.columns
-    assert "epsg" in tiles.columns
-    assert "geometry" in tiles.columns
+    if "id" not in tiles.columns:
+        msg = "Column id is missing"
+        raise ValueError(msg)
+    if "epsg" not in tiles.columns:
+        msg = "Column epsg is missing"
+        raise ValueError(msg)
+    if "geometry" not in tiles.columns:
+        msg = "Column geometry is missing"
+        raise ValueError(msg)
     # Adjacent tiles
     adjs = tiles[["id"]].copy()
 
     def func(tile_id: str) -> str:
-        res = get_adjacent_tiles(tile_id, tiles[["id", "epsg", "geometry"]], land)
+        res = get_adjacent_tiles(
+            tile_id=tile_id,
+            tiles=tiles[["id", "epsg", "geometry"]],
+            land=land,
+            orbit_id=orbit_id,
+            orbit=orbit,
+            neighbors_overlap=neighbors_overlap,
+            land_overlap=land_overlap,
+            orbit_overlap=orbit_overlap,
+        )
         if res is None:
             return ""
-        else:
-            return ",".join(res)
+        return ",".join(res)
 
     adjs["adjs"] = adjs.apply(lambda x: func(x.id), axis=1).astype("str")
     adjs = adjs.set_index("id")
-    adjs = check_adjacents(adjs)
-    return adjs
+    return check_adjacents(adjs)
 
 
 def check_adjacents(adjacents: pd.DataFrame, by="adjs") -> pd.DataFrame:
@@ -315,12 +360,12 @@ def check_adjacents(adjacents: pd.DataFrame, by="adjs") -> pd.DataFrame:
     -------
     adjacents_checked: GeoDataFrame
     """
-    pairs: List[List[str]] = []
+    pairs: list[list[str]] = []
     for _, row in adjacents.iterrows():
         t1 = row.name
         if row[by] != "":
             for t2 in row[by].split(","):
-                pairs.append([t1, t2, "".join(sorted([t1, t2]))])  # type: ignore
+                pairs.append([t1, t2, "".join(sorted([t1, t2]))])  # type: ignore # noqa PERF401
     check = pd.DataFrame(data=pairs, columns=["t1", "t2", "pair"])
     check = check.drop_duplicates("pair", keep=False)
     adjacents_checked = adjacents.copy()
@@ -333,7 +378,7 @@ def check_adjacents(adjacents: pd.DataFrame, by="adjs") -> pd.DataFrame:
 
 def initialize_regroup(
     tiles: pd.DataFrame, land: gpd.GeoDataFrame | None = None, by: str = "id"
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Initialize two dataframes :
         - One contains the list of tiles with its ID,
@@ -376,8 +421,8 @@ def initialize_regroup(
 
 
 def _get_adjacents(
-    tile_ids: List[str], adjacents: pd.DataFrame, by: str = "adjs"
-) -> Optional[List[str]]:
+    tile_ids: list[str], adjacents: pd.DataFrame, by: str = "adjs"
+) -> list[str] | None:
     """
     Get adjacent tile list of a list of tile IDs
 
@@ -394,7 +439,7 @@ def _get_adjacents(
     ------
     adj_list: List[str]
     """
-    adj_list: List[str] = []
+    adj_list: list[str] = []
     for tile in tile_ids:
         adj_list += str(adjacents.loc[tile, by]).split(",")
     if adj_list == [""]:
@@ -403,7 +448,10 @@ def _get_adjacents(
 
 
 def _join_group(
-    tiles: pd.DataFrame, adjs: pd.DataFrame, groups: pd.DataFrame, threshold: int
+    tiles: pd.DataFrame,
+    adjs: pd.DataFrame,
+    groups: pd.DataFrame,
+    threshold: int,
 ) -> None:
     """
     Join tile to a group if the number of valid pixel is below a threshold
@@ -438,21 +486,23 @@ def _join_group(
             ].idxmax()
             # The constraint is that a tile can only belong to one group.
             # To avoid a tile ending up in two groups, the next column is used to update associations between groups.
-            best_grp = str(tiles.loc[tiles.group == best_candidate, "next"].values[0])
+            best_grp = str(
+                tiles.loc[tiles.group == best_candidate, "next"].values[0]
+            )
             next_grp = str(tiles.loc[tiles.group == row.name, "next"].values[0])
             # Merge the actual group with the best group
             new_group = sorted(
-                list(
-                    set(
-                        best_grp.split(",")
-                        + str(row.name).split(",")
-                        + next_grp.split(",")
-                    )
+                set(
+                    best_grp.split(",")
+                    + str(row.name).split(",")
+                    + next_grp.split(",")
                 )
             )
             # print(row.name, new_group)
             # Update
-            tiles.loc[tiles["group"] == best_candidate, "next"] = ",".join(new_group)
+            tiles.loc[tiles["group"] == best_candidate, "next"] = ",".join(
+                new_group
+            )
             tiles.loc[tiles["group"] == row.name, "next"] = ",".join(new_group)
             tiles.loc[tiles["next"] == best_grp, "next"] = ",".join(new_group)
             tiles.loc[tiles["next"] == next_grp, "next"] = ",".join(new_group)
@@ -464,7 +514,7 @@ def regroup(
     groups: pd.DataFrame,
     threshold: int,
     land: gpd.GeoDataFrame | None = None,
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Regroup tiles
 
@@ -493,7 +543,9 @@ def regroup(
     # Update the group
     tile_df["group"] = tile_df["next"]
     # Drop duplicates
-    group_df = tile_df[["group"]].reset_index(drop=True).drop_duplicates("group")
+    group_df = (
+        tile_df[["group"]].reset_index(drop=True).drop_duplicates("group")
+    )
     # Compute valid pixels with new groups
     group_df[["pvalid", "nbvalid", "zones"]] = group_df.apply(
         lambda x: define_valid_zones(
@@ -514,7 +566,7 @@ def regroup(
 def write_regroup(
     df: pd.DataFrame,
     filename: str = "groups.shp",
-    columns: List[str] = ["group", "nbvalid"],
+    columns: list[str] | None = None,
 ) -> None:
     """
     Write groups of tiles in a shapefile
@@ -528,6 +580,8 @@ def write_regroup(
     columns: List[str]
         List of columns to write
     """
+    if columns is None:
+        columns = ["group", "nbvalid"]
     mgrs_grid = gpd.read_file(
         "/vsizip/"
         + os.path.join(
@@ -538,7 +592,9 @@ def write_regroup(
     )
     geometry: pd.Series = df.apply(
         lambda x: unary_union(
-            mgrs_grid[mgrs_grid.Name.isin(str(x.group).split(","))].geometry.values
+            mgrs_grid[
+                mgrs_grid.Name.isin(str(x.group).split(","))
+            ].geometry.values
         ),
         axis=1,
     )

@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# coding: utf8
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
 import os
@@ -13,7 +11,9 @@ def get_test_data_path() -> str:
     """
     Get test data path for DEM tiles
     """
-    return os.path.join(os.environ["EVASPA_TEST_DATA_PATH"], "DEM_Copercinus_30m")
+    return os.path.join(
+        os.environ["EVASPA_TEST_DATA_PATH"], "DEM_Copercinus_30m"
+    )
 
 
 def test_get_dem_from_tile() -> None:
@@ -27,7 +27,7 @@ def test_get_dem_from_tile() -> None:
     assert dem.crs == "EPSG:32632"
     assert dem.resolution == 60
     np.testing.assert_array_equal(
-        sorted([v for v in dem.data_vars]), ["aspect", "height", "slope"]
+        sorted(dem.data_vars), ["aspect", "height", "slope"]
     )
 
 
@@ -42,7 +42,7 @@ def test_get_dem_from_tiles() -> None:
     assert dem.crs == "EPSG:32632"
     assert dem.resolution == 60
     np.testing.assert_array_equal(
-        sorted([v for v in dem.data_vars]), ["aspect", "height", "slope"]
+        sorted(dem.data_vars), ["aspect", "height", "slope"]
     )
 
     dem = get_dem_from_tiles(["32TML", "32TNL"], base_dir=get_test_data_path())
@@ -52,5 +52,5 @@ def test_get_dem_from_tiles() -> None:
     assert dem.crs == "EPSG:32632"
     assert dem.resolution == 60
     np.testing.assert_array_equal(
-        sorted([v for v in dem.data_vars]), ["aspect", "height", "slope"]
+        sorted(dem.data_vars), ["aspect", "height", "slope"]
     )

@@ -1,18 +1,20 @@
-#!/usr/bin/env python
-# coding: utf8
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
 from __future__ import annotations
 
 import json
+import sys
+from abc import ABC, abstractmethod
+from enum import Enum
+
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
-import sys
-
-from abc import ABC, abstractmethod
-from enum import Enum
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
+
+PERCENTILE_MIN = 0
+PERCENTILE_MAX = 100
+NB_INTERVAL_MAX = 1000
 
 
 class EdgeError(Exception):
@@ -68,7 +70,6 @@ class Edge(BaseModel, ABC):
         var : np.array_like
             Variable used versus temperature (ex: Albedo)
         """
-        pass
 
     @abstractmethod
     def get(self, var: npt.ArrayLike) -> npt.NDArray:
@@ -87,7 +88,6 @@ class Edge(BaseModel, ABC):
         temperature : np.array
             Temperature at the edge
         """
-        pass
 
     def to_dict(self) -> dict:
         """
@@ -113,7 +113,9 @@ class Edge(BaseModel, ABC):
         data: DataFrame
             Prepared data in a dataframe format
         """
-        assert var.shape == lst.shape
+        if var.shape != lst.shape:
+            msg = "LST and variable do not have the same size"
+            raise ValueError(msg)
         return (
             pd.DataFrame(data={"lst": lst.reshape(-1), "var": var.reshape(-1)})
             .dropna(axis=0, how="any")
@@ -147,9 +149,11 @@ class Edge(BaseModel, ABC):
                 json.dumps(config)
             )
         except KeyError as e:
-            raise EdgeError(f"Class {name} is not defined") from e
+            msg = f"Class {name} is not defined"
+            raise EdgeError(msg) from e
         except ValidationError as e:
-            raise EdgeError("Error in edge configuration") from e
+            msg = "Error in edge configuration"
+            raise EdgeError(msg) from e
 
 
 class LinearEdge(Edge):
@@ -181,8 +185,15 @@ class LinearEdge(Edge):
         percentile: tuple[int,int]
             Validated percentile interval
         """
-        if (p[0] > p[1]) or (0 > p[0]) or (p[0] >= 100) or (0 >= p[1]) or (p[1] > 100):
-            raise ValueError("Percentile must be an interval between [0,100]")
+        if (
+            (p[0] > p[1])
+            or (p[0] < PERCENTILE_MIN)
+            or (p[0] >= PERCENTILE_MAX)
+            or (p[1] <= PERCENTILE_MIN)
+            or (p[1] > PERCENTILE_MAX)
+        ):
+            msg = "Percentile must be an interval between [0,100]"
+            raise ValueError(msg)
         return p
 
     @field_validator("interval_nb")
@@ -203,8 +214,9 @@ class LinearEdge(Edge):
         interval_nb: int
             Validated interval number
         """
-        if (nb <= 0) or (nb > 1000):
-            raise ValueError("Number of intervals must be between 1 and 1000")
+        if (nb <= 0) or (nb > NB_INTERVAL_MAX):
+            msg = f"Number of intervals must be between 1 and {NB_INTERVAL_MAX}"
+            raise ValueError(msg)
         return nb
 
     def get(self, var: npt.ArrayLike) -> npt.NDArray:
@@ -243,17 +255,22 @@ class LinearEdge(Edge):
             Variable used versus temperature (ex: Albedo)
         """
         # Init
-        assert np.array(var).shape == np.array(lst).shape
+        if np.array(var).shape != np.array(lst).shape:
+            msg = "LST and variable do not have the same size"
+            raise ValueError(msg)
         var_values = []
         lst_values = []
         df = self._prepare(np.array(var), np.array(lst))
         intervals = self._get_intervals(df["var"])
 
         # Compute point coordinates for regression
-        for i, group in df.groupby(intervals):
+        for _, group in df.groupby(intervals):
             value = group["lst"][
                 (group["lst"] > np.percentile(group["lst"], self.percentile[0]))
-                & (group["lst"] <= np.percentile(group["lst"], self.percentile[1]))
+                & (
+                    group["lst"]
+                    <= np.percentile(group["lst"], self.percentile[1])
+                )
             ].agg(self.selection.value)
             if not np.isnan(value):
                 var_values.append(group["var"].median())
@@ -354,7 +371,7 @@ class FlatEdge(Edge):
         """
         return self.value * np.ones_like(np.array(var))
 
-    def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
+    def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:  # noqa: ARG002
         """
         Description
         -----------

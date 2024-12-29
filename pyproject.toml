@@ -64,7 +64,8 @@ packages = ["src/evaspa"]
 path = "src/evaspa/__about__.py"
 
 [tool.hatch.envs.hatch-static-analysis]
-config-path = "ruff_defaults.toml"
+config-path = "none"
+dependencies = ["ruff==0.8.4"]
 
 [tool.hatch.envs.default]
 dependencies = [
@@ -115,26 +116,6 @@ exclude_lines = [
   "no cov",
   "if __name__ == .__main__.:",
   "if TYPE_CHECKING:",
-]
-
-[tool.hatch.envs.style]
-detached = true
-dependencies = [
-  "black",
-  "black[jupyter]",
-  "flake8",
-  "isort",
-]
-
-[tool.hatch.envs.style.scripts]
-check = [
-  "black --check --diff .",
-  "isort --check-only --diff .",
-]
-fmt = [
-  "isort .",
-  "black .",
-  "flake8 --max-line-length 120 --exclude=.ipynb_checkpoints .",
 ]
 
 [tool.mypy]
