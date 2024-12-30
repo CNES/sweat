@@ -23,3 +23,10 @@ repos:
       language: system
       types: [jupyter]
       entry: jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace
+    
+    - id: check-file-size
+      name: check-file-size
+      entry: hooks/check-file-size.sh
+      language: script
+      stages: [pre-commit]
+      pass_filenames: false
