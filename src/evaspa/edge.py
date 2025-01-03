@@ -342,7 +342,7 @@ class LinearEdge(Edge):
             "interval_type": self.interval_type.value,
             "interval_nb": self.interval_nb,
             "selection": self.selection.value,
-            "coeffs": self.coeffs,
+            "coeffs": tuple(float(coeff) for coeff in self.coeffs),
         }
 
 
