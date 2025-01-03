@@ -62,5 +62,9 @@
             "use_topo": false,
             "g_models": ["choudhury","kustas"]
         }
+    },
+    "debug": {
+        "profile": true,
+        "verbose": true
     }
 }

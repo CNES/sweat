@@ -8,6 +8,7 @@ import xarray as xr
 from pydantic import BaseModel, ConfigDict, Field
 from scipy.constants import c, h, k, pi
 
+from evaspa.debugging import register_debugging
 from evaspa.logging import LoggerManager
 
 logger = LoggerManager.get_logger(__name__)
@@ -346,6 +347,7 @@ def create_le(ef: xr.Dataset, rn: xr.Dataset, gflux: xr.Dataset) -> xr.Dataset:
     return xr.Dataset(data_vars=data_vars, coords=ef.coords.copy(), attrs=attrs)
 
 
+@register_debugging
 def run(
     data: xr.Dataset, ef: xr.Dataset, use_topo=False, g_models=DEFAULT_G_MODELS
 ) -> xr.Dataset:

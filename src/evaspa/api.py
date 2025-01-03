@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
 from evaspa import ef, filter, io, merging, seb, tiling, trishna
 from evaspa.config import InputConfig, ParamsConfig
+from evaspa.debugging import DebuggingConfig, configure_debugging
 from evaspa.logging import LoggerManager
 
 logger = LoggerManager.get_logger(__name__)
@@ -119,7 +120,9 @@ def regroup_tiles(
     return group_df
 
 
-def run_evaspa(entry: dict, params: dict) -> xr.Dataset | None:
+def run_evaspa(
+    entry: dict, params: dict, debug: dict | None = None
+) -> xr.Dataset | None:
     """
     Description
     -----------
@@ -139,14 +142,22 @@ def run_evaspa(entry: dict, params: dict) -> xr.Dataset | None:
     le: xr.Dataset
         Instant latent heat flux
     """
+    # Validate input config
     msg = f"Input: {entry}"
     logger.debug(msg)
-    msg = f"Config: {params}"
-    logger.debug(msg)
-    # Validate input config
     input_config = InputConfig.model_validate(entry)
     # Validate parameters config
+    msg = f"Params: {params}"
+    logger.debug(msg)
     params_config = ParamsConfig.model_validate(params)
+    # Validate debug config
+    msg = f"Debug: {debug}"
+    logger.debug(msg)
+    if debug is not None:
+        debug_config = DebuggingConfig.model_validate(debug)
+    else:
+        debug_config = DebuggingConfig()
+    configure_debugging(**debug_config.model_dump())
     # Read input data
     if os.path.isfile(input_config.path):
         data = io.read_data_from_file(input_config.path)

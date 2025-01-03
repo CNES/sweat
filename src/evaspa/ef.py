@@ -19,6 +19,7 @@ from pydantic import (
     ValidationError,
 )
 
+from evaspa.debugging import register_debugging
 from evaspa.edge import Edge, EdgeConfig, EdgeError
 from evaspa.logging import LoggerManager
 from evaspa.merging import MergeMethod, merge_to_dataset
@@ -496,6 +497,7 @@ def select(ef: xr.Dataset) -> xr.Dataset:
     return ef
 
 
+@register_debugging
 def run(
     models: list[EFModel],
     data: xr.Dataset,

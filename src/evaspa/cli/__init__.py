@@ -82,15 +82,19 @@ def evaspa_tiling(
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
-@click.option("--debug/--no-debug", default=False, help="Debug mode")
+@click.option(
+    "--verbose/--no-verbose",
+    default=False,
+    help="Debug logging mode",
+)
 @click.argument(
     "input_file", type=click.Path(exists=True, file_okay=True, readable=True)
 )
 @click.version_option(version=__version__, prog_name="evaspa")
-def evaspa(debug, input_file):
+def evaspa(verbose, input_file):
     # Configure logging
     log_level = logging.INFO
-    if debug:
+    if verbose:
         log_level = logging.DEBUG
     LoggerManager.set_level(log_level)
     # Set configuration
@@ -99,16 +103,13 @@ def evaspa(debug, input_file):
     dict_config = read_config(input_file)
     # Verify config and manage default parameters
     config = InputFile.model_validate(dict_config)
+    output_dir = Path(config.output.path)
     # Run
     logger.info("Run evaspa...")
-    res = run_evaspa(
-        config.input,
-        config.params,
-    )
-    # Write results
-    output_dir = Path(config.output.path)
+    res = run_evaspa(config.input, config.params, config.debug)
     # Save configuration
     write_config(config.model_dump(), output_dir, fmt="json")
+    # Write results
     if res is not None:
         # Write Evaporative farction
         filename = "evaspa.tif"

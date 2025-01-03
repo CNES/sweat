@@ -7,6 +7,8 @@ import numpy.typing as npt
 import xarray as xr
 from pydantic import BaseModel, ConfigDict, Field
 
+from evaspa.debugging import register_debugging
+
 
 class FilterParams(BaseModel):
     """
@@ -41,6 +43,7 @@ class FilterConfig(BaseModel):
     config: FilterParams = Field(default=FilterParams())
 
 
+@register_debugging
 def determine_valid_pixels(
     data: xr.Dataset,
     cloud: npt.ArrayLike | str | None = None,

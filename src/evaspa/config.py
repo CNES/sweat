@@ -17,9 +17,11 @@ from pydantic import (
     ConfigDict,
     Field,
     field_validator,
+    model_validator,
 )
 
 from evaspa.__about__ import __version__
+from evaspa.debugging import DebuggingConfig
 from evaspa.ef import EFConfig  # noqa TC001
 from evaspa.filter import FilterConfig
 from evaspa.logging import LoggerManager
@@ -33,18 +35,33 @@ class InputFile(BaseModel):
     Class describing the format of the input file
     """
 
+    model_config = ConfigDict(extra="forbid")
+
     input: InputConfig
     output: OutputConfig
     params: ParamsConfig
+    debug: DebuggingConfig = Field(default=DebuggingConfig())
     version: str = Field(default=str(__version__))
 
+    # TODO: Validate the path for debugging with the output path
     @field_validator("version")
     @classmethod
     def update_version(cls, v: str) -> str:
+        """ "
+        Update version in configuration
+        """
         if Version(v) > Version(__version__):
             msg = "File generated with a newer version"
             logger.warning(msg)
         return str(__version__)
+
+    @model_validator(mode="after")
+    def update_debug(self):
+        """
+        Update debug path with output path
+        """
+        self.debug.path = self.output.path
+        return self
 
 
 class InputConfig(BaseModel):
