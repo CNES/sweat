@@ -464,7 +464,7 @@ select = [
   "T203",
   "TC001",
   "TC002",
-  "TC003",
+  #"TC003",
   "TC004",
   "TC005",
   "TC010",
@@ -551,8 +551,8 @@ select = [
   "S",
   "TID252",
 ]
-"**/notebooks/*.ipynb" = ["T201","T203"]
-"**/raqrs/notebooks/*.ipynb" = ["T201","T203","PLR2004"]
+"**/notebooks/*.ipynb" = ["T201","T203","SLF001"]
+"**/raqrs/notebooks/*.ipynb" = ["T201","T203","PLR2004","SLF001"]
 
 [lint.flake8-tidy-imports]
 ban-relative-imports = "all"

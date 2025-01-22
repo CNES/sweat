@@ -33,6 +33,7 @@ dependencies = [
   "shapely",
   "sensorsio",
   "pydantic>=2.8",
+  "timezonefinder",
 ]
 
 [project.optional-dependencies]
@@ -153,3 +154,5 @@ pip = ">=24.3.1,<25"
 gdal = ">=3.10.0,<4"
 hdf4 = ">=4.2.15,<5"
 hdf5 = ">=1.14.4,<2"
+netcdf4 = ">=1.7.2,<2"
+h5netcdf = ">=1.4.1,<2"

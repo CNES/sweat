@@ -5,6 +5,7 @@ Module for configuration management
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 import os
 from pathlib import Path
@@ -21,6 +22,7 @@ from pydantic import (
 )
 
 from evaspa.__about__ import __version__
+from evaspa.daily import DailyConfig
 from evaspa.debugging import DebuggingConfig
 from evaspa.ef import EFConfig  # noqa TC001
 from evaspa.filter import FilterConfig
@@ -72,6 +74,7 @@ class InputConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     path: str
+    date: dt.datetime | None = Field(default=None)
 
     @field_validator("path")
     @classmethod
@@ -110,6 +113,7 @@ class ParamsConfig(BaseModel):
     filtering: FilterConfig = Field(default=FilterConfig())
     ef: EFConfig
     seb: SEBConfig = Field(default=SEBConfig())
+    daily: DailyConfig = Field(default=DailyConfig())
 
 
 def read_config(path: str) -> dict:
