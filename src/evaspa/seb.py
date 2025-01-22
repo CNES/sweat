@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from enum import Enum
+
 import numpy as np
 import numpy.typing as npt
 import xarray as xr
@@ -13,10 +15,22 @@ from evaspa.logging import LoggerManager
 
 logger = LoggerManager.get_logger(__name__)
 
-# Stefan-Boltzmann constat
+# Constant list
+LATENT_HEAT_VAPORIZATION = 2.45e6  # J.kg-2
+# Stefan-Boltzmann constant
 CST_SB = ((2 * pi**5) * (k**4)) / (15 * (c**2) * (h**3))
 
-DEFAULT_G_MODELS = ["kustas"]
+
+class RatioModel(Enum):
+    """List of G/Rn ratio models"""
+
+    KUSTAS = "kustas"
+    SU = "su"
+    CHOUDHURY = "choudhury"
+
+
+DEFAULT_MODELS = [RatioModel.KUSTAS]
+ALL_MODELS = [RatioModel.KUSTAS, RatioModel.SU, RatioModel.CHOUDHURY]
 
 
 class SEBConfig(BaseModel):
@@ -27,10 +41,10 @@ class SEBConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     use_topo: bool = Field(default=False)
-    g_models: list[str] = Field(default=DEFAULT_G_MODELS)
+    models: list[RatioModel] = Field(default=DEFAULT_MODELS)
 
 
-def compute_rn(
+def _compute_rn(
     lst: npt.ArrayLike,
     emis: npt.ArrayLike,
     albedo: npt.ArrayLike,
@@ -46,7 +60,7 @@ def compute_rn(
     ----------
     lst : np.array_like
         Land surface temperature
-    lst : np.array_like
+    emis : np.array_like
         Land surface emissivity
     albedo : np.array_like
         Land surface albedo
@@ -95,6 +109,9 @@ def create_net_radiation(data: xr.Dataset) -> xr.Dataset:
     if len(rsd_data) == 0:
         msg = "No RSD data available"
         raise ValueError(msg)
+
+    msg = f"RSD data available: {rsd_data}"
+    logger.debug(msg)
     rld_data: list[str] = [str.replace(v, "rsd", "rld", 1) for v in rsd_data]
     for v in rld_data:
         if v not in data.data_vars:
@@ -103,12 +120,14 @@ def create_net_radiation(data: xr.Dataset) -> xr.Dataset:
                 f" data ({str.replace(v,'rld','rsd')})"
             )
             raise ValueError(msg)
+    msg = f"RLD data available: {rsd_data}"
+    logger.debug(msg)
     # Compute rn for all rsd/rld available
     rn = {}
     for rsd, rld in zip(rsd_data, rld_data, strict=False):
         name = str.replace(rsd, "rsd", "rn", 1)
         rn[name] = xr.DataArray(
-            data=compute_rn(
+            data=_compute_rn(
                 data["lst"], data["emis"], data["albedo"], data[rsd], data[rld]
             ),
             dims=data.dims,
@@ -122,13 +141,13 @@ def create_net_radiation(data: xr.Dataset) -> xr.Dataset:
     return xr.Dataset(data_vars=rn, coords=data.coords.copy(), attrs=attrs)
 
 
-def compute_g_kustas(
-    rn: npt.ArrayLike, ndvi: npt.ArrayLike, c1: float = 0.4, c2: float = 0.33
+def _ratio_from_kustas(
+    ndvi: npt.ArrayLike, c1: float = 0.4, c2: float = 0.33
 ) -> npt.NDArray:
     """
     Description
     -----------
-    Compute G flux from Kustas et al. 1993
+    Compute G/Rn ratio from Kustas et al. 1993
     G/Rn = c1 - c2 x NDVI
 
     Kustas W.P., Daughtry C.S.T. and Oevelen P.J.V., 1993.
@@ -138,8 +157,6 @@ def compute_g_kustas(
 
     Parameters
     ----------
-    rn : np.array_like
-        Net radiation
     ndvi: np.array_like
         NDVI
     c1: float
@@ -149,14 +166,13 @@ def compute_g_kustas(
 
     Returns
     -------
-    g_flux: np.array
-        Ground heat flux
+    ratio: np.array
+        Ground heat flux / Net radiation
     """
-    return np.array(rn) * (c1 - (c2 * np.array(ndvi)))
+    return c1 - (c2 * np.array(ndvi))
 
 
-def compute_g_su(
-    rn: npt.ArrayLike,
+def _ratio_from_su(
     fcover: npt.ArrayLike,
     c1: float = 0.315,
     c2: float = 0.05,
@@ -164,7 +180,7 @@ def compute_g_su(
     """
     Description
     -----------
-    Compute G flux from Su 2002
+    Compute G/Rn ratio from Su 2002
     G/Rn = c2 + (1 - fcover) x (c1 - c2)
 
     Su Z., 2002. The surface energy balance system
@@ -173,30 +189,28 @@ def compute_g_su(
 
     Parameters
     ----------
-    rn : np.array_like
-        Net radiation
     fcover: np.array_like
         Fcover
     c1: float
-        c1 parameter (default = 0.4)
+        c1 parameter (default = 0.315)
     c2: float
-        c2 parameter (default = 0.33)
+        c2 parameter (default = 0.05)
 
     Returns
     -------
-    g_flux: np.array
-        Ground heat flux
+    ratio: np.array
+        Ground heat flux / Net radiation
     """
-    return np.array(rn) * (c2 + (1.0 - np.array(fcover)) * (c1 - c2))
+    return c2 + (1.0 - np.array(fcover)) * (c1 - c2)
 
 
-def compute_g_choudhury(
-    rn: npt.ArrayLike, lai: npt.ArrayLike, c1: float = 0.3, c2: float = 0.5
+def _ratio_from_choudhury(
+    lai: npt.ArrayLike, c1: float = 0.3, c2: float = 0.5
 ) -> npt.NDArray:
     """
     Description
     -----------
-    Compute G flux from Choudhury et al. 1987
+    Compute G/Rn ratio from Choudhury et al. 1987
     G/Rn = c1 x exp(-c2 x lai)
 
     Choudhury, B.J., Idso, S.B., & Reginato, R.J. (1987).
@@ -207,85 +221,87 @@ def compute_g_choudhury(
 
     Parameters
     ----------
-    rn : np.array_like
-        Net radiation
     fcover: np.array_like
         Fcover
     c1: float
-        c1 parameter (default = 0.4)
+        c1 parameter (default = 0.3)
     c2: float
-        c2 parameter (default = 0.33)
+        c2 parameter (default = 0.5)
 
     Returns
     -------
-    g_flux: np.array
-        Ground heat flux
+    ratio: np.array
+        Ground heat flux / Net radiation
     """
-    return np.array(rn) * c1 * np.exp(-c2 * np.array(lai))
+    return c1 * np.exp(-c2 * np.array(lai))
 
 
-def create_gflux(
+def create_ratio(
     data: xr.Dataset,
-    rn: xr.Dataset,
-    g_models: list[str] | None = None,
+    models: list[RatioModel] = DEFAULT_MODELS,
 ) -> xr.Dataset:
     """
     Description
     -----------
-    Compute G flux dataset using several methods.
+    Compute G/Rn ratio dataset using several models.
 
     Parameters
     ----------
     data : xr.Dataset
         Data containing (LST, emissivity, albedo and downward
         shortwave and longwave radiation)
+    models: list[str]
+        List of ratio models
 
     Returns
     -------
-    rn: xr.Dataset
-        Net radiation dataset
+    ratio: xr.Dataset
+        Ground heat flux / Net radiation
     """
-    if g_models is None:
-        g_models = ["kustas", "su", "choudhury"]
-    g = {}
-    for var in rn.data_vars:
-        for model in g_models:
-            if model == "kustas":
-                g[f"{var}_kustas"] = xr.DataArray(
-                    data=compute_g_kustas(rn[var], data["ndvi"]),
+
+    ratio = {}
+    for model in models:
+        try:
+            if model == RatioModel.KUSTAS:
+                ratio[model.value] = xr.DataArray(
+                    data=_ratio_from_kustas(data["ndvi"]),
                     dims=data.dims,
                     coords=data.coords.copy(),
                 )
-            elif model == "su":
-                g[f"{var}_su"] = xr.DataArray(
-                    data=compute_g_su(rn[var], data["fcover"]),
+            elif model == RatioModel.SU:
+                ratio[model.value] = xr.DataArray(
+                    data=_ratio_from_su(data["fcover"]),
                     dims=data.dims,
                     coords=data.coords.copy(),
                 )
-            elif model == "choudhury":
-                g[f"{var}_choudhury"] = xr.DataArray(
-                    data=compute_g_choudhury(rn[var], data["lai"]),
+            elif model == RatioModel.CHOUDHURY:
+                ratio[model.value] = xr.DataArray(
+                    data=_ratio_from_choudhury(data["lai"]),
                     dims=data.dims,
                     coords=data.coords.copy(),
                 )
             else:
-                logger.warning("Method unknown for G flux: {method}")
+                msg = f"Unknown model for G/Rn ratio: {model}"
+                logger.warning(msg)
+        except KeyError as e:
+            msg = f"Data missing for {model.value} model: {e}"
+            logger.warning(msg)
     # Attributes
     attrs = {
         "crs": data.attrs.get("crs", None),
         "transform": data.attrs.get("transform", None),
     }
-    return xr.Dataset(data_vars=g, coords=data.coords.copy(), attrs=attrs)
+    return xr.Dataset(data_vars=ratio, coords=data.coords.copy(), attrs=attrs)
 
 
-def compute_le(
-    ef: npt.ArrayLike, rn: npt.ArrayLike, gflux: npt.ArrayLike
+def _compute_le(
+    ef: npt.ArrayLike, rn: npt.ArrayLike, ratio: npt.ArrayLike
 ) -> npt.NDArray:
     """
     Description
     -----------
     Compute latent heat flux based on the following formula
-    LE = EF x (Rn - G)
+    LE = EF x (Rn - G) = EF x Rn (1 - ratio)
 
     Parameters
     ----------
@@ -293,26 +309,26 @@ def compute_le(
         Evaporative fraction
     rn: np.array_like
         Net radiation
-    gflux: np.array_like
-        Ground heat flux
+    ratio: np.array_like
+        Ground heat flux / net radiation ratio
 
     Returns
     -------
     le: np.array
         Latent heat flux
     """
-    return np.array(ef) * (np.array(rn) - np.array(gflux))
+    return np.array(ef) * np.array(rn) * (1.0 - np.array(ratio))
 
 
-def create_le(ef: xr.Dataset, rn: xr.Dataset, gflux: xr.Dataset) -> xr.Dataset:
+def create_le(ef: xr.Dataset, rn: xr.Dataset, ratio: xr.Dataset) -> xr.Dataset:
     """
     Description
     -----------
     Create latent heat flux dataset for all EF models,
-    all Rn models and all G models.
+    all Rn models and all G/Rn ratio models.
     For each combination of models, LE is computed with
     the following formula
-    LE = EF x (Rn - G)
+    LE = EF x (Rn - G) = EF x Rn x (1-ratio)
 
     Parameters
     ----------
@@ -320,8 +336,8 @@ def create_le(ef: xr.Dataset, rn: xr.Dataset, gflux: xr.Dataset) -> xr.Dataset:
         Evaporative fraction dataset
     rn: xr.Dataset
         Net radiation dataset
-    gflux: xr.Dataset
-        Ground heat flux dataset
+    ratio: np.array_like
+        Ground heat flux / net radiation ratio
 
     Returns
     -------
@@ -331,10 +347,12 @@ def create_le(ef: xr.Dataset, rn: xr.Dataset, gflux: xr.Dataset) -> xr.Dataset:
     data_vars = {}
     for ef_model in ef.data_vars:
         for rn_model in rn.data_vars:
-            for g_model in gflux.data_vars:
-                name = f"{ef_model}_{rn_model}_{g_model}"
+            for ratio_model in ratio.data_vars:
+                name = f"{ef_model}_{rn_model}_{ratio_model}"
                 data_vars[name] = xr.DataArray(
-                    data=compute_le(ef[ef_model], rn[rn_model], gflux[g_model]),
+                    data=_compute_le(
+                        ef[ef_model], rn[rn_model], ratio[ratio_model]
+                    ),
                     dims=ef.dims,
                     coords=ef.coords.copy(),
                 )
@@ -347,18 +365,36 @@ def create_le(ef: xr.Dataset, rn: xr.Dataset, gflux: xr.Dataset) -> xr.Dataset:
     return xr.Dataset(data_vars=data_vars, coords=ef.coords.copy(), attrs=attrs)
 
 
+def compute_et_from_le(
+    le: npt.ArrayLike, temp: float | None = None
+) -> npt.NDArray:
+    """
+    Description
+    -----------
+    Compute ET in mm from LE in W (J.m-2).
+    ET = LE / L with L is the latent heat vaoprization of water.
+    """
+    if temp is None:
+        latent_heat = LATENT_HEAT_VAPORIZATION
+    else:
+        msg = "The variation of latent heat of vaporization of water with temperature is not implemented yet."
+        logger.warning(msg)
+        latent_heat = LATENT_HEAT_VAPORIZATION
+    return np.array(le) / latent_heat
+
+
 @register_debugging
 def run(
-    data: xr.Dataset, ef: xr.Dataset, use_topo=False, g_models=DEFAULT_G_MODELS
+    data: xr.Dataset, ef: xr.Dataset, use_topo=False, models=DEFAULT_MODELS
 ) -> xr.Dataset:
     """
     Description
     -----------
     Compute latent heat flux dataset for all EF models.
-    First all Rn models and all G models are computed.
+    First all Rn models and all G/Rn ratio models are computed.
     Then, for each combination of models, LE is computed with
     the following formula
-    LE = EF x (Rn - G)
+    LE = EF x (Rn - G) = EF x RN x (1 - ratio)
 
     Parameters
     ----------
@@ -368,7 +404,7 @@ def run(
         Evaporative fraction dataset
     use_topo: bool
         Topography to take into account
-    g_models: list[str]
+    models: list[str]
         List of G models
 
     Returns
@@ -376,12 +412,21 @@ def run(
     le: xr.Dataset
         Latent heat flux dataset
     """
+    if len(ef.data_vars) == 0:
+        msg = "EF dataset empty"
+        raise ValueError(msg)
     # Correct shortwave radiation with topo
     if use_topo:
         logger.warning("No topography correction implemented yet")
     # Compute net radiation
     rn_xr = create_net_radiation(data)
+    if len(rn_xr.data_vars) == 0:
+        msg = "Radiation dataset empty"
+        raise ValueError(msg)
     # Compute G flux
-    g_xr = create_gflux(data, rn_xr, g_models=g_models)
+    ratio_xr = create_ratio(data, models=models)
+    if len(ratio_xr.data_vars) == 0:
+        msg = "G/Rn ratio dataset empty"
+        raise ValueError(msg)
     # Compute latent heat flux
-    return create_le(ef, rn_xr, g_xr)
+    return create_le(ef, rn_xr, ratio_xr)

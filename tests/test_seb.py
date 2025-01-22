@@ -3,20 +3,9 @@
 import numpy as np
 import pytest
 import xarray as xr
+from pyproj import CRS
 
-from evaspa.seb import (
-    CST_SB,
-    SEBConfig,
-    compute_g_choudhury,
-    compute_g_kustas,
-    compute_g_su,
-    compute_le,
-    compute_rn,
-    create_gflux,
-    create_le,
-    create_net_radiation,
-    run,
-)
+from evaspa import seb
 
 
 def setup_data(
@@ -79,7 +68,7 @@ def setup_data(
             "lon": ("lon", lon),
             "lat": ("lat", lat),
         },
-        attrs={"description": "Test data"},
+        attrs={"description": "Test data", "crs": CRS(4326)},
     )
 
 
@@ -89,7 +78,7 @@ def setup_dataset(
     max_value: float = 1.0,
     size: int = 125,
     seed: int = 0,
-):
+) -> xr.Dataset:
     """
     Create a rondom dataset
     """
@@ -117,22 +106,30 @@ def test_stefan_boltzmann_constant() -> None:
     """
     Stefan Boltzmann constant
     """
-    np.testing.assert_approx_equal(CST_SB, 5.670374419e-8, significant=7)
+    np.testing.assert_approx_equal(seb.CST_SB, 5.670374419e-8, significant=7)
 
 
-def test_compute_rn() -> None:
+@pytest.mark.parametrize(
+    ("lst", "emis", "albedo", "rsd", "rld", "expected"),
+    [
+        pytest.param(0.0, 0.0, 0.0, 100.0, 0.0, 100.0),
+        pytest.param(300.0, 1.0, 0.0, 0.0, 0.0, -seb.CST_SB * 300.0**4),
+        pytest.param(0.0, 1.0, 1.0, 0.0, 50.0, 50.0),
+        pytest.param(0.0, 1.0, 1.0, 100.0, 50.0, 50.0),
+    ],
+)
+def test_compute_rn(lst, emis, albedo, rsd, rld, expected) -> None:
     """
     Test compute net radiation Rn
-    #TODO test other case
     """
     # Case 1: Black body
-    rsd = np.ones((2, 2))
-    rld = np.zeros((2, 2))
-    albedo = np.ones((2, 2))
-    emis = np.ones((2, 2))
-    lst = np.ones((2, 2)) * 300
-    rn = compute_rn(lst, emis, albedo, rsd, rld)
-    ref = -CST_SB * (300**4) * np.ones((2, 2))
+    rsd_arr = rsd * np.ones((2, 2))
+    rld_arr = rld * np.ones((2, 2))
+    albedo_arr = albedo * np.ones((2, 2))
+    emis_arr = emis * np.ones((2, 2))
+    lst_arr = lst * np.ones((2, 2))
+    rn = seb._compute_rn(lst_arr, emis_arr, albedo_arr, rsd_arr, rld_arr)  # noqa: SLF001
+    ref = expected * np.ones((2, 2))
     np.testing.assert_allclose(rn, ref)
 
 
@@ -148,51 +145,78 @@ def test_create_net_radiation(params, expected) -> None:
     Test create net radiation dataset
     """
     data = setup_data(**params)
-    rn = create_net_radiation(data)
+    rn = seb.create_net_radiation(data)
     assert len(rn.data_vars) == expected
 
 
-def test_compute_g_kustas() -> None:
+def test_ratio_from_kustas() -> None:
     """
-    Test compute G flux (kustas method)
+    Test G/Rn ratio (kustas method)
     """
-    rn = np.ones((2, 2))
     ndvi = 0.5 * np.ones((2, 2))
-    g = compute_g_kustas(rn, ndvi)
-    ref = 0.235 * np.ones((2, 2))
-    np.testing.assert_allclose(g, ref)
+    ratio = seb._ratio_from_kustas(ndvi)  # noqa: SLF001
+    ref = (0.4 - (0.33 * 0.5)) * np.ones((2, 2))
+    np.testing.assert_allclose(ratio, ref)
 
 
-def test_compute_g_su() -> None:
+def test_ratio_from_su() -> None:
     """
-    Test compute G flux (Su method)
+    Test G/Rn ratio (Su method)
     """
-    rn = np.ones((2, 2))
     fcover = 0.5 * np.ones((2, 2))
-    g = compute_g_su(rn, fcover)
-    ref = 0.1825 * np.ones((2, 2))
-    np.testing.assert_allclose(g, ref)
+    ratio = seb._ratio_from_su(fcover)  # noqa: SLF001
+    ref = (0.05 + (1.0 - 0.5) * (0.315 - 0.05)) * np.ones((2, 2))
+    np.testing.assert_allclose(ratio, ref)
 
 
-def test_compute_g_choudhury() -> None:
+def test_ratio_from_choudhury() -> None:
     """
     Test compute G flux (Choudhury method)
     """
-    rn = np.ones((2, 2))
     lai = 2 * np.ones((2, 2))
-    g = compute_g_choudhury(rn, lai)
-    ref = 0.11036 * np.ones((2, 2))
-    np.testing.assert_allclose(g, ref, atol=0.0001)
+    ratio = seb._ratio_from_choudhury(lai)  # noqa: SLF001
+    ref = 0.3 * np.exp(-1.0) * np.ones((2, 2))
+    np.testing.assert_allclose(ratio, ref, atol=0.0001)
 
 
-def test_create_gflux() -> None:
+@pytest.mark.parametrize(
+    ("models", "expected"),
+    [
+        pytest.param([seb.RatioModel.SU], 1),
+        pytest.param(seb.ALL_MODELS, len(seb.ALL_MODELS)),
+        pytest.param(seb.DEFAULT_MODELS, len(seb.DEFAULT_MODELS)),
+        pytest.param(None, len(seb.DEFAULT_MODELS)),
+    ],
+)
+def test_create_ratio(models, expected) -> None:
     """
-    Test create G dataset
+    Test create G/Rn dataset
     """
     data = setup_data(nb=1, size=2)
-    rn = create_net_radiation(data)
-    gflux = create_gflux(data, rn)
-    assert len(gflux.data_vars) == 3
+    if models is not None:
+        ratio = seb.create_ratio(data, models=models)
+    else:
+        ratio = seb.create_ratio(data)
+    assert len(ratio.data_vars) == expected
+
+
+def test_create_ratio_unknown_model(caplog) -> None:
+    """
+    Test create G/Rn dataset with unknown model
+    """
+    data = setup_data(nb=1, size=2)
+    seb.create_ratio(data, models=["foo"])  # type: ignore
+    assert "Unknown model for G/Rn ratio: foo" in caplog.text
+
+
+def test_create_ratio_data_missing(caplog) -> None:
+    """
+    Test create G/Rn dataset with missing data
+    """
+    data = setup_data(nb=1, size=2)
+    data = data.drop_vars("ndvi")
+    seb.create_ratio(data, models=[seb.RatioModel.KUSTAS])
+    assert "Data missing for kustas model" in caplog.text
 
 
 def test_compute_le() -> None:
@@ -201,9 +225,9 @@ def test_compute_le() -> None:
     """
     ef = 0.5 * np.ones((2, 2))
     rn = 200 * np.ones((2, 2))
-    g = rn * 0.5
+    ratio = 0.5
     ref = 50 * np.ones((2, 2))
-    le = compute_le(ef, rn, g)
+    le = seb._compute_le(ef, rn, ratio)  # noqa: SLF001
     np.testing.assert_allclose(le, ref, atol=0.0001)
 
 
@@ -211,10 +235,12 @@ def test_create_le() -> None:
     """
     Test create LE dataset
     """
-    ef = setup_dataset(["m1", "m2", "m3"])
+    ef = setup_dataset(["ef1", "ef2", "ef3"])
     rn = setup_dataset(["rn1", "rn2"], min_value=200, max_value=250)
-    gflux = setup_dataset(["g1", "g2", "g3"], min_value=100, max_value=150)
-    le = create_le(ef, rn, gflux)
+    ratio = setup_dataset(
+        ["model1", "model2", "model3"], min_value=100, max_value=150
+    )
+    le = seb.create_le(ef, rn, ratio)
     assert len(le.data_vars) == 18
 
 
@@ -223,15 +249,15 @@ def test_create_le() -> None:
     [
         {},
         {"use_topo": True},
-        {"g_models": ["su", "kustas"]},
-        {"use_topo": True, "g_models": ["su", "kustas"]},
+        {"models": ["su", "kustas"]},
+        {"use_topo": True, "models": ["su", "kustas"]},
     ],
 )
 def test_sebconfig(config) -> None:
     """
     Test FilterConfig
     """
-    assert SEBConfig.model_validate(config)
+    assert seb.SEBConfig.model_validate(config)
 
 
 @pytest.mark.parametrize(
@@ -239,8 +265,8 @@ def test_sebconfig(config) -> None:
     [
         {},
         {"use_topo": True},
-        {"g_models": ["su", "kustas"]},
-        {"use_topo": True, "g_models": ["su", "kustas"]},
+        {"models": ["su", "kustas"]},
+        {"use_topo": True, "models": ["su", "kustas"]},
     ],
 )
 def test_run(config):
@@ -249,4 +275,14 @@ def test_run(config):
     """
     data = setup_data(nb=1)
     ef = setup_dataset(["m1", "m2", "m3"])
-    run(data, ef, **config)
+    seb.run(data, ef, **config)
+
+
+def test_compute_et_from_le():
+    """
+    Test method for computing ET from LE
+    """
+    le = 100 * np.ones((2, 2))
+    ref = np.ones((2, 2)) * 100 / seb.LATENT_HEAT_VAPORIZATION
+    et = seb.compute_et_from_le(le)
+    np.testing.assert_allclose(et, ref)
