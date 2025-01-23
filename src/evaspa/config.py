@@ -8,6 +8,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 import os
+from enum import Enum
 from pathlib import Path
 from typing import Annotated
 
@@ -141,6 +142,17 @@ def read_config(path: str) -> dict:
         raise OSError(msg)
 
 
+def json_serial(obj):
+    """JSON serializer for objects not serializable by default json code"""
+
+    if isinstance(obj, (dt.datetime, dt.date)):
+        return obj.isoformat()
+    elif isinstance(obj, Enum):  # noqa I001
+        return obj.value
+    msg = f"Type {type(obj)} not serializable"
+    raise TypeError(msg)
+
+
 def write_config(config: dict, path: str, fmt: str = "json") -> None:
     """
     Description
@@ -159,7 +171,7 @@ def write_config(config: dict, path: str, fmt: str = "json") -> None:
     output_dir = Path(path)
     if fmt.lower() == "json":
         with open(output_dir / "config.json", "w") as f:
-            json.dump(config, f, indent=4, default=lambda x: x.value)
+            json.dump(config, f, indent=4, default=json_serial)
     else:
         msg = f"Unsupported format for configuration file ({fmt})"
         raise ValueError(msg)
