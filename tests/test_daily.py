@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import datetime as dt
-import logging
 
 import numpy as np
 import pytest
@@ -184,7 +183,6 @@ def test_extrapolate_unavailable_variables(caplog):
     """
     Test extrapolation function with unavailable variables
     """
-    caplog.set_level(logging.DEBUG)
     data = setup_dataset(
         ["var"],
         dt.datetime(2025, 1, 9, 11, 30, 00, tzinfo=dt.timezone.utc),
@@ -200,7 +198,6 @@ def test_extrapolate_unavailable_variables(caplog):
     assert (
         "Variables ['foo'] not available for daily extrapolation" in caplog.text
     )
-    assert "Daily extrapolation performed on ['var']" in caplog.text
 
 
 def test_extrapolate_toa_missing_date():

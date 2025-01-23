@@ -386,7 +386,7 @@ def toa_daily_irradiance(day: npt.ArrayLike, lat: npt.ArrayLike) -> npt.NDArray:
     Return
     ------
     toa_irradiance: float
-        TOA daily irradiance (kJ.m-2.day-1)
+        TOA daily irradiance (J.m-2.day-1)
     """
     # convert angle in radians
     lat_rad = np.deg2rad(lat)
@@ -396,7 +396,7 @@ def toa_daily_irradiance(day: npt.ArrayLike, lat: npt.ArrayLike) -> npt.NDArray:
     h0 = np.arccos(-np.tan(lat_rad) * np.tan(delta))
     return (
         24.0
-        * 3.6
+        * 3600
         * SOLAR_FLUX
         * _sun_earth_distance(day)
         / np.pi
