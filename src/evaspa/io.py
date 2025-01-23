@@ -10,6 +10,8 @@ import rasterio as rio
 import xarray as xr
 from rasterio.enums import ColorInterp
 
+from evaspa.config import InputConfig
+
 
 def _open_rasterio(filename: str) -> xr.Dataset:
     """
@@ -113,6 +115,32 @@ def read_data(dirname: str) -> xr.Dataset:
         for filename in filenames
     ]
     return xr.merge(xarrs, combine_attrs="override")
+
+
+def read_input(config: dict) -> xr.Dataset:
+    """
+    Description
+    -----------
+    Read input data
+
+    Parameters
+    ----------
+    config: dict
+        Input information
+
+    Returns
+    -------
+    xarr: xr.Dataset
+        Data
+    """
+    input_config = InputConfig.model_validate(config)
+    if os.path.isfile(input_config.path):
+        data = read_data_from_file(input_config.path)
+    else:
+        data = read_data(input_config.path)
+    if input_config.date is not None:
+        data.attrs["date"] = input_config.date
+    return data
 
 
 def write_dataset(

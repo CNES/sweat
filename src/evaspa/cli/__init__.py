@@ -105,15 +105,22 @@ def evaspa(verbose, input_file):
     config = InputFile.model_validate(dict_config)
     output_dir = Path(config.output.path)
     # Run
-    logger.info("Run evaspa...")
+    logger.debug("Run evaspa...")
     res = run_evaspa(config.input, config.params, config.debug)
+    logger.info("Run evaspa: OK")
     # Save configuration
+    logger.debug("Write results...")
     write_config(config.model_dump(), output_dir, fmt="json")
+    logger.info("Write configiguration: OK")
     # Write results
     if res is not None:
-        # Write Evaporative farction
-        filename = "evaspa.tif"
+        # Write instantaneous results
+        filename = "evaspa_inst.tif"
         write_dataset(
-            res, filename=filename, directory=output_dir, separate=True
+            res[0], filename=filename, directory=output_dir, separate=True
+        )
+        filename = "evaspa_daily.tif"
+        write_dataset(
+            res[1], filename=filename, directory=output_dir, separate=True
         )
     logger.info("Writing results: OK")

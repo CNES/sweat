@@ -1,7 +1,7 @@
 {
     "models": [
             {
-                "name": "model1",
+                "name": "EF1",
                 "dry_edge": {
                     "type": "LinearEdge",
                     "config": {
@@ -23,7 +23,7 @@
                 "var": "albedo"
             },
             {
-                "name": "model2",
+                "name": "EF8",
                 "dry_edge": {
                     "type": "LinearEdge",
                     "config": {
@@ -37,7 +37,7 @@
                     "type": "FlatEdge",
                     "config": {"selection": "min"}
                 },
-                "var": "lai"
+                "var": "albedo"
             }
     ]
 }

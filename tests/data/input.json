@@ -1,6 +1,7 @@
 {
     "input":{
-        "path":"tests/data/modis_test.tif"
+        "path":"tests/data/modis_test_geo.tif",
+        "date":"2018-05-16T10:00:00-00:00"
     },
     "output":{
         "path":"out"
@@ -50,7 +51,7 @@
                     "type": "FlatEdge",
                     "config": {"selection": "min"}
                 },
-                "var": "lai"
+                "var": "albedo"
             }
             ],
             "options":{
@@ -60,7 +61,8 @@
         },
         "seb":{
             "use_topo": false,
-            "g_models": ["choudhury","kustas"]
+            "models": ["kustas"],
+            "merging": "mean"
         }
     },
     "debug": {

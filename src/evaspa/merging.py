@@ -57,7 +57,7 @@ def merge_to_dataset(
     """
     Description
     -----------
-    Merge data and create a
+    Merge data and create a dataset
 
     Parameters
     ----------

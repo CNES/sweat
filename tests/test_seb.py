@@ -265,8 +265,8 @@ def test_sebconfig(config) -> None:
     [
         {},
         {"use_topo": True},
-        {"models": ["su", "kustas"]},
-        {"use_topo": True, "models": ["su", "kustas"]},
+        {"models": seb.DEFAULT_MODELS},
+        {"use_topo": True, "models": seb.ALL_MODELS},
     ],
 )
 def test_run(config):
@@ -284,5 +284,5 @@ def test_compute_et_from_le():
     """
     le = 100 * np.ones((2, 2))
     ref = np.ones((2, 2)) * 100 / seb.LATENT_HEAT_VAPORIZATION
-    et = seb.compute_et_from_le(le)
+    et = seb._compute_et_from_le(le)  # noqa: SLF001
     np.testing.assert_allclose(et, ref)

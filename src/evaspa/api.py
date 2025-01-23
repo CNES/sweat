@@ -5,7 +5,6 @@ Module containing the API for EVASPA
 
 from __future__ import annotations
 
-import os
 from typing import TYPE_CHECKING
 
 import geopandas as gpd
@@ -14,7 +13,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import xarray as xr
 
-from evaspa import ef, filter, io, merging, seb, tiling, trishna
+from evaspa import daily, ef, filter, io, seb, tiling, trishna
 from evaspa.config import InputConfig, ParamsConfig
 from evaspa.debugging import DebuggingConfig, configure_debugging
 from evaspa.logging import LoggerManager
@@ -122,7 +121,7 @@ def regroup_tiles(
 
 def run_evaspa(
     entry: dict, params: dict, debug: dict | None = None
-) -> xr.Dataset | None:
+) -> tuple[xr.Dataset, xr.Dataset] | None:
     """
     Description
     -----------
@@ -158,27 +157,35 @@ def run_evaspa(
     else:
         debug_config = DebuggingConfig()
     configure_debugging(**debug_config.model_dump())
+    logger.debug("Check configuration: OK")
     # Read input data
-    if os.path.isfile(input_config.path):
-        data = io.read_data_from_file(input_config.path)
-    else:
-        data = io.read_data(input_config.path)
+    data = io.read_input(input_config.model_dump())
+    logger.debug("Read input data: OK")
     # Filter data
     data["valid"] = filter.determine_valid_pixels(
         data, **params_config.filtering.model_dump()
     )
+    logger.debug("Filter data: OK")
     # Check variablity
     if not ef.check_variability(
         data["lst"], mask=data["valid"], **params_config.ef.check.model_dump()
     ):
         logger.error("Variability criteria not respected")
         return None
+    logger.debug("Check variablity: OK")
     # Compute EF
     models, options = ef.initialize(params_config.ef.model_dump())
-    ef_xr, inst_xr = ef.run(
-        models, data, mask="valid", **params_config.ef.options.model_dump()
-    )
+    ef_xr, inst_xr = ef.run(models, data, mask="valid", **options)
+    logger.debug("Compute EF: OK")
     # Compute LE
-    le_xr = seb.run(data, ef_xr, **params_config.seb.model_dump())
-    inst_xr["le"] = merging.merge(le_xr, method=merging.MergeMethod.MEAN)
-    return inst_xr
+    _, merged_xr = seb.run(data, ef_xr, **params_config.seb.model_dump())
+    inst_xr = merged_xr.merge(
+        inst_xr, join="override", combine_attrs="no_conflicts"
+    )
+    logger.debug("Compute LE: OK")
+    # Extrapolate at daily scale
+    daily_xr = daily.extrapolate_at_daily_scale(
+        inst_xr, variables=["le", "et"], **params_config.daily.model_dump()
+    )
+    logger.debug("Daily extrapolation: OK")
+    return inst_xr, daily_xr

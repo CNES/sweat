@@ -250,12 +250,7 @@ class EFModel:
         )
         ef = np.where(ef > 1, 1, ef)
         ef = np.where(ef < 0, 0, ef)
-        return xr.DataArray(
-            data=ef,
-            dims=data.dims,
-            coords=data.coords.copy(),
-            attrs=self.to_dict(),
-        )
+        return data["lst"].copy(data=ef).assign_attrs(self.to_dict())
 
     def to_dict(self) -> dict:
         """
@@ -474,7 +469,7 @@ def compute(
     for m in models:
         m.fit(data, mask)
         ef[m.name] = m.compute(data, mask)
-    return xr.Dataset(ef)
+    return xr.Dataset(ef, coords=data.coords.copy(), attrs=data.attrs.copy())
 
 
 def select(ef: xr.Dataset) -> xr.Dataset:

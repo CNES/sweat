@@ -12,6 +12,7 @@ from scipy.constants import c, h, k, pi
 
 from evaspa.debugging import register_debugging
 from evaspa.logging import LoggerManager
+from evaspa.merging import MergeMethod, merge_to_dataset
 
 logger = LoggerManager.get_logger(__name__)
 
@@ -42,6 +43,7 @@ class SEBConfig(BaseModel):
 
     use_topo: bool = Field(default=False)
     models: list[RatioModel] = Field(default=DEFAULT_MODELS)
+    merging: MergeMethod = Field(default=MergeMethod.MEDIAN)
 
 
 def _compute_rn(
@@ -261,28 +263,33 @@ def create_ratio(
 
     ratio = {}
     for model in models:
+        # Check if model is available
         try:
-            if model == RatioModel.KUSTAS:
+            name = RatioModel(model).name
+        except ValueError:
+            msg = f"Unknown model for G/Rn ratio: {model}"
+            logger.warning(msg)
+            continue
+        # Compute ratio for the model
+        try:
+            if name == RatioModel.KUSTAS.name:
                 ratio[model.value] = xr.DataArray(
                     data=_ratio_from_kustas(data["ndvi"]),
                     dims=data.dims,
                     coords=data.coords.copy(),
                 )
-            elif model == RatioModel.SU:
+            elif name == RatioModel.SU.name:
                 ratio[model.value] = xr.DataArray(
                     data=_ratio_from_su(data["fcover"]),
                     dims=data.dims,
                     coords=data.coords.copy(),
                 )
-            elif model == RatioModel.CHOUDHURY:
+            elif name == RatioModel.CHOUDHURY.name:
                 ratio[model.value] = xr.DataArray(
                     data=_ratio_from_choudhury(data["lai"]),
                     dims=data.dims,
                     coords=data.coords.copy(),
                 )
-            else:
-                msg = f"Unknown model for G/Rn ratio: {model}"
-                logger.warning(msg)
         except KeyError as e:
             msg = f"Data missing for {model.value} model: {e}"
             logger.warning(msg)
@@ -349,32 +356,32 @@ def create_le(ef: xr.Dataset, rn: xr.Dataset, ratio: xr.Dataset) -> xr.Dataset:
         for rn_model in rn.data_vars:
             for ratio_model in ratio.data_vars:
                 name = f"{ef_model}_{rn_model}_{ratio_model}"
-                data_vars[name] = xr.DataArray(
+                data_vars[name] = ef[ef_model].copy(
                     data=_compute_le(
-                        ef[ef_model], rn[rn_model], ratio[ratio_model]
-                    ),
-                    dims=ef.dims,
-                    coords=ef.coords.copy(),
+                        ef[ef_model].data,
+                        rn[rn_model].data,
+                        ratio[ratio_model].data,
+                    )
                 )
-
     # Attributes
     attrs = {
         "crs": ef.attrs.get("crs", None),
         "transform": ef.attrs.get("transform", None),
     }
-    return xr.Dataset(data_vars=data_vars, coords=ef.coords.copy(), attrs=attrs)
+    return xr.Dataset(data_vars, attrs=attrs)
 
 
-def compute_et_from_le(
-    le: npt.ArrayLike, temp: float | None = None
+def _compute_et_from_le(
+    le: npt.ArrayLike, temperature: float | None = None
 ) -> npt.NDArray:
     """
     Description
     -----------
     Compute ET in mm from LE in W (J.m-2).
     ET = LE / L with L is the latent heat vaoprization of water.
+    #TODO
     """
-    if temp is None:
+    if temperature is None:
         latent_heat = LATENT_HEAT_VAPORIZATION
     else:
         msg = "The variation of latent heat of vaporization of water with temperature is not implemented yet."
@@ -385,8 +392,12 @@ def compute_et_from_le(
 
 @register_debugging
 def run(
-    data: xr.Dataset, ef: xr.Dataset, use_topo=False, models=DEFAULT_MODELS
-) -> xr.Dataset:
+    data: xr.Dataset,
+    ef: xr.Dataset,
+    use_topo=False,
+    models=DEFAULT_MODELS,
+    merging: MergeMethod = MergeMethod.MEAN,
+) -> tuple[xr.Dataset, xr.Dataset]:
     """
     Description
     -----------
@@ -406,12 +417,17 @@ def run(
         Topography to take into account
     models: list[str]
         List of G models
+    merging : MergeMethod
+        Method used for merging
 
     Returns
     -------
     le: xr.Dataset
         Latent heat flux dataset
+    le_merged : xr. Dataset
+        Latent heat flux merged
     """
+    # print(data)
     if len(ef.data_vars) == 0:
         msg = "EF dataset empty"
         raise ValueError(msg)
@@ -420,13 +436,21 @@ def run(
         logger.warning("No topography correction implemented yet")
     # Compute net radiation
     rn_xr = create_net_radiation(data)
+    # print(rn_xr)
+
     if len(rn_xr.data_vars) == 0:
         msg = "Radiation dataset empty"
         raise ValueError(msg)
     # Compute G flux
     ratio_xr = create_ratio(data, models=models)
+    # print(ratio_xr)
     if len(ratio_xr.data_vars) == 0:
         msg = "G/Rn ratio dataset empty"
         raise ValueError(msg)
     # Compute latent heat flux
-    return create_le(ef, rn_xr, ratio_xr)
+    le_xr = create_le(ef, rn_xr, ratio_xr)
+    merged_xr = merge_to_dataset(le_xr, method=merging, name="le")
+    merged_xr["et"] = merged_xr["le"].copy(
+        data=_compute_et_from_le(merged_xr["le"])
+    )
+    return le_xr, merged_xr

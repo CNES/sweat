@@ -52,7 +52,10 @@ def test_run_evaspa() -> None:
     """
     Test run EVASPA
     """
-    entry = {"path": "tests/data/modis_test.tif"}
-    params = {"ef": {"check": {"threshold": 0.02}, "models": "default_evaspa"}}
+    entry = {
+        "path": "tests/data/modis_test_geo.tif",
+        "date": "2018-05-16T10:00:00-00:00",
+    }
+    params = {"ef": {"models": "default_evaspa"}}
     res = api.run_evaspa(entry, params)
     assert res

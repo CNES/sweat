@@ -23,6 +23,7 @@ out/
 
 # Test
 !tests/data/modis_test.tif
+!tests/data/modis_test_geo.tif
 
 # pixi environments
 .pixi
