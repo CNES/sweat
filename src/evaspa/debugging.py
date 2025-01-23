@@ -85,7 +85,9 @@ class _DebugDecorator:
             if value is None:
                 data.attrs[key] = "none"
             elif isinstance(value, dict):
-                data[key] = json.dumps(value)
+                data.attrs[key] = json.dumps(value)
+            else:
+                data.attrs[key] = str(value)
         if isinstance(data, Dataset):
             for var in data.data_vars:
                 for key, value in data[var].attrs.items():
@@ -93,6 +95,8 @@ class _DebugDecorator:
                         data[var].attrs[key] = "none"
                     elif isinstance(value, dict):
                         data[var].attrs[key] = json.dumps(value)
+                    else:
+                        data[var].attrs[key] = str(value)
         data.to_netcdf(os.path.join(self.out, filename))
 
 
