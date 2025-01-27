@@ -269,18 +269,18 @@ class EFModel:
             "var": self.var,
         }
 
-    def __str__(self) -> str:
-        """
-        String conversion
-        """
-        return (
-            f"Model({self.name},dry_edge={self.dry_edge.__class__},"
-            f"wet_edge={self.wet_edge.__class__},var={self.var})"
-        )
-
     def __repr__(self) -> str:
         """
-        For print method
+        String conversion method
+        """
+        return (
+            f"Model({self.name},dry_edge={self.dry_edge.__class__.__name__},"
+            f"wet_edge={self.wet_edge.__class__.__name__},var={self.var})"
+        )
+
+    def __str__(self) -> str:
+        """
+        String conversion method for end-users
         """
         return (
             f"Model: {self.name}\n"
@@ -345,7 +345,8 @@ class EFModel:
         # Dry edge
         try:
             dry_edge = Edge.create(
-                efconfig.dry_edge.type, efconfig.dry_edge.config
+                efconfig.dry_edge.type,
+                efconfig.dry_edge.config | {"position": "top"},
             )
         except EdgeError as e:
             msg = "Error in dry edge creation"
@@ -353,7 +354,8 @@ class EFModel:
         # Wet edge
         try:
             wet_edge = Edge.create(
-                efconfig.wet_edge.type, efconfig.wet_edge.config
+                efconfig.wet_edge.type,
+                efconfig.wet_edge.config | {"position": "bottom"},
             )
         except EdgeError as e:
             msg = "Error in wet edge creation"

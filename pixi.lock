@@ -151,10 +151,12 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/3c/a6/bc1012356d8ece4d66dd75c4b9fc6c1f6650ddd5991e421177d9f8f671be/platformdirs-4.3.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/88/5f/e351af9a41f866ac3f1fac4ca0613908d9a41741cfcf2228f4ad853b697d/pluggy-1.5.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/22/a6/858897256d0deac81a172289110f31629fc4cee19b6f01283303e18c8db3/ptyprocess-0.7.0-py2.py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/4b/c7/0aca8f485595069da0b78e616b9a9b8453590f4f70cf8eb9cf3e5b1dc94e/pwlf-2.4.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/2f/0f24b288e2ce56f51c920137620b4434a38fd80583dbbe24fc2a1656c388/pybind11-2.13.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/a3/a812df4e2dd5696d1f351d58b8fe16a405b234ad2886a0dab9183fb78109/pycparser-2.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/f3/26/3e1bbe954fde7ee22a6e7d31582c642aad9e84ffe4b5fb61e63b87cd326f/pydantic-2.10.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8d/f0/49129b27c43396581a635d8710dae54a791b17dfc50c70164866bbf865e3/pydantic_core-2.27.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/bc/ac/91fe4c039e2744466621343d3b8af4a485193ed0aab53af5b1db03be0989/pyDOE-0.3.8.zip
       - pypi: https://files.pythonhosted.org/packages/8a/0b/9fcc47d19c48b59121088dd6da2488a49d5f72dacf8262e2790a1d2c7d15/pygments-2.19.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/78/c3/f81003ed480eb619647100d4a4ed9ff3c13153abbd8955dfe530a137ea5c/pyhdf-0.11.4.tar.gz
       - pypi: https://files.pythonhosted.org/packages/02/00/6d9c66a025387790e356247b7ad3802e7f2d19a21b8743af8d5607736986/pykdtree-1.3.13-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
@@ -351,10 +353,12 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/88/5f/e351af9a41f866ac3f1fac4ca0613908d9a41741cfcf2228f4ad853b697d/pluggy-1.5.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/16/8f/496e10d51edd6671ebe0432e33ff800aa86775d2d147ce7d43389324a525/pre_commit-4.0.1-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/22/a6/858897256d0deac81a172289110f31629fc4cee19b6f01283303e18c8db3/ptyprocess-0.7.0-py2.py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/4b/c7/0aca8f485595069da0b78e616b9a9b8453590f4f70cf8eb9cf3e5b1dc94e/pwlf-2.4.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/2f/0f24b288e2ce56f51c920137620b4434a38fd80583dbbe24fc2a1656c388/pybind11-2.13.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/a3/a812df4e2dd5696d1f351d58b8fe16a405b234ad2886a0dab9183fb78109/pycparser-2.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/f3/26/3e1bbe954fde7ee22a6e7d31582c642aad9e84ffe4b5fb61e63b87cd326f/pydantic-2.10.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8d/f0/49129b27c43396581a635d8710dae54a791b17dfc50c70164866bbf865e3/pydantic_core-2.27.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/bc/ac/91fe4c039e2744466621343d3b8af4a485193ed0aab53af5b1db03be0989/pyDOE-0.3.8.zip
       - pypi: https://files.pythonhosted.org/packages/8a/0b/9fcc47d19c48b59121088dd6da2488a49d5f72dacf8262e2790a1d2c7d15/pygments-2.19.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/78/c3/f81003ed480eb619647100d4a4ed9ff3c13153abbd8955dfe530a137ea5c/pyhdf-0.11.4.tar.gz
       - pypi: https://files.pythonhosted.org/packages/02/00/6d9c66a025387790e356247b7ad3802e7f2d19a21b8743af8d5607736986/pykdtree-1.3.13-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
@@ -606,10 +610,12 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/9c/39/0f88a830a1c8a3aba27fededc642da37613c57cbff143412e3536f89784f/psutil-6.1.1-cp36-abi3-manylinux_2_12_x86_64.manylinux2010_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/22/a6/858897256d0deac81a172289110f31629fc4cee19b6f01283303e18c8db3/ptyprocess-0.7.0-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8e/37/efad0257dc6e593a18957422533ff0f87ede7c9c6ea010a2177d738fb82f/pure_eval-0.2.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/4b/c7/0aca8f485595069da0b78e616b9a9b8453590f4f70cf8eb9cf3e5b1dc94e/pwlf-2.4.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/2f/0f24b288e2ce56f51c920137620b4434a38fd80583dbbe24fc2a1656c388/pybind11-2.13.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/a3/a812df4e2dd5696d1f351d58b8fe16a405b234ad2886a0dab9183fb78109/pycparser-2.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/f3/26/3e1bbe954fde7ee22a6e7d31582c642aad9e84ffe4b5fb61e63b87cd326f/pydantic-2.10.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8d/f0/49129b27c43396581a635d8710dae54a791b17dfc50c70164866bbf865e3/pydantic_core-2.27.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/bc/ac/91fe4c039e2744466621343d3b8af4a485193ed0aab53af5b1db03be0989/pyDOE-0.3.8.zip
       - pypi: https://files.pythonhosted.org/packages/8a/0b/9fcc47d19c48b59121088dd6da2488a49d5f72dacf8262e2790a1d2c7d15/pygments-2.19.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/78/c3/f81003ed480eb619647100d4a4ed9ff3c13153abbd8955dfe530a137ea5c/pyhdf-0.11.4.tar.gz
       - pypi: https://files.pythonhosted.org/packages/02/00/6d9c66a025387790e356247b7ad3802e7f2d19a21b8743af8d5607736986/pykdtree-1.3.13-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
@@ -1183,11 +1189,12 @@ packages:
 - pypi: .
   name: evaspa
   version: 0.0.1
-  sha256: 1185f2e695448a09c2892e28c7ea4eba5c379b854399e9d00ddc8300df881222
+  sha256: 6970ba0da7e115fc0bd2386ef8e8299840221c69f7ed4bd7d993d88b752414c7
   requires_dist:
   - geopandas
   - numpy
   - pandas
+  - pwlf
   - pydantic>=2.8
   - rasterio
   - scikit-image
@@ -3656,6 +3663,16 @@ packages:
   sha256: 1db8e35b67b3d218d818ae653e27f06c3aa420901fa7b081ca98cbedc874e0d0
   requires_dist:
   - pytest ; extra == 'tests'
+- pypi: https://files.pythonhosted.org/packages/4b/c7/0aca8f485595069da0b78e616b9a9b8453590f4f70cf8eb9cf3e5b1dc94e/pwlf-2.4.0-py3-none-any.whl
+  name: pwlf
+  version: 2.4.0
+  sha256: a88aad9357116f1df058b937a5553bf70388a6bcfbc8e8bbc8fa02e864d31c11
+  requires_dist:
+  - numpy>=1.14.0
+  - scipy>=1.2.0
+  - pydoe>=0.3.8
+  - tensorflow<2.0.0 ; extra == 'piecewiselinfittf'
+  requires_python: '>3.5'
 - pypi: https://files.pythonhosted.org/packages/13/2f/0f24b288e2ce56f51c920137620b4434a38fd80583dbbe24fc2a1656c388/pybind11-2.13.6-py3-none-any.whl
   name: pybind11
   version: 2.13.6
@@ -3686,6 +3703,13 @@ packages:
   requires_dist:
   - typing-extensions>=4.6.0,!=4.7.0
   requires_python: '>=3.8'
+- pypi: https://files.pythonhosted.org/packages/bc/ac/91fe4c039e2744466621343d3b8af4a485193ed0aab53af5b1db03be0989/pyDOE-0.3.8.zip
+  name: pydoe
+  version: 0.3.8
+  sha256: cbd6f14ae26d3c9f736013205f53ea1191add4567033c3ee77b7dd356566c4b6
+  requires_dist:
+  - numpy
+  - scipy
 - pypi: https://files.pythonhosted.org/packages/8a/0b/9fcc47d19c48b59121088dd6da2488a49d5f72dacf8262e2790a1d2c7d15/pygments-2.19.1-py3-none-any.whl
   name: pygments
   version: 2.19.1

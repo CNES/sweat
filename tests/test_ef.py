@@ -135,7 +135,7 @@ def setup_models() -> list[EFModel]:
             },
             "wet_edge": {
                 "type": "FlatEdge",
-                "config": {"selection": "min", "value": np.inf},
+                "config": {"value": np.inf},
             },
             "var": "albedo",
         },
@@ -176,9 +176,6 @@ def setup_models() -> list[EFModel]:
                 "name": "model",
                 "dry_edge": {
                     "type": "FlatEdge",
-                    "config": {
-                        "selection": "max",
-                    },
                 },
                 "wet_edge": {
                     "type": "LinearEdge",
@@ -207,9 +204,6 @@ def setup_models() -> list[EFModel]:
                 },
                 "wet_edge": {
                     "type": "FlatEdge",
-                    "config": {
-                        "selection": "min",
-                    },
                 },
                 "var": "albedo",
             },
@@ -220,15 +214,9 @@ def setup_models() -> list[EFModel]:
                 "name": "model",
                 "dry_edge": {
                     "type": "FlatEdge",
-                    "config": {
-                        "selection": "max",
-                    },
                 },
                 "wet_edge": {
                     "type": "FlatEdge",
-                    "config": {
-                        "selection": "min",
-                    },
                 },
                 "var": "albedo",
             },
@@ -330,22 +318,6 @@ def test_create_model(config, check_ef) -> None:
             "wet_edge": {
                 "type": "FlatEdge",
                 "config": {
-                    "selection": "foo",
-                },
-            },
-            "var": "albedo",
-        },
-        {
-            "name": "model",
-            "dry_edge": {
-                "type": "FlatEdge",
-                "config": {
-                    "selection": "max",
-                },
-            },
-            "wet_edge": {
-                "type": "FlatEdge",
-                "config": {
                     "selection": "min",
                 },
             },
@@ -389,9 +361,6 @@ def test_create_model_error(config) -> None:
             "name": "model",
             "dry_edge": {
                 "type": "FlatEdge",
-                "config": {
-                    "selection": "max",
-                },
             },
             "wet_edge": {
                 "type": "LinearEdge",
@@ -417,9 +386,6 @@ def test_create_model_error(config) -> None:
             },
             "wet_edge": {
                 "type": "FlatEdge",
-                "config": {
-                    "selection": "min",
-                },
             },
             "var": "albedo",
         },
@@ -427,15 +393,9 @@ def test_create_model_error(config) -> None:
             "name": "model",
             "dry_edge": {
                 "type": "FlatEdge",
-                "config": {
-                    "selection": "max",
-                },
             },
             "wet_edge": {
                 "type": "FlatEdge",
-                "config": {
-                    "selection": "min",
-                },
             },
             "var": "albedo",
         },
@@ -544,7 +504,7 @@ def test_check_variability(lst, mask, expected) -> None:
                             "type": "LinearEdge",
                             "config": {
                                 "interval_type": "size",
-                                "interval_nb": 20,
+                                "interval_size": 0.05,
                                 "percentile": [98, 100],
                                 "selection": "median",
                             },
@@ -553,7 +513,7 @@ def test_check_variability(lst, mask, expected) -> None:
                             "type": "LinearEdge",
                             "config": {
                                 "interval_type": "size",
-                                "interval_nb": 20,
+                                "interval_size": 0.05,
                                 "percentile": [0, 2],
                                 "selection": "median",
                             },
@@ -573,7 +533,6 @@ def test_check_variability(lst, mask, expected) -> None:
                         },
                         "wet_edge": {
                             "type": "FlatEdge",
-                            "config": {"selection": "min"},
                         },
                         "var": "albedo",
                     },
@@ -722,7 +681,6 @@ def test_all() -> None:
                 },
                 "wet_edge": {
                     "type": "FlatEdge",
-                    "config": {"selection": "min"},
                 },
                 "var": "albedo",
             },

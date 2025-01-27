@@ -34,6 +34,7 @@ dependencies = [
   "sensorsio",
   "pydantic>=2.8",
   "timezonefinder",
+  "pwlf",
 ]
 
 [project.optional-dependencies]
@@ -131,6 +132,7 @@ module = [
     "rasterio.*",
     "sensorsio.*",
     "shapely.*",
+    "pwlf.*",
 ]
 ignore_missing_imports = true
 

@@ -10,11 +10,24 @@ from enum import Enum
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
+import pwlf
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    ValidationInfo,
+    field_validator,
+)
+
+from evaspa.logging import LoggerManager
+
+logger = LoggerManager.get_logger(__name__)
 
 PERCENTILE_MIN = 0
 PERCENTILE_MAX = 100
 NB_INTERVAL_MAX = 1000
+SIZE_INTERVAL_MAX = 1
 
 
 class EdgeError(Exception):
@@ -31,8 +44,10 @@ class IntervalType(Enum):
 class EdgeConfig(BaseModel):
     """Configuration of a edge"""
 
+    model_config = ConfigDict(extra="forbid")
+
     type: str
-    config: dict
+    config: dict = Field(default={})
 
 
 class SelectionMethod(Enum):
@@ -44,17 +59,20 @@ class SelectionMethod(Enum):
     MEAN = "mean"
 
 
-class SelectionFlatMethod(Enum):
-    """Method used to select flat edge position"""
+class EdgePosition(Enum):
+    """Edge position"""
 
-    MIN = "min"
-    MAX = "max"
+    TOP = "top"
+    BOTTOM = "bottom"
 
 
 class Edge(BaseModel, ABC):
     """Abstract class for edge"""
 
-    model_config = ConfigDict(allow_inf_nan=True, ser_json_inf_nan="strings")
+    model_config = ConfigDict(
+        extra="forbid", allow_inf_nan=True, ser_json_inf_nan="strings"
+    )
+    position: EdgePosition
 
     @abstractmethod
     def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
@@ -65,9 +83,9 @@ class Edge(BaseModel, ABC):
 
         Parameters
         ----------
-        lst : np.array_like
+        lst: np.array_like
             Land surface temperature
-        var : np.array_like
+        var: np.array_like
             Variable used versus temperature (ex: Albedo)
         """
 
@@ -80,7 +98,7 @@ class Edge(BaseModel, ABC):
 
         Parameters
         ----------
-        var : np.array_like
+        var: np.array_like
             Variable
 
         Returns
@@ -103,9 +121,9 @@ class Edge(BaseModel, ABC):
 
         Parameters
         ----------
-        lst : np.array
+        lst: np.array
             Land surface temperature
-        var : np.array
+        var: np.array
             Variable used versus temperature (ex: Albedo)
 
         Returns
@@ -133,9 +151,9 @@ class Edge(BaseModel, ABC):
 
         Parameters
         ----------
-            : np.array
+        lst: np.array
             Land surface temperature
-        var : np.array
+        var: np.array
             Variable used versus temperature (ex: Albedo)
 
         Returns
@@ -156,16 +174,15 @@ class Edge(BaseModel, ABC):
             raise EdgeError(msg) from e
 
 
-class LinearEdge(Edge):
-    """Class for linear edge"""
+class RegressionEdge(Edge, ABC):
+    """Class for polynomial edge"""
 
     model_config = ConfigDict(allow_inf_nan=True, ser_json_inf_nan="strings")
-    percentile: tuple[int, int]
-    interval_type: IntervalType = IntervalType.SIZE
+    interval_type: IntervalType
     interval_nb: int = 20
+    interval_size: float = 0.05
+    percentile: tuple[int, int]
     selection: SelectionMethod = SelectionMethod.MEDIAN
-
-    coeffs: tuple[float, float] = (float("inf"), float("inf"))
 
     @field_validator("percentile")
     @classmethod
@@ -177,7 +194,7 @@ class LinearEdge(Edge):
 
         Parameters
         ----------
-        p : tuple[int,int]
+        p: tuple[int,int]
             Percentile interval
 
         Returns
@@ -198,15 +215,15 @@ class LinearEdge(Edge):
 
     @field_validator("interval_nb")
     @classmethod
-    def check_interval_nb(cls, nb: int) -> int:
+    def check_interval_nb(cls, nb: int, info: ValidationInfo) -> int:
         """
         Description
         -----------
-        Check the consistency of the interval number
+        If interval type is "density", check the consistency of the interval number
 
         Parameters
         ----------
-        nb : int
+        nb: int
             Interval number
 
         Returns
@@ -214,30 +231,47 @@ class LinearEdge(Edge):
         interval_nb: int
             Validated interval number
         """
-        if (nb <= 0) or (nb > NB_INTERVAL_MAX):
-            msg = f"Number of intervals must be between 1 and {NB_INTERVAL_MAX}"
-            raise ValueError(msg)
+        if info.data.get("interval_type") == IntervalType.DENSITY:
+            if (nb <= 0) or (nb > NB_INTERVAL_MAX):
+                msg = f"Number of intervals must be between 1 and {NB_INTERVAL_MAX}"
+                raise ValueError(msg)
+        else:
+            logger.warning(
+                "Number of intervals is ignored for interval type SIZE"
+            )
         return nb
 
-    def get(self, var: npt.ArrayLike) -> npt.NDArray:
+    @field_validator("interval_size")
+    @classmethod
+    def check_interval_size(cls, size: float, info: ValidationInfo) -> float:
         """
         Description
         -----------
-        Compute edge value
+        If interval type is "size", check the consistency of the interval size
 
         Parameters
         ----------
-        var : np.array_like
-            Variable
+        size: float
+            Interval size
 
         Returns
         -------
-        temperature : np.array
-            Temperature at the edge
+        interval_size: int
+            Validated interval size
         """
-        return self.coeffs[0] * np.array(var) + self.coeffs[1]
+        if info.data.get("interval_type") == IntervalType.SIZE:
+            if (size <= 0) or (size > SIZE_INTERVAL_MAX):
+                msg = f"Number of intervals must be between 0 and {SIZE_INTERVAL_MAX}"
+                raise ValueError(msg)
+        else:
+            logger.warning(
+                "Size of intervals is ignored for interval type DENSITY"
+            )
+        return size
 
-    def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
+    def get_points(
+        self, var: npt.ArrayLike, lst: npt.ArrayLike
+    ) -> tuple[npt.NDArray, npt.NDArray]:
         """
         Description
         -----------
@@ -245,14 +279,20 @@ class LinearEdge(Edge):
           - the abscissa value is obtained by taking the median.
           - the ordinate value is obtained by applying the
           selection method to the percentile interval.
-        Perform a linear regression from the points
 
         Parameters
         ----------
-        lst : np.array_like
+        lst: np.array_like
             Land surface temperature
-        var : np.array_like
+        var: np.array_like
             Variable used versus temperature (ex: Albedo)
+
+        Returns
+        -------
+        lst_values: np.array
+            LST coordinates
+        var_values: np.array
+            Variable coordinates
         """
         # Init
         if np.array(var).shape != np.array(lst).shape:
@@ -262,11 +302,13 @@ class LinearEdge(Edge):
         lst_values = []
         df = self._prepare(np.array(var), np.array(lst))
         intervals = self._get_intervals(df["var"])
-
         # Compute point coordinates for regression
         for _, group in df.groupby(intervals):
             value = group["lst"][
-                (group["lst"] > np.percentile(group["lst"], self.percentile[0]))
+                (
+                    group["lst"]
+                    >= np.percentile(group["lst"], self.percentile[0])
+                )
                 & (
                     group["lst"]
                     <= np.percentile(group["lst"], self.percentile[1])
@@ -275,9 +317,7 @@ class LinearEdge(Edge):
             if not np.isnan(value):
                 var_values.append(group["var"].median())
                 lst_values.append(value)
-
-        # Linear regression
-        self.coeffs = tuple(np.polyfit(var_values, lst_values, 1))
+        return np.array(var_values), np.array(lst_values)
 
     def _get_intervals(self, values: pd.Series) -> pd.Series:
         """
@@ -303,34 +343,130 @@ class LinearEdge(Edge):
             # Intervals with a fixed size
             value_min = values.min()
             value_max = values.max()
-            interval_size = (value_max - value_min) / self.interval_nb
-            intervals = ((values - value_min) / interval_size).astype(int)
-            intervals.loc[intervals >= self.interval_nb] = self.interval_nb - 1
+            interval_nb = int(
+                np.ceil((value_max - value_min) / self.interval_size)
+            )
+            intervals = ((values - value_min) / self.interval_size).astype(int)
+            intervals.loc[intervals >= interval_nb] = interval_nb - 1
 
         return intervals
 
-    def __str__(self) -> str:
+    @abstractmethod
+    def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
         """
-        String conversion
+        Description
+        -----------
+        Method to compute the edge parameters
+
+        Parameters
+        ----------
+        lst: np.array_like
+            Land surface temperature
+        var: np.array_like
+            Variable used versus temperature (ex: Albedo)
         """
+
+    @abstractmethod
+    def get(self, var: npt.ArrayLike) -> npt.NDArray:
+        """
+        Description
+        -----------
+        Compute edge value at var value.
+
+        Parameters
+        ----------
+        var: np.array_like
+            Variable
+
+        Returns
+        -------
+        edge: np.array
+            Temperature at the edge
+        """
+
+
+class LinearEdge(RegressionEdge):
+    """Class for linear edge"""
+
+    coeffs: tuple[float, float] = (float("inf"), float("inf"))
+
+    def get(self, var: npt.ArrayLike) -> npt.NDArray:
+        """
+        Description
+        -----------
+        Compute edge value
+
+        Parameters
+        ----------
+        var: np.array_like
+            Variable
+
+        Returns
+        -------
+        edge: np.array
+            Temperature at the edge
+        """
+        return self.coeffs[0] * np.array(var) + self.coeffs[1]
+
+    def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
+        """
+        Description
+        -----------
+        For each interval, compute the point coordinates used for the regression:
+          - the abscissa value is obtained by taking the median.
+          - the ordinate value is obtained by applying the
+          selection method to the percentile interval.
+        Perform a linear regression from the points
+
+        Parameters
+        ----------
+        lst: np.array_like
+            Land surface temperature
+        var: np.array_like
+            Variable used versus temperature (ex: Albedo)
+        """
+        # Get points for linear regression
+        var_values, lst_values = self.get_points(var, lst)
+        # Linear regression
+        self.coeffs = tuple(np.polyfit(var_values, lst_values, 1))
+
+    def __repr__(self) -> str:
+        """
+        String conversion method
+        """
+        interval_prop = (
+            f"interval_nb={self.interval_nb}"
+            if self.interval_type == IntervalType.DENSITY
+            else f"interval_size={self.interval_size}"
+        )
+
         return (
-            f"LinearEdge(percentile={self.percentile},"
+            f"LinearEdge("
+            f"position={self.position.value},"
             f"interval_type={self.interval_type.value},"
-            f"interval_nb={self.interval_nb},"
+            f"{interval_prop},"
+            f"percentile={self.percentile},"
             f"selection={self.selection.value},"
             f"coeffs={self.coeffs})"
         )
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         """
-        For print method
+        String conversion method for end-users
         """
+        interval_prop = (
+            f"interval_nb={self.interval_nb}"
+            if self.interval_type == IntervalType.DENSITY
+            else f"interval_size={self.interval_size}"
+        )
         return (
-            f"LinearEdge(percentile={self.percentile},"
-            f"interval_type={self.interval_type.value},"
-            f"interval_nb={self.interval_nb},"
-            f"selection={self.selection.value},"
-            f"coeffs={self.coeffs})"
+            f"LinearEdge:\n"
+            f"  - position={self.position.value}\n"
+            f"  - interval_type={self.interval_type.value}\n"
+            f"  - {interval_prop}\n"
+            f"  - percentile={self.percentile}\n"
+            f"  - selection={self.selection.value}\n"
+            f"  - coeffs={self.coeffs}"
         )
 
     def to_dict(self) -> dict:
@@ -338,9 +474,647 @@ class LinearEdge(Edge):
         Export to a dictionary
         """
         return {
-            "percentile": self.percentile,
+            "position": self.position.value,
             "interval_type": self.interval_type.value,
-            "interval_nb": self.interval_nb,
+            (
+                "interval_nb"
+                if self.interval_type.name == IntervalType.DENSITY.name
+                else "interval_size"
+            ): (
+                self.interval_nb
+                if self.interval_type.name == IntervalType.DENSITY.name
+                else self.interval_size
+            ),
+            "percentile": self.percentile,
+            "selection": self.selection.value,
+            "coeffs": tuple(float(coeff) for coeff in self.coeffs),
+        }
+
+
+class ThresholdLinearEdge(RegressionEdge):
+    """Class for linear edge with a threshold"""
+
+    coeffs: tuple[float, float] = (float("inf"), float("inf"))
+    threshold: float = float("inf")
+
+    def get(self, var: npt.ArrayLike) -> npt.NDArray:
+        """
+        Description
+        -----------
+        Compute edge value
+
+        Parameters
+        ----------
+        var: np.array_like
+            Variable
+
+        Returns
+        -------
+        edge: np.array
+            Temperature at the edge
+        """
+        return self.coeffs[0] * np.array(var) + self.coeffs[1]
+
+    def fit_numpy(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
+        """
+        Description
+        -----------
+        For each interval, compute the point coordinates used for the regression:
+          - the abscissa value is obtained by taking the median.
+          - the ordinate value is obtained by applying the
+          selection method to the percentile interval.
+        Perform a linear regression from the points
+
+        Parameters
+        ----------
+        lst: np.array_like
+            Land surface temperature
+        var: np.array_like
+            Variable used versus temperature (ex: Albedo)
+        """
+        # Get points for linear regression
+        var_values, lst_values = self.get_points(var, lst)
+        # Remove points below the threshold
+        if self.position.name == EdgePosition.TOP.name:
+            cut = np.nanargmax(lst_values[::-1])
+        else:
+            cut = np.nanargmin(lst_values[::-1])
+        cut = len(lst_values) - cut - 1
+        self.threshold = var_values[cut]
+        if cut == len(lst_values) - 1:
+            logger.warning("ThresholdLinearEdge: Threshold not found")
+            # Linear regression
+            self.coeffs = tuple(np.polyfit(var_values, lst_values, 1))
+        # Linear regression
+        self.coeffs = tuple(np.polyfit(var_values[cut:], lst_values[cut:], 1))
+
+    def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
+        """
+        Description
+        -----------
+        For each interval, compute the point coordinates used for the regression:
+          - the abscissa value is obtained by taking the median.
+          - the ordinate value is obtained by applying the
+          selection method to the percentile interval.
+        Perform a linear regression from the points
+
+        Parameters
+        ----------
+        lst: np.array_like
+            Land surface temperature
+        var: np.array_like
+            Variable used versus temperature (ex: Albedo)
+        """
+        # Get points for linear regression
+        var_values, lst_values = self.get_points(var, lst)
+        # Initialize piecewise linear fit
+        # Seed is fixed to garantee reproductible results
+        my_pwlf = pwlf.PiecewiseLinFit(
+            var_values, lst_values, degree=1, seed=123
+        )
+        # fit the data for 2 line segments
+        my_pwlf.fit(2)
+        sign = 1
+        if self.position.name == EdgePosition.BOTTOM.name:
+            sign = -1
+        if sign * (my_pwlf.beta[2] - my_pwlf.beta[2]) > 0:
+            logger.warning("ThresholdLinearEdge: Threshold not found")
+            # Linear regression
+            self.coeffs = tuple(np.polyfit(var_values, lst_values, 1))
+        else:
+            self.threshold = my_pwlf.fit_breaks[1]
+            self.coeffs = (
+                my_pwlf.beta[2] + my_pwlf.beta[1],
+                my_pwlf.beta[0]
+                - (
+                    my_pwlf.beta[1] * my_pwlf.fit_breaks[0]
+                    + my_pwlf.beta[2] * my_pwlf.fit_breaks[1]
+                ),
+            )
+
+    def __repr__(self) -> str:
+        """
+        String conversion method
+        """
+        interval_prop = (
+            f"interval_nb={self.interval_nb}"
+            if self.interval_type == IntervalType.DENSITY
+            else f"interval_size={self.interval_size}"
+        )
+
+        return (
+            "ThresholdLinearEdge("
+            f"position={self.position.value},"
+            f"interval_type={self.interval_type.value},"
+            f"{interval_prop},"
+            f"percentile={self.percentile},"
+            f"selection={self.selection.value},"
+            f"coeffs={self.coeffs},"
+            f"threshold={self.threshold}"
+        )
+
+    def __str__(self) -> str:
+        """
+        String conversion method for end-users
+        """
+        interval_prop = (
+            f"interval_nb={self.interval_nb}"
+            if self.interval_type == IntervalType.DENSITY
+            else f"interval_size={self.interval_size}"
+        )
+        return (
+            f"ThresholdLinearEdge:\n"
+            f"  - position={self.position.value}\n"
+            f"  - interval_type={self.interval_type.value}\n"
+            f"  - {interval_prop}\n"
+            f"  - percentile={self.percentile}\n"
+            f"  - selection={self.selection.value}\n"
+            f"  - coeffs={self.coeffs}\n"
+            f"  - threshold={self.threshold}"
+        )
+
+    def to_dict(self) -> dict:
+        """
+        Export to a dictionary
+        """
+        return {
+            "position": self.position.value,
+            "interval_type": self.interval_type.value,
+            (
+                "interval_nb"
+                if self.interval_type.name == IntervalType.DENSITY.name
+                else "interval_size"
+            ): (
+                self.interval_nb
+                if self.interval_type.name == IntervalType.DENSITY.name
+                else self.interval_size
+            ),
+            "percentile": self.percentile,
+            "selection": self.selection.value,
+            "coeffs": tuple(float(coeff) for coeff in self.coeffs),
+            "threshold": float(self.threshold),
+        }
+
+
+class DoubleLinearEdge(RegressionEdge):
+    """Class for double linear edge"""
+
+    coeffs1: tuple[float, float] = (float("inf"), float("inf"))
+    coeffs2: tuple[float, float] = (float("inf"), float("inf"))
+    inflection: float = float("inf")
+
+    def get(self, var: npt.ArrayLike) -> npt.NDArray:
+        """
+        Description
+        -----------
+        Compute edge value
+
+        Parameters
+        ----------
+        var: np.array_like
+            Variable
+
+        Returns
+        -------
+        edge: np.array
+            Temperature at the edge
+        """
+        x = np.array(var)
+        return np.piecewise(
+            x,
+            [x < self.inflection, x >= self.inflection],
+            [
+                lambda x: self.coeffs1[0] * x + self.coeffs1[1],
+                lambda x: self.coeffs2[0] * x + self.coeffs2[1],
+            ],
+        )
+
+    def fit_numpy(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
+        """
+        Description
+        -----------
+        For each interval, compute the point coordinates used for the regression:
+          - the abscissa value is obtained by taking the median.
+          - the ordinate value is obtained by applying the
+          selection method to the percentile interval.
+        Perform a linear regression from the points
+
+        Parameters
+        ----------
+        lst: np.array_like
+            Land surface temperature
+        var: np.array_like
+            Variable used versus temperature (ex: Albedo)
+        """
+        # Get points for linear regression
+        var_values, lst_values = self.get_points(var, lst)
+        # Remove points below the threshold
+        if self.position.name == EdgePosition.TOP.name:
+            cut = np.nanargmax(lst_values[::-1])
+        else:
+            cut = np.nanargmin(lst_values[::-1])
+        cut = len(lst_values) - cut - 1
+        self.inflection = var_values[cut]
+        if cut == len(lst_values) - 1:
+            logger.warning("DoubleLinearEdge: second regression impossible")
+            self.coeffs1 = tuple(np.polyfit(var_values, lst_values, 1))
+            self.coeffs2 = self.coeffs1
+        elif cut == 0:
+            logger.warning("DoubleLinearEdge: first regression impossible")
+            self.coeffs2 = tuple(np.polyfit(var_values, lst_values, 1))
+            self.coeffs1 = self.coeffs2
+        # Linear regression
+        self.coeffs1 = tuple(np.polyfit(var_values[:cut], lst_values[:cut], 1))
+        self.coeffs2 = tuple(np.polyfit(var_values[cut:], lst_values[cut:], 1))
+
+    def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
+        """
+        Description
+        -----------
+        For each interval, compute the point coordinates used for the regression:
+          - the abscissa value is obtained by taking the median.
+          - the ordinate value is obtained by applying the
+          selection method to the percentile interval.
+        Perform a linear regression from the points
+
+        Parameters
+        ----------
+        lst: np.array_like
+            Land surface temperature
+        var: np.array_like
+            Variable used versus temperature (ex: Albedo)
+        """
+        # Get points for linear regression
+        var_values, lst_values = self.get_points(var, lst)
+        # Initialize piecewise linear fit
+        my_pwlf = pwlf.PiecewiseLinFit(
+            var_values, lst_values, degree=1, seed=123
+        )
+        # fit the data for 2 line segments
+        my_pwlf.fit(2)
+        self.inflection = my_pwlf.fit_breaks[1]
+        self.coeffs1 = (
+            my_pwlf.beta[1],
+            +my_pwlf.beta[0] - my_pwlf.beta[1] * my_pwlf.fit_breaks[0],
+        )
+        self.coeffs2 = (
+            my_pwlf.beta[2] + my_pwlf.beta[1],
+            my_pwlf.beta[0]
+            - (
+                my_pwlf.beta[1] * my_pwlf.fit_breaks[0]
+                + my_pwlf.beta[2] * my_pwlf.fit_breaks[1]
+            ),
+        )
+
+    def __repr__(self) -> str:
+        """
+        String conversion method
+        """
+        interval_prop = (
+            f"interval_nb={self.interval_nb}"
+            if self.interval_type == IntervalType.DENSITY
+            else f"interval_size={self.interval_size}"
+        )
+
+        return (
+            f"DoubleLinearEdge("
+            f"position={self.position.value},"
+            f"interval_type={self.interval_type.value},"
+            f"{interval_prop},"
+            f"percentile={self.percentile},"
+            f"selection={self.selection.value},"
+            f"coeffs1={self.coeffs1},"
+            f"coeffs2={self.coeffs2},"
+            f"inflection={self.inflection})"
+        )
+
+    def __str__(self) -> str:
+        """
+        String conversion method for end-users
+        """
+        interval_prop = (
+            f"interval_nb={self.interval_nb}"
+            if self.interval_type == IntervalType.DENSITY
+            else f"interval_size={self.interval_size}"
+        )
+        return (
+            f"DoubleLinearEdge:\n"
+            f"  - position={self.position.value}\n"
+            f"  - interval_type={self.interval_type.value}\n"
+            f"  - {interval_prop}\n"
+            f"  - percentile={self.percentile}\n"
+            f"  - selection={self.selection.value}\n"
+            f"  - coeffs1={self.coeffs1}\n"
+            f"  - coeffs2={self.coeffs2}\n"
+            f"  - inflection={self.inflection}"
+        )
+
+    def to_dict(self) -> dict:
+        """
+        Export to a dictionary
+        """
+        return {
+            "position": self.position.value,
+            "interval_type": self.interval_type.value,
+            (
+                "interval_nb"
+                if self.interval_type == IntervalType.DENSITY
+                else "interval_size"
+            ): (
+                self.interval_nb
+                if self.interval_type == IntervalType.DENSITY
+                else self.interval_size
+            ),
+            "percentile": self.percentile,
+            "selection": self.selection.value,
+            "coeffs1": tuple(float(coeff) for coeff in self.coeffs1),
+            "coeffs2": tuple(float(coeff) for coeff in self.coeffs2),
+            "inflection": float(self.inflection),
+        }
+
+
+class FlatLinearEdge(RegressionEdge):
+    """Class for flat linear edge"""
+
+    coeffs1: float = float("inf")
+    coeffs2: tuple[float, float] = (float("inf"), float("inf"))
+    inflection: float = float("inf")
+
+    def get(self, var: npt.ArrayLike) -> npt.NDArray:
+        """
+        Description
+        -----------
+        Compute edge value
+
+        Parameters
+        ----------
+        var: np.array_like
+            Variable
+
+        Returns
+        -------
+        edge: np.array
+            Temperature at the edge
+        """
+        x = np.array(var)
+        return np.piecewise(
+            x,
+            [x < self.inflection, x >= self.inflection],
+            [
+                self.coeffs1,
+                lambda x: self.coeffs2[0] * x + self.coeffs2[1],
+            ],
+        )
+
+    def fit_numpy(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
+        """
+        Description
+        -----------
+        For each interval, compute the point coordinates used for the regression:
+          - the abscissa value is obtained by taking the median.
+          - the ordinate value is obtained by applying the
+          selection method to the percentile interval.
+        Perform a linear regression from the points
+
+        Parameters
+        ----------
+        lst: np.array_like
+            Land surface temperature
+        var: np.array_like
+            Variable used versus temperature (ex: Albedo)
+        """
+        # Get points for linear regression
+        var_values, lst_values = self.get_points(var, lst)
+        # Remove points below the threshold
+        if self.position.name == EdgePosition.TOP.name:
+            cut = np.nanargmax(lst_values[::-1])
+        else:
+            cut = np.nanargmin(lst_values[::-1])
+        cut = len(lst_values) - cut - 1
+        self.inflection = var_values[cut]
+        if cut == len(lst_values) - 1:
+            logger.warning("FlatLinearEdge: second regression impossible")
+            self.coeffs1 = lst_values[cut]
+            self.coeffs2 = (0.0, self.coeffs1)
+        elif cut == 0:
+            logger.warning("FlatLinearEdge: first regression impossible")
+            self.coeffs2 = tuple(np.polyfit(var_values, lst_values, 1))
+            self.coeffs1 = self.coeffs2[0] * var_values[0] + self.coeffs2[1]
+        else:
+            # Linear regression
+            self.coeffs2 = tuple(
+                np.polyfit(var_values[cut:], lst_values[cut:], 1)
+            )
+            self.coeffs1 = self.coeffs2[0] * var_values[cut] + self.coeffs2[1]
+
+    def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
+        """
+        Description
+        -----------
+        For each interval, compute the point coordinates used for the regression:
+          - the abscissa value is obtained by taking the median.
+          - the ordinate value is obtained by applying the
+          selection method to the percentile interval.
+        Perform a linear regression from the points
+
+        Parameters
+        ----------
+        lst: np.array_like
+            Land surface temperature
+        var: np.array_like
+            Variable used versus temperature (ex: Albedo)
+        """
+        # Get points for linear regression
+        var_values, lst_values = self.get_points(var, lst)
+        # Initialize piecewise linear fit
+        my_pwlf = pwlf.PiecewiseLinFit(
+            var_values, lst_values, degree=[0, 1], seed=123
+        )
+        # fit the data for 2 line segments
+        my_pwlf.fit(2)
+        self.inflection = my_pwlf.fit_breaks[1]
+        self.coeffs1 = my_pwlf.beta[0]
+        self.coeffs2 = (
+            my_pwlf.beta[1],
+            my_pwlf.predict(self.inflection)
+            - my_pwlf.beta[1] * self.inflection,
+        )
+
+    def __repr__(self) -> str:
+        """
+        String conversion method
+        """
+        interval_prop = (
+            f"interval_nb={self.interval_nb}"
+            if self.interval_type == IntervalType.DENSITY
+            else f"interval_size={self.interval_size}"
+        )
+
+        return (
+            f"FlatLinearEdge("
+            f"position={self.position.value},"
+            f"interval_type={self.interval_type.value},"
+            f"{interval_prop},"
+            f"percentile={self.percentile},"
+            f"selection={self.selection.value},"
+            f"coeffs1={self.coeffs1},"
+            f"coeffs2={self.coeffs2},"
+            f"inflection={self.inflection})"
+        )
+
+    def __str__(self) -> str:
+        """
+        String conversion method for end-users
+        """
+        interval_prop = (
+            f"interval_nb={self.interval_nb}"
+            if self.interval_type == IntervalType.DENSITY
+            else f"interval_size={self.interval_size}"
+        )
+        return (
+            f"FlatLinearEdge\n"
+            f"  - position={self.position.value}\n"
+            f"  - interval_type={self.interval_type.value}\n"
+            f"  - {interval_prop}\n"
+            f"  - percentile={self.percentile}\n"
+            f"  - selection={self.selection.value}\n"
+            f"  - coeffs1={self.coeffs1}\n"
+            f"  - coeffs2={self.coeffs2}\n"
+            f"  - inflection={self.inflection}"
+        )
+
+    def to_dict(self) -> dict:
+        """
+        Export to a dictionary
+        """
+        return {
+            "position": self.position.value,
+            "interval_type": self.interval_type.value,
+            (
+                "interval_nb"
+                if self.interval_type == IntervalType.DENSITY
+                else "interval_size"
+            ): (
+                self.interval_nb
+                if self.interval_type == IntervalType.DENSITY
+                else self.interval_size
+            ),
+            "percentile": self.percentile,
+            "selection": self.selection.value,
+            "coeffs1": float(self.coeffs1),
+            "coeffs2": tuple(float(coeff) for coeff in self.coeffs2),
+            "inflection": float(self.inflection),
+        }
+
+
+class ParabolicEdge(RegressionEdge):
+    """Class for parabolic edge"""
+
+    coeffs: tuple[float, float, float] = (
+        float("inf"),
+        float("inf"),
+        float("inf"),
+    )
+
+    def get(self, var: npt.ArrayLike) -> npt.NDArray:
+        """
+        Description
+        -----------
+        Compute edge value
+
+        Parameters
+        ----------
+        var: np.array_like
+            Variable
+
+        Returns
+        -------
+        edge: np.array
+            Temperature at the edge
+        """
+        return (
+            self.coeffs[0] * np.array(var) * np.array(var)
+            + self.coeffs[1] * np.array(var)
+            + self.coeffs[2]
+        )
+
+    def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
+        """
+        Description
+        -----------
+        For each interval, compute the point coordinates used for the regression:
+          - the abscissa value is obtained by taking the median.
+          - the ordinate value is obtained by applying the
+          selection method to the percentile interval.
+        Perform a linear regression from the points
+
+        Parameters
+        ----------
+        lst: np.array_like
+            Land surface temperature
+        var: np.array_like
+            Variable used versus temperature (ex: Albedo)
+        """
+        var_values, lst_values = self.get_points(var, lst)
+        # Linear regression
+        self.coeffs = tuple(np.polyfit(var_values, lst_values, 2))
+
+    def __repr__(self) -> str:
+        """
+        String conversion method
+        """
+        interval_prop = (
+            f"interval_nb={self.interval_nb}"
+            if self.interval_type == IntervalType.DENSITY
+            else f"interval_size={self.interval_size}"
+        )
+
+        return (
+            f"ParabolicEdge("
+            f"position={self.position.value},"
+            f"interval_type={self.interval_type.value},"
+            f"{interval_prop},"
+            f"percentile={self.percentile},"
+            f"selection={self.selection.value},"
+            f"coeffs={self.coeffs})"
+        )
+
+    def __str__(self) -> str:
+        """
+        String conversion method for end-users
+        """
+        interval_prop = (
+            f"interval_nb={self.interval_nb}"
+            if self.interval_type == IntervalType.DENSITY
+            else f"interval_size={self.interval_size}"
+        )
+        return (
+            f"ParabolicEdge\n"
+            f"  - position={self.position.value}\n"
+            f"  - interval_type={self.interval_type.value}\n"
+            f"  - {interval_prop}\n"
+            f"  - percentile={self.percentile}\n"
+            f"  - selection={self.selection.value}\n"
+            f"  - coeffs={self.coeffs}\n"
+        )
+
+    def to_dict(self) -> dict:
+        """
+        Export to a dictionary
+        """
+        return {
+            "position": self.position.value,
+            "interval_type": self.interval_type.value,
+            (
+                "interval_nb"
+                if self.interval_type == IntervalType.DENSITY
+                else "interval_size"
+            ): (
+                self.interval_nb
+                if self.interval_type == IntervalType.DENSITY
+                else self.interval_size
+            ),
+            "percentile": self.percentile,
             "selection": self.selection.value,
             "coeffs": tuple(float(coeff) for coeff in self.coeffs),
         }
@@ -350,7 +1124,6 @@ class FlatEdge(Edge):
     """Class for flat edge"""
 
     model_config = ConfigDict(allow_inf_nan=True, ser_json_inf_nan="strings")
-    selection: SelectionFlatMethod
     value: float = float("inf")
 
     def get(self, var: npt.ArrayLike) -> npt.NDArray:
@@ -384,16 +1157,35 @@ class FlatEdge(Edge):
         var : np.array_like
             Variable used versus temperature (ex: Albedo)
         """
-        if self.selection == SelectionFlatMethod.MAX:
+        if self.position.name == EdgePosition.TOP.name:
             self.value = np.nanmax(np.array(lst))
-        elif self.selection == SelectionFlatMethod.MIN:
+        elif self.position.name == EdgePosition.BOTTOM.name:
             self.value = np.nanmin(np.array(lst))
+
+    def __repr__(self) -> str:
+        """
+        String conversion method
+        """
+        return (
+            f"FlatEdge(position: {self.position.value},"
+            f"value: {float(self.value)})"
+        )
+
+    def __str__(self) -> str:
+        """
+        String conversion method for end-users
+        """
+        return (
+            f"FlatEdge\n"
+            f"  - position={self.position.value}\n"
+            f"  - value={self.value}\n"
+        )
 
     def to_dict(self) -> dict:
         """
         Export to a dictionary
         """
         return {
-            "selection": self.selection.value,
+            "position": self.position.value,
             "value": float(self.value),
         }

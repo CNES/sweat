@@ -48,8 +48,7 @@
                     }
                 },
                 "wet_edge": {
-                    "type": "FlatEdge",
-                    "config": {"selection": "min"}
+                    "type": "FlatEdge"
                 },
                 "var": "albedo"
             }
