@@ -567,30 +567,28 @@ class ThresholdLinearEdge(RegressionEdge):
         """
         # Get points for linear regression
         var_values, lst_values = self.get_points(var, lst)
+        if self.position.name == EdgePosition.TOP.name:
+            cut = np.nanargmax(lst_values[::-1])
+        else:
+            cut = np.nanargmin(lst_values[::-1])
+        cut = len(lst_values) - cut - 1
+        guess = var_values[cut]
         # Initialize piecewise linear fit
         # Seed is fixed to garantee reproductible results
-        my_pwlf = pwlf.PiecewiseLinFit(
+        pwlf_solver = pwlf.PiecewiseLinFit(
             var_values, lst_values, degree=1, seed=123
         )
         # fit the data for 2 line segments
-        my_pwlf.fit(2)
-        sign = 1
-        if self.position.name == EdgePosition.BOTTOM.name:
-            sign = -1
-        if sign * (my_pwlf.beta[2] - my_pwlf.beta[2]) > 0:
-            logger.warning("ThresholdLinearEdge: Threshold not found")
-            # Linear regression
-            self.coeffs = tuple(np.polyfit(var_values, lst_values, 1))
-        else:
-            self.threshold = my_pwlf.fit_breaks[1]
-            self.coeffs = (
-                my_pwlf.beta[2] + my_pwlf.beta[1],
-                my_pwlf.beta[0]
-                - (
-                    my_pwlf.beta[1] * my_pwlf.fit_breaks[0]
-                    + my_pwlf.beta[2] * my_pwlf.fit_breaks[1]
-                ),
-            )
+        breaks = pwlf_solver.fit_guess([guess])
+        self.threshold = breaks[1]
+        self.coeffs = (
+            pwlf_solver.beta[2] + pwlf_solver.beta[1],
+            pwlf_solver.beta[0]
+            - (
+                pwlf_solver.beta[1] * pwlf_solver.fit_breaks[0]
+                + pwlf_solver.beta[2] * pwlf_solver.fit_breaks[1]
+            ),
+        )
 
     def __repr__(self) -> str:
         """
@@ -747,22 +745,23 @@ class DoubleLinearEdge(RegressionEdge):
         # Get points for linear regression
         var_values, lst_values = self.get_points(var, lst)
         # Initialize piecewise linear fit
-        my_pwlf = pwlf.PiecewiseLinFit(
+        pwlf_solver = pwlf.PiecewiseLinFit(
             var_values, lst_values, degree=1, seed=123
         )
         # fit the data for 2 line segments
-        my_pwlf.fit(2)
-        self.inflection = my_pwlf.fit_breaks[1]
+        pwlf_solver.fit(2)
+        self.inflection = pwlf_solver.fit_breaks[1]
         self.coeffs1 = (
-            my_pwlf.beta[1],
-            +my_pwlf.beta[0] - my_pwlf.beta[1] * my_pwlf.fit_breaks[0],
+            pwlf_solver.beta[1],
+            +pwlf_solver.beta[0]
+            - pwlf_solver.beta[1] * pwlf_solver.fit_breaks[0],
         )
         self.coeffs2 = (
-            my_pwlf.beta[2] + my_pwlf.beta[1],
-            my_pwlf.beta[0]
+            pwlf_solver.beta[2] + pwlf_solver.beta[1],
+            pwlf_solver.beta[0]
             - (
-                my_pwlf.beta[1] * my_pwlf.fit_breaks[0]
-                + my_pwlf.beta[2] * my_pwlf.fit_breaks[1]
+                pwlf_solver.beta[1] * pwlf_solver.fit_breaks[0]
+                + pwlf_solver.beta[2] * pwlf_solver.fit_breaks[1]
             ),
         )
 
@@ -926,18 +925,33 @@ class FlatLinearEdge(RegressionEdge):
         """
         # Get points for linear regression
         var_values, lst_values = self.get_points(var, lst)
+        if self.position.name == EdgePosition.TOP.name:
+            cut = np.nanargmax(lst_values[::-1])
+        else:
+            cut = np.nanargmin(lst_values[::-1])
+        cut = len(lst_values) - cut - 1
+        guess = var_values[cut]
         # Initialize piecewise linear fit
-        my_pwlf = pwlf.PiecewiseLinFit(
-            var_values, lst_values, degree=[0, 1], seed=123
+        pwlf_solver = pwlf.PiecewiseLinFit(
+            var_values,
+            lst_values,
+            seed=123,
         )
+        breaks = pwlf_solver.fit_guess([guess])
         # fit the data for 2 line segments
-        my_pwlf.fit(2)
-        self.inflection = my_pwlf.fit_breaks[1]
-        self.coeffs1 = my_pwlf.beta[0]
+        self.inflection = breaks[1]
+        self.coeffs1 = (
+            pwlf_solver.beta[1] * self.inflection
+            + pwlf_solver.beta[0]
+            - pwlf_solver.beta[1] * pwlf_solver.fit_breaks[0]
+        )
         self.coeffs2 = (
-            my_pwlf.beta[1],
-            my_pwlf.predict(self.inflection)
-            - my_pwlf.beta[1] * self.inflection,
+            pwlf_solver.beta[2] + pwlf_solver.beta[1],
+            pwlf_solver.beta[0]
+            - (
+                pwlf_solver.beta[1] * pwlf_solver.fit_breaks[0]
+                + pwlf_solver.beta[2] * pwlf_solver.fit_breaks[1]
+            ),
         )
 
     def __repr__(self) -> str:

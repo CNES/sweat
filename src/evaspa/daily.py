@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import numpy.typing as npt
 import rasterio as rio
-import xarray as xr  # noqa: TC002
+import xarray as xr
 from pydantic import BaseModel, ConfigDict, Field
 from pyproj import CRS
 from timezonefinder import TimezoneFinder

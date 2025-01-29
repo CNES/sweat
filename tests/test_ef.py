@@ -784,9 +784,46 @@ def test_efconfig(config) -> None:
     assert cfg
 
 
+@pytest.mark.parametrize(
+    "config",
+    [
+        {
+            "models": [
+                {
+                    "name": "model1",
+                    "dry_edge": {
+                        "type": "FlatEdge",
+                    },
+                    "wet_edge": {
+                        "type": "FlatEdge",
+                    },
+                    "var": "fcover",
+                },
+                {
+                    "name": "model1",
+                    "dry_edge": {
+                        "type": "FlatEdge",
+                    },
+                    "wet_edge": {
+                        "type": "FlatEdge",
+                    },
+                    "var": "lai",
+                },
+            ]
+        },
+    ],
+)
+def test_efconfig_error(config) -> None:
+    """
+    Test EFCheckConfig with error
+    """
+    with pytest.raises((EFConfigError, EFModelError)):
+        EFConfig.model_validate(config)
+
+
 def test_get_available_configuration() -> None:
     """
     Test get_available_configuration method
     """
     names = get_available_configuration()
-    assert names == ["default_evaspa"]
+    assert names == ["default_evaspa", "hsm_evaspa"]

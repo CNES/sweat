@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, Any
@@ -17,7 +18,9 @@ from pydantic import (
     ConfigDict,
     Field,
     ValidationError,
+    model_validator,
 )
+from typing_extensions import Self
 
 from evaspa.debugging import register_debugging
 from evaspa.edge import Edge, EdgeConfig, EdgeError
@@ -122,6 +125,18 @@ class EFConfig(BaseModel):
     models: EFModels
     options: EFOptionsConfig = Field(default=EFOptionsConfig())
     check: EFCheckConfig = Field(default=EFCheckConfig())
+
+    @model_validator(mode="after")
+    def check_model_name(self) -> Self:
+        """
+        Check that all models have a different name
+        """
+        names = [model.name for model in self.models]
+        duplicates = [k for k, v in Counter(names).items() if v > 1]
+        if len(duplicates) > 0:
+            msg = f"All EF models must a different name: {duplicates}"
+            raise EFConfigError(msg)
+        return self
 
 
 class EFConfigError(Exception):
@@ -349,7 +364,7 @@ class EFModel:
                 efconfig.dry_edge.config | {"position": "top"},
             )
         except EdgeError as e:
-            msg = "Error in dry edge creation"
+            msg = f"Error in dry edge creation for model {efconfig.name}"
             raise EFModelError(msg) from e
         # Wet edge
         try:
@@ -358,7 +373,7 @@ class EFModel:
                 efconfig.wet_edge.config | {"position": "bottom"},
             )
         except EdgeError as e:
-            msg = "Error in wet edge creation"
+            msg = f"Error in wet edge creation for model {efconfig.name}"
             raise EFModelError(msg) from e
 
         return cls(
