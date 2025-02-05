@@ -390,6 +390,61 @@ def _compute_et_from_le(
     return np.array(le) / latent_heat
 
 
+def correct_direct_radiation(
+    rsd: npt.ArrayLike,
+    sza: npt.ArrayLike,
+    saa: npt.ArrayLike,
+    slope: npt.ArrayLike,
+    aspect: npt.ArrayLike,
+) -> npt.NDArray:
+    """
+    Description
+    -----------
+    Correct instant direct downward shortwave radiation
+    for arbitrary terrains and sun positions.
+    The instant direct downward shortwave radiation has been computed
+    by taking cos(SZA) as the cosine of the solar incidence angle
+    relative to the normal to the land surface.
+    The objective is to take into account slope and aspect
+    impact on direct shortwave radiation.
+
+    RSD_corr = RSD x cos(i) / cos(sza)
+    cos(i) = cos(slope)cos(sza) + sin(slope)sin(sza)cos(aspect-saa)
+
+    G. E. Liston and K. Elder, “A meteorological distribution system
+    for high-resolution terrestrial modeling (MicroMet),” vol. 7,
+    no. 2, pp. 217-234, 2006, Journal of Hydrometeorology
+
+    Parameters
+    ----------
+    rsd: np.array_like
+        Direct downward shortwave radiation
+    sza: np.array_like
+        Sun Zenith Angle
+    saa: np.array_like
+        Sun Azimuth Angle
+    slope: np.array_like
+        Slope
+    aspect: np.array_like
+        Aspect
+
+    Return
+    ------
+    rsd_corr: np.array
+        Direct downward shortwave radiation corrected with topography
+    """
+    # convert deg to rad
+    slope_rad = np.deg2rad(slope)
+    aspect_rad = np.deg2rad(aspect)
+    sza_rad = np.deg2rad(sza)
+    saa_rad = np.deg2rad(saa)
+    cos_i = np.cos(slope_rad) * np.cos(sza_rad) + np.sin(slope_rad) * np.sin(
+        sza_rad
+    ) * np.cos(aspect_rad - saa_rad)
+    cos_i = np.where(cos_i < 0, 0, cos_i)
+    return np.array(rsd) * cos_i / np.cos(sza_rad)
+
+
 @register_debugging
 def run(
     data: xr.Dataset,

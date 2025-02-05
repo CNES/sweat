@@ -119,6 +119,7 @@ exclude_lines = [
 [tool.mypy]
 exclude = []
 plugins = ["numpy.typing.mypy_plugin"]
+disable_error_code = ["import-untyped"]
 
 [[tool.mypy.overrides]]
 module = [

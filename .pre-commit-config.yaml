@@ -4,14 +4,14 @@ repos:
     - id: hatch-fmt
       name: hatch-fmt
       entry: hatch fmt
-      language: python
+      language: system
       types_or: [python, pyi, jupyter]
       stages: [pre-commit]
 
     - id: mypy
       name: mypy
       entry: hatch run types:check
-      language: python
+      language: system
       files: \.py$
       types: [python]
       stages: [pre-commit]
