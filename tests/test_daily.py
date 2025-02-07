@@ -65,9 +65,57 @@ def setup_dataset(
     )
 
 
-def test_toa_daily_estimate():
+@pytest.mark.parametrize(
+    ("use_topo"),
+    [
+        False,
+        True,
+    ],
+)
+def test_toa_daily_estimate(use_topo):
     """
     Test toa daily estimate function
+    """
+    data = setup_dataset(
+        ["var", "height", "slope", "aspect"],
+        dt.datetime(2025, 1, 9, 11, 30, 00, tzinfo=dt.timezone.utc),
+        wgs84_bounds=(1.0, 43.0, 2.0, 44.0),
+        epsg=32631,
+        max_value=105,
+        min_value=95,
+        size=(200, 100),
+    )
+    dem = None
+    if use_topo:
+        dem = data[["height", "slope", "aspect"]]
+    daily.toa_daily_estimate(data[["var"]], date=data.attrs["date"], dem=dem)
+
+
+def test_toa_daily_estimate_missing_dem_data(caplog):
+    """
+    Test toa daily estimate function (missing DEM data)
+    """
+    caplog.clear()
+    data = setup_dataset(
+        ["var", "aspect"],
+        dt.datetime(2025, 1, 9, 11, 30, 00, tzinfo=dt.timezone.utc),
+        wgs84_bounds=(1.0, 43.0, 2.0, 44.0),
+        epsg=32631,
+        max_value=105,
+        min_value=95,
+        size=(200, 100),
+    )
+    dem = data[["aspect"]]
+    daily.toa_daily_estimate(data, date=data.attrs["date"], dem=dem)
+    assert (
+        "No DEM information (aspect or slope) to compute topographic corrections. Topographic corrections are disabled."
+        in caplog.text
+    )
+
+
+def test_toa_daily_estimate_mising_crs():
+    """
+    Test toa daily estimate function (missing CRS data)
     """
     data = setup_dataset(
         ["var"],
@@ -78,7 +126,12 @@ def test_toa_daily_estimate():
         min_value=95,
         size=(200, 100),
     )
-    daily.toa_daily_estimate(data, date=data.attrs["date"])
+    data.attrs["crs"] = None
+    with pytest.raises(
+        ValueError,
+        match="Impossible to compute TOA extrapolation because CRS is missing in the metadata",
+    ):
+        daily.toa_daily_estimate(data, date=data.attrs["date"])
 
 
 def test_extrapolate_unknown_method(caplog):
@@ -143,27 +196,57 @@ def test_extrapolate_toa_missing_date():
 
 
 @pytest.mark.parametrize(
-    ("variables", "method", "expected"),
+    ("variables", "method", "use_topo", "expected"),
     [
-        pytest.param(["var1"], "toa", 1),
-        pytest.param(["var1", "var2", "var3"], "toa", 3),
-        pytest.param(None, "toa", 3),
+        pytest.param(["var1"], "toa", False, 1),
+        pytest.param(["var1", "var2", "var3"], "toa", True, 3),
+        pytest.param(None, "toa", True, 3),
     ],
 )
-def test_extrapolate_at_daily_scale(variables, method, expected):
+def test_extrapolate_at_daily_scale(variables, method, use_topo, expected):
     """
     Test extrapolation function at daily scale
     """
+    data = setup_dataset(
+        ["var1", "var2", "var3", "height", "slope", "aspect"],
+        dt.datetime(2025, 1, 9, 11, 30, 00, tzinfo=dt.timezone.utc),
+        wgs84_bounds=(1.0, 43.0, 2.0, 44.0),
+        epsg=32631,
+        max_value=90,
+        min_value=0,
+        size=(200, 100),
+    )
+    dem = None
+    if use_topo:
+        dem = data[["height", "slope", "aspect"]]
+    res = daily.extrapolate_at_daily_scale(
+        data[["var1", "var2", "var3"]],
+        variables=variables,
+        method=method,
+        dem=dem,
+        use_topo=use_topo,
+    )
+    assert len(res.data_vars) == expected
+
+
+def test_extrapolate_at_daily_scale_without_dem(caplog):
+    """
+    Test extrapolation function at daily scale
+    """
+    caplog.clear()
     data = setup_dataset(
         ["var1", "var2", "var3"],
         dt.datetime(2025, 1, 9, 11, 30, 00, tzinfo=dt.timezone.utc),
         wgs84_bounds=(1.0, 43.0, 2.0, 44.0),
         epsg=32631,
-        max_value=105,
-        min_value=95,
+        max_value=90,
+        min_value=0,
         size=(200, 100),
     )
-    res = daily.extrapolate_at_daily_scale(
-        data, variables=variables, method=method
+    daily.extrapolate_at_daily_scale(
+        data, variables=None, method="toa", dem=None, use_topo=True
     )
-    assert len(res.data_vars) == expected
+    assert (
+        "No DEM information to compute topographic corrections. Topographic corrections are disabled."
+        in caplog.text
+    )

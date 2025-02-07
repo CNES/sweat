@@ -1,6 +1,9 @@
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
+import datetime as dt
+
 import numpy as np
+import numpy.typing as npt
 import pytest
 import xarray as xr
 from pyproj import CRS
@@ -99,6 +102,20 @@ def setup_dataset(
             "lat": ("lat", lat),
         },
         attrs={"description": "Test data"},
+    )
+
+
+def setup_array(data: npt.NDArray) -> xr.DataArray:
+    """
+    Create dataarray
+    """
+    return xr.DataArray(
+        data=data,
+        dims=["y", "x"],
+        coords={
+            "x": (["x"], np.linspace(-1.0, 1.0, num=data.shape[0])),
+            "y": (["y"], np.linspace(42.0, 44.0, num=data.shape[1])),
+        },
     )
 
 
@@ -286,3 +303,151 @@ def test_compute_et_from_le():
     ref = np.ones((2, 2)) * 100 / seb.LATENT_HEAT_VAPORIZATION
     et = seb._compute_et_from_le(le)  # noqa: SLF001
     np.testing.assert_allclose(et, ref)
+
+
+@pytest.mark.parametrize(
+    ("rsd", "sza", "saa", "slope", "aspect", "expected"),
+    [
+        pytest.param(1000, 20, 0, 30, 0, 1048.01),
+        pytest.param(1000, 20, 0, 0, 0, 1000),
+    ],
+)
+def test_correct_direct_radiation(rsd, sza, saa, slope, aspect, expected):
+    """
+    Test function for correcting direct shortwave radiation
+    """
+    res = seb._correct_direct_radiation(rsd, sza, saa, slope, aspect)  # noqa: SLF001
+    np.testing.assert_approx_equal(res, expected, significant=2)
+
+
+@pytest.mark.parametrize(
+    ("rsd", "slope", "aspect", "fdiff", "sza", "saa", "expected"),
+    [
+        pytest.param(
+            setup_array(1000 * np.ones((2, 2))),
+            setup_array(30 * np.ones((2, 2))),
+            setup_array(80 * np.ones((2, 2))),
+            None,
+            None,
+            None,
+            setup_array(
+                np.array(
+                    [
+                        [1082, 1066],
+                        [1082, 1066],
+                    ]
+                )
+            ),
+        ),
+        pytest.param(
+            setup_array(1000 * np.ones((2, 2))),
+            setup_array(30 * np.ones((2, 2))),
+            setup_array(80 * np.ones((2, 2))),
+            setup_array(np.zeros((2, 2))),
+            None,
+            None,
+            setup_array(
+                np.array(
+                    [
+                        [1082, 1066],
+                        [1082, 1066],
+                    ]
+                )
+            ),
+        ),
+        pytest.param(
+            setup_array(1000 * np.ones((2, 2))),
+            setup_array(30 * np.ones((2, 2))),
+            setup_array(80 * np.ones((2, 2))),
+            setup_array(np.ones((2, 2))),
+            None,
+            None,
+            setup_array(
+                np.array(
+                    [
+                        [1000, 1000],
+                        [1000, 1000],
+                    ]
+                )
+            ),
+        ),
+        pytest.param(
+            setup_array(1000 * np.ones((2, 2))),
+            setup_array(30 * np.ones((2, 2))),
+            setup_array(80 * np.ones((2, 2))),
+            setup_array(np.zeros((2, 2))),
+            setup_array(30 * np.ones((2, 2))),
+            setup_array(80 * np.ones((2, 2))),
+            setup_array(
+                np.array(
+                    [
+                        [1154, 1154],
+                        [1154, 1154],
+                    ]
+                )
+            ),
+        ),
+    ],
+)
+def test_correct_shortwave_radiation(
+    rsd, slope, aspect, fdiff, sza, saa, expected
+):
+    """
+    Test function for correcting direct shortwave radiation
+    """
+    date = dt.datetime(2025, 6, 10, 10, 0, 0, tzinfo=dt.timezone.utc)
+    res = seb.correct_shortwave_radiation(
+        rsd=rsd,
+        slope=slope,
+        aspect=aspect,
+        fdiff=fdiff,
+        date=date,
+        sza=sza,
+        saa=saa,
+        crs=CRS(4326),
+    )
+    np.testing.assert_allclose(res, expected, atol=5.0, rtol=0.1)
+
+
+@pytest.mark.parametrize(
+    ("rsd", "slope", "aspect", "fdiff", "sza", "saa", "msg"),
+    [
+        pytest.param(
+            setup_array(1000 * np.ones((2, 2))),
+            setup_array(30 * np.ones((2, 2))),
+            setup_array(80 * np.ones((2, 2))),
+            None,
+            setup_array(30 * np.ones((2, 2))),
+            setup_array(80 * np.ones((2, 2))),
+            "No diffuse fraction data",
+        ),
+        pytest.param(
+            setup_array(1000 * np.ones((2, 2))),
+            setup_array(30 * np.ones((2, 2))),
+            setup_array(80 * np.ones((2, 2))),
+            setup_array(np.zeros((2, 2))),
+            None,
+            None,
+            "Sun angle not present, theoretical calculation done",
+        ),
+    ],
+)
+def test_correct_shortwave_radiation_with_warnings(
+    rsd, slope, aspect, fdiff, sza, saa, msg, caplog
+):
+    """
+    Test function for correcting direct shortwave radiation
+    """
+    caplog.clear()
+    date = dt.datetime(2025, 6, 10, 10, 0, 0, tzinfo=dt.timezone.utc)
+    seb.correct_shortwave_radiation(
+        rsd=rsd,
+        slope=slope,
+        aspect=aspect,
+        fdiff=fdiff,
+        date=date,
+        sza=sza,
+        saa=saa,
+        crs=CRS(4326),
+    )
+    assert msg in caplog.text

@@ -835,7 +835,7 @@ def compute_daily_toa_solar_radiation(
     slope = 0 for horizontal and slope = pi/2 radians for vertical slope
     (slope is always positive and represents the slope in any
     direction), and aspect is the surface aspect angle, where for
-    noth hemisphere aspect = pi for slopes oriented due south,
+    north hemisphere aspect = pi for slopes oriented due south,
     aspect = pi/2 radians for slopes oriented due east,
     aspect = -pi/2 radians for slopes
     oriented due west and aspect = 0 radians for slopes
@@ -963,7 +963,7 @@ def compute_diffuse_fraction(
     """
     Description
     -----------
-    This method compute the fraction of diffuse radiation
+    This method computes the fraction of diffuse radiation
     from the global radiation. We use the relationship between
     the fraction of diffuse radiation (Rdiff) compared to
     global radiation data (Rsd) and the fraction of global
@@ -980,10 +980,14 @@ def compute_diffuse_fraction(
     ----------
     date: dt.datetime
         Date
-    rsd: np.array_like
-        Gloabl radiation data
-    sza: np.array_like
+    rsd: xr.DataArray
+        Global radiation data
+    sza: xr.DataArray
         Sun Zenith Angle (in degrees)
+    saa: xr.DataArray
+        Sun Azimuth Angle (in degrees)
+    crs: CRS
+        Coordinate Reference System
 
     Return
     ------

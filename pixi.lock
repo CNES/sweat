@@ -1189,7 +1189,7 @@ packages:
 - pypi: .
   name: evaspa
   version: 0.0.1
-  sha256: 6970ba0da7e115fc0bd2386ef8e8299840221c69f7ed4bd7d993d88b752414c7
+  sha256: 1f0f0776c1fa4537b1017b92a1c8a194786a6a15ebc6b5fbfcecfb4003aa0cb0
   requires_dist:
   - geopandas
   - numpy

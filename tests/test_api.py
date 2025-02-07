@@ -48,14 +48,143 @@ def test_regroup() -> None:
     assert len(group) == 5
 
 
-def test_run_evaspa() -> None:
+@pytest.mark.parametrize(
+    ("entry", "params"),
+    [
+        pytest.param(
+            {
+                "path": "tests/data/modis_test_geo.tif",
+                "date": "2018-05-16T10:00:00-00:00",
+            },
+            {
+                "ef": {
+                    "models": "default_evaspa",
+                },
+            },
+        ),
+        pytest.param(
+            {
+                "path": "tests/data/modis_test_geo.tif",
+                "date": "2018-05-16T10:00:00-00:00",
+            },
+            {
+                "filtering": {},
+                "ef": {
+                    "check": {"threshold": 0.02},
+                    "models": [
+                        {
+                            "name": "model1",
+                            "dry_edge": {
+                                "type": "LinearEdge",
+                                "config": {
+                                    "interval_type": "density",
+                                    "interval_nb": 20,
+                                    "percentile": [98, 100],
+                                    "selection": "median",
+                                },
+                            },
+                            "wet_edge": {
+                                "type": "LinearEdge",
+                                "config": {
+                                    "interval_type": "density",
+                                    "interval_nb": 20,
+                                    "percentile": [0, 2],
+                                    "selection": "median",
+                                },
+                            },
+                            "var": "albedo",
+                        },
+                        {
+                            "name": "model2",
+                            "dry_edge": {
+                                "type": "LinearEdge",
+                                "config": {
+                                    "interval_type": "density",
+                                    "interval_nb": 20,
+                                    "percentile": [95, 100],
+                                    "selection": "median",
+                                },
+                            },
+                            "wet_edge": {
+                                "type": "FlatEdge",
+                            },
+                            "var": "albedo",
+                        },
+                    ],
+                    "options": {"selection": False, "merging": "mean"},
+                },
+                "seb": {
+                    "use_topo": True,
+                    "models": ["kustas"],
+                    "merging": "mean",
+                },
+                "daily": {"use_topo": True, "method": "toa"},
+            },
+        ),
+        pytest.param(
+            {
+                "path": "tests/data/modis_test_dem.tif",
+                "date": "2018-05-16T10:00:00-00:00",
+            },
+            {
+                "filtering": {},
+                "ef": {
+                    "check": {"threshold": 0.02},
+                    "models": [
+                        {
+                            "name": "model1",
+                            "dry_edge": {
+                                "type": "LinearEdge",
+                                "config": {
+                                    "interval_type": "density",
+                                    "interval_nb": 20,
+                                    "percentile": [98, 100],
+                                    "selection": "median",
+                                },
+                            },
+                            "wet_edge": {
+                                "type": "LinearEdge",
+                                "config": {
+                                    "interval_type": "density",
+                                    "interval_nb": 20,
+                                    "percentile": [0, 2],
+                                    "selection": "median",
+                                },
+                            },
+                            "var": "albedo",
+                        },
+                        {
+                            "name": "model2",
+                            "dry_edge": {
+                                "type": "LinearEdge",
+                                "config": {
+                                    "interval_type": "density",
+                                    "interval_nb": 20,
+                                    "percentile": [95, 100],
+                                    "selection": "median",
+                                },
+                            },
+                            "wet_edge": {
+                                "type": "FlatEdge",
+                            },
+                            "var": "albedo",
+                        },
+                    ],
+                    "options": {"selection": False, "merging": "mean"},
+                },
+                "seb": {
+                    "use_topo": True,
+                    "models": ["kustas"],
+                    "merging": "mean",
+                },
+                "daily": {"use_topo": True, "method": "toa"},
+            },
+        ),
+    ],
+)
+def test_run_evaspa(entry, params) -> None:
     """
     Test run EVASPA
     """
-    entry = {
-        "path": "tests/data/modis_test_geo.tif",
-        "date": "2018-05-16T10:00:00-00:00",
-    }
-    params = {"ef": {"models": "default_evaspa"}}
     res = api.run_evaspa(entry, params)
     assert res

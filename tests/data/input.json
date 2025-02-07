@@ -1,6 +1,6 @@
 {
     "input":{
-        "path":"tests/data/modis_test_geo.tif",
+        "path":"tests/data/modis_test_dem.tif",
         "date":"2018-05-16T10:00:00-00:00"
     },
     "output":{
@@ -59,9 +59,13 @@
             }
         },
         "seb":{
-            "use_topo": false,
+            "use_topo": true,
             "models": ["kustas"],
             "merging": "mean"
+        },
+        "daily":{
+            "use_topo" : true,
+            "method": "toa"
         }
     },
     "debug": {

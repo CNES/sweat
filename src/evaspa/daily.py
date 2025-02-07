@@ -25,9 +25,12 @@ class DailyConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     method: str = Field(default="toa")
+    use_topo: bool = Field(default=False)
 
 
-def toa_daily_estimate(data: xr.Dataset, date: dt.datetime) -> xr.Dataset:
+def toa_daily_estimate(
+    data: xr.Dataset, date: dt.datetime, dem: xr.Dataset | None = None
+) -> xr.Dataset:
     """
     Description
     -----------
@@ -51,6 +54,17 @@ def toa_daily_estimate(data: xr.Dataset, date: dt.datetime) -> xr.Dataset:
     daily: xr.DataArray
         Daily extrapolated data
     """
+    # DEM
+    slope = None
+    aspect = None
+    if dem is not None:
+        if dem.get("slope", None) is None or dem.get("aspect", None) is None:
+            logger.warning(
+                "No DEM information (aspect or slope) to compute topographic corrections. Topographic corrections are disabled."
+            )
+        else:
+            slope = dem["slope"]
+            aspect = dem["aspect"]
     # Get lon/lat coordinates
     crs = data.attrs.get("crs", None)
     if crs is None:
@@ -61,10 +75,20 @@ def toa_daily_estimate(data: xr.Dataset, date: dt.datetime) -> xr.Dataset:
     daily.attrs = data.attrs.copy()
     # Compute TOA solar radiation
     toa_inst = solar.compute_toa_solar_radiation(
-        date, daily.coords["x"], daily.coords["y"], daily.attrs["crs"]
+        date,
+        daily.coords["x"],
+        daily.coords["y"],
+        daily.attrs["crs"],
+        slope=slope,
+        aspect=aspect,
     )
     toa_daily = solar.compute_daily_toa_solar_radiation(
-        date, daily.coords["x"], daily.coords["y"], daily.attrs["crs"]
+        date,
+        daily.coords["x"],
+        daily.coords["y"],
+        daily.attrs["crs"],
+        slope=slope,
+        aspect=aspect,
     )
     # Compute ratio
     for var in daily.data_vars:
@@ -73,7 +97,11 @@ def toa_daily_estimate(data: xr.Dataset, date: dt.datetime) -> xr.Dataset:
 
 
 def extrapolate_at_daily_scale(
-    data: xr.Dataset, variables: list[str] | None = None, method: str = "toa"
+    data: xr.Dataset,
+    variables: list[str] | None = None,
+    dem: xr.Dataset | None = None,
+    method: str = "toa",
+    use_topo: bool = False,
 ) -> xr.Dataset:
     """
     Description
@@ -92,14 +120,24 @@ def extrapolate_at_daily_scale(
         Instantaneous data
     variables: list[str]
         List of variables to extrapolate.
+    dem: xr.Dataset
+        DEM data
     method: str
         Method used for extrapolation (default: toa)
+    use_topo: bool
+        Use topographic corrections
 
     Returns
     -------
     daily: xr.DataArray
         Daily extrapolated data
     """
+    if use_topo and dem is None:
+        logger.warning(
+            "No DEM information to compute topographic corrections. Topographic corrections are disabled."
+        )
+    if not use_topo:
+        dem = None
     # Data selection
     if variables is None:
         keep = list(data.data_vars)
@@ -116,7 +154,9 @@ def extrapolate_at_daily_scale(
         if data.attrs.get("date", None) is None:
             msg = "Impossible to extrapolate because the date is missing in metadata"
             raise ValueError(msg)
-        daily = toa_daily_estimate(data=data[keep], date=data.attrs["date"])
+        daily = toa_daily_estimate(
+            data=data[keep], date=data.attrs["date"], dem=dem
+        )
     else:
         msg = f"Extrapolation method {method} unknown"
         logger.error(msg)

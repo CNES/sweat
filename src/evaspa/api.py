@@ -184,8 +184,18 @@ def run_evaspa(
     )
     logger.debug("Compute LE: OK")
     # Extrapolate at daily scale
+    # Extract DEM data
+    dem = None
+    dem_data = [
+        d for d in data.data_vars if d in ["elevation", "slope", "aspect"]
+    ]
+    if len(dem_data) > 0:
+        dem = data[dem_data]
     daily_xr = daily.extrapolate_at_daily_scale(
-        inst_xr, variables=["le", "et"], **params_config.daily.model_dump()
+        inst_xr,
+        variables=["le", "et"],
+        dem=dem,
+        **params_config.daily.model_dump(),
     )
     logger.debug("Daily extrapolation: OK")
     return inst_xr, daily_xr
