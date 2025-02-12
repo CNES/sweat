@@ -27,7 +27,7 @@ class DebuggingConfig(BaseModel):
 
     profile: bool = Field(default=False)
     verbose: bool = Field(default=False)
-    path: str = Field(default=os.getcwd())
+    path: str = Field(default=os.path.join(os.getcwd(), "debug"))
 
 
 class _DebugDecorator:
