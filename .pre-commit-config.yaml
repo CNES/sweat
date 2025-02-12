@@ -22,7 +22,7 @@ repos:
       stages: [pre-commit]
       language: system
       types: [jupyter]
-      entry: jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace
+      entry: .pixi/envs/default/bin/jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace
     
     - id: check-file-size
       name: check-file-size
