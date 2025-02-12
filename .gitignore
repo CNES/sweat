@@ -6,6 +6,7 @@
 *.pyc
 .coverage
 __pycache__/
+dist/
 
 # Notebooks
 .ipynb_checkpoints/
@@ -24,7 +25,13 @@ out/
 # Test
 !tests/data/modis_test.tif
 !tests/data/modis_test_geo.tif
+!tests/data/modis_test_dem.tif
+
 
 # pixi environments
 .pixi
 *.egg-info
+
+# Generated docs
+site/
+docs/private.md

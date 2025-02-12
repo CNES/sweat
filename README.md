@@ -2,11 +2,6 @@
 
 -----
 
-**Table of Contents**
-
-- [Installation](#installation)
-- [Development](#Development)
-
 
 ## Installation
 
@@ -39,30 +34,36 @@ To use notebook
 pip install .[notebook]
 ```
 
-## Development
+## Usage
 
-For development
+### Command-line interface
+
+To run EVASPA 
 ```console
-pip install -e .[dev,notebook]
-```
-Run static analysis
-```console
-hatch fmt # for ruff
-hatch run types:check # for mypy
+evaspa INPUT_FILE
 ```
 
-Run tests
-```console
-hatch test # for pytest
-hatch test --cover # for coverage
+An example of configuration file:
+```json
+{
+    "input":{
+        "path":"tests/data/modis_test_geo.tif",
+        "date":"2018-05-16T10:00:00-00:00"
+    },
+    "output":{
+        "path":"out"
+    },
+    "params":{
+        "ef":{
+            "models": "default_evaspa"
+        }
+    }
+}
 ```
 
-Install pre-commit scripts
-```console
-pre-commit install
-```
+### Notebooks
 
-Run pre-commit
+To launch the notebooks
 ```console
-pre-commit run --all-files
+jupyter-lab
 ```
