@@ -23,6 +23,28 @@
                 "var": "albedo"
             },
             {
+                "name": "EF2",
+                "dry_edge": {
+                    "type": "LinearEdge",
+                    "config": {
+                        "interval_type": "density",
+                        "interval_nb": 20,
+                        "percentile": [95, 100],
+                        "selection": "mean"
+                    }
+                },
+                "wet_edge": {
+                    "type": "LinearEdge",
+                    "config": {
+                        "interval_type": "density",
+                        "interval_nb": 20,
+                        "percentile": [0, 5],
+                        "selection": "mean"
+                    }
+                },
+                "var": "albedo"
+            },
+            {
                 "name": "EF4",
                 "dry_edge": {
                     "type": "LinearEdge",
@@ -83,6 +105,22 @@
                 "var": "albedo"
             },
             {
+                "name": "EF1",
+                "dry_edge": {
+                    "type": "LinearEdge",
+                    "config": {
+                        "interval_type": "density",
+                        "interval_nb": 20,
+                        "percentile": [95, 100],
+                        "selection": "median"
+                    }
+                },
+                "wet_edge": {
+                    "type": "FlatEdge"
+                },
+                "var": "albedo"
+            },
+            {
                 "name": "EF10",
                 "dry_edge": {
                     "type": "LinearEdge",
@@ -116,6 +154,22 @@
             },
             {
                 "name": "EF12",
+                "dry_edge": {
+                    "type": "FlatEdge"
+                },
+                "wet_edge": {
+                    "type": "LinearEdge",
+                    "config": {
+                        "interval_type": "density",
+                        "interval_nb": 20,
+                        "percentile": [0, 5],
+                        "selection": "median"
+                    }
+                },
+                "var": "albedo"
+            },
+            {
+                "name": "EF13",
                 "dry_edge": {
                     "type": "FlatEdge"
                 },

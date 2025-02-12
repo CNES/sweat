@@ -1,0 +1,157 @@
+{
+    "models": [
+            {
+                "name": "EF1a",
+                "dry_edge": {
+                    "type": "LinearEdge",
+                    "config": {
+                        "interval_type": "density",
+                        "interval_nb": 20,
+                        "percentile": [95, 100],
+                        "selection": "median"
+                    }
+                },
+                "wet_edge": {
+                    "type": "LinearEdge",
+                    "config": {
+                        "interval_type": "density",
+                        "interval_nb": 20,
+                        "percentile": [0, 5],
+                        "selection": "median"
+                    }
+                },
+                "var": "albedo"
+            },
+            {
+                "name": "EF2a",
+                "dry_edge": {
+                    "type": "LinearEdge",
+                    "config": {
+                        "interval_type": "density",
+                        "interval_nb": 20,
+                        "percentile": [95, 100],
+                        "selection": "mean"
+                    }
+                },
+                "wet_edge": {
+                    "type": "LinearEdge",
+                    "config": {
+                        "interval_type": "density",
+                        "interval_nb": 20,
+                        "percentile": [0, 5],
+                        "selection": "mean"
+                    }
+                },
+                "var": "albedo"
+            },
+            {
+                "name": "EF3a",
+                "dry_edge": {
+                    "type": "FlatEdge"
+                },
+                "wet_edge": {
+                    "type": "FlatEdge"
+                },
+                "var": "albedo"
+            },
+            {
+                "name": "EF4a",
+                "dry_edge": {
+                    "type": "LinearEdge",
+                    "config": {
+                        "interval_type": "size",
+                        "interval_size": 0.01,
+                        "percentile": [95, 100],
+                        "selection": "median"
+                    }
+                },
+                "wet_edge": {
+                    "type": "LinearEdge",
+                    "config": {
+                        "interval_type": "size",
+                        "interval_size": 0.01,
+                        "percentile": [0, 5],
+                        "selection": "median"
+                    }
+                },
+                "var": "albedo"
+            },
+            {
+                "name": "EF1v",
+                "dry_edge": {
+                    "type": "LinearEdge",
+                    "config": {
+                        "interval_type": "density",
+                        "interval_nb": 20,
+                        "percentile": [95, 100],
+                        "selection": "median"
+                    }
+                },
+                "wet_edge": {
+                    "type": "LinearEdge",
+                    "config": {
+                        "interval_type": "density",
+                        "interval_nb": 20,
+                        "percentile": [0, 5],
+                        "selection": "median"
+                    }
+                },
+                "var": "ndvi"
+            },
+            {
+                "name": "EF2v",
+                "dry_edge": {
+                    "type": "LinearEdge",
+                    "config": {
+                        "interval_type": "density",
+                        "interval_nb": 20,
+                        "percentile": [95, 100],
+                        "selection": "mean"
+                    }
+                },
+                "wet_edge": {
+                    "type": "LinearEdge",
+                    "config": {
+                        "interval_type": "density",
+                        "interval_nb": 20,
+                        "percentile": [0, 5],
+                        "selection": "mean"
+                    }
+                },
+                "var": "ndvi"
+            },
+            {
+                "name": "EF3v",
+                "dry_edge": {
+                    "type": "FlatEdge"
+                },
+                "wet_edge": {
+                    "type": "FlatEdge"
+                },
+                "var": "ndvi"
+            },
+            {
+                "name": "EF4v",
+                "dry_edge": {
+                    "type": "LinearEdge",
+                    "config": {
+                        "interval_type": "size",
+                        "interval_size": 0.01,
+                        "percentile": [95, 100],
+                        "selection": "median"
+                    }
+                },
+                "wet_edge": {
+                    "type": "LinearEdge",
+                    "config": {
+                        "interval_type": "size",
+                        "interval_size": 0.01,
+                        "percentile": [0, 5],
+                        "selection": "median"
+                    }
+                },
+                "var": "albedo"
+            }
+
+    ]
+}
