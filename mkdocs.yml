@@ -74,7 +74,13 @@ plugins:
             signature_crossrefs: true
             summary: true
             unwrap_annotated: true
-  - mkdocs-jupyter
+  - mkdocs-jupyter:
+      execute: true
+      include: ["*.ipynb"]
+      ignore: ["raqrs/notebooks/*.ipynb"]
+      remove_tag_config:
+        remove_input_tags:
+          - hide_code
 
 markdown_extensions:
   - pymdownx.snippets
@@ -100,6 +106,7 @@ extra_javascript:
 
 extra_css:
   - https://unpkg.com/katex@0/dist/katex.min.css
+  - css/jupyter.css
 
 nav:
   - Home: 
@@ -113,6 +120,7 @@ nav:
       - EF model: ef_model.md
   - Dev: dev.md
   - Tutorials:
+    - Overview: tutorials.md
     - EVASPA notebook: notebooks/run_evaspa.ipynb
   - API: api/
   - todo.md
