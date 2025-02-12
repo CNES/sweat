@@ -35,3 +35,4 @@ out/
 # Generated docs
 site/
 docs/private.md
+!docs/images/*.png
