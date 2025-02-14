@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import glob
+import os
+
 import numpy as np
 import numpy.typing as npt
 import pytest
 import xarray as xr
 
+import evaspa.ef
 from evaspa.ef import (
     EFCheckConfig,
     EFConfig,
@@ -826,4 +830,13 @@ def test_get_available_configuration() -> None:
     Test get_available_configuration method
     """
     names = get_available_configuration()
-    assert names == ["default_evaspa", "hsm_evaspa"]
+    config_path = os.path.join(
+        os.path.dirname(os.path.abspath(evaspa.ef.__file__)),
+        "conf",
+    )
+    configs = [
+        os.path.basename(os.path.splitext(file)[0])
+        for file in glob.glob(os.path.join(config_path, "*.json"))
+        if os.path.splitext(file)[1] == ".json"
+    ]
+    assert sorted(names) == sorted(configs)
