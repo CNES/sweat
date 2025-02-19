@@ -7,10 +7,10 @@ Describe how to identify valid pixels
 | Name | Description | Type | Mandatory | Default value | Possible value |
 |------|-------------|------|-----------|---------------|----------------|
 | cloud | Name of variables that contains cloud mask in input data. If not provided, cloud mask is not applied | str | no | null | - |
-| water | Name of variables that contains water mask in input data. If not provided, cloud mask is not applied | str | no | null | - |
-| qa | Name of variables that contains quality mask in input data. If not provided, cloud mask is not applied | str | no | null | - |
-| zones | Name of variables that contains valid zone mask in input data. If not provided, cloud mask is not applied | str | no | null | - |
-| cover | Name of variables that contains land cover / land use mask in input data. If not provided, cloud mask is not applied | str | no | null | - |
+| water | Name of variables that contains water mask in input data. If not provided, water mask is not applied | str | no | null | - |
+| qa | Name of variables that contains quality mask in input data. If not provided, qa mask is not applied | str | no | null | - |
+| zones | Name of variables that contains valid zone mask in input data. If not provided, valid zone mask is not applied | str | no | null | - |
+| cover | Name of variables that contains land cover / land use mask in input data. If not provided, land cover / land use mask is not applied | str | no | null | - |
 | config | Parameters for the filter. The parameters correspond to the values used for masking | dict | no | - | - |
 
 ```json

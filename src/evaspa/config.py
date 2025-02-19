@@ -64,6 +64,9 @@ class InputFile(BaseModel):
         Update debug path with output path
         """
         self.debug.path = os.path.join(self.output.path, "debug")
+        # Create debug if necessary
+        if self.debug.verbose:
+            os.makedirs(self.debug.path, exist_ok=True)
         return self
 
 

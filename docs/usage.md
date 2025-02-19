@@ -10,6 +10,7 @@ evaspa INPUT_FILE
 ## Input file description
 
 The input file is composed of 4 sections:
+
   * **input**: provide information for input data
   * **output**: provide information to write results
   * **params**: provide parameters to processing steps
@@ -48,6 +49,10 @@ The **input** section is composed of:
 |------|-------------|------|-----------|--------------|
 | path | Path of input data (file or directory) | str | yes | - |
 | date | Date of the acquisition | str | non | - |
+
+The path of input data can be either a GeoTIF file or a directory 
+containing GeoTIF files. The code assumes that each band of the GeoTIF file 
+has a band description in order to retrieve the name of the band to use.
 
 Example:
 ```json
@@ -93,3 +98,28 @@ Example:
     "path": "out/debug"
 }
 ```
+
+## Output directory description
+
+EVASPA produces the following files in the output directory: 
+
+```bash
+output_dir/
+├── config.json
+├── debug
+│   ├── evaspa.filter_determine_valid_pixels.nc
+│   ├── evaspa.seb_run_0.nc
+│   └── evaspa.seb_run_1.nc
+├── evaspa_daily
+│   ├── evaspa_daily_et.tif
+│   └── evaspa_daily_le.tif
+└── evaspa_inst
+    ├── evaspa_inst_ef.tif
+    ├── evaspa_inst_et.tif
+    └── evaspa_inst_le.tif
+```
+
+* `config.json` corresponds to the exact configurtaion used to run EVASPA.
+* `evasa_inst` contains instantaneous products
+* `evasa_daily` contains daily products
+* `debug` (optional) contains intermediary results if verbose mode is active in debug section
