@@ -34,7 +34,7 @@ therefore used solely to heat the surface. However, due to the increase in refle
 (more is reflected). This process leads to a decrease in temperature as the reflectance increases. Temperature is then said to be “radiation-controlled”. 
 A schematic representation of the S-SEBI is shown in figure.
 
-![EF_schema](images/ef_schema.png){ width="300" }
+![EF_schema](images/ef_schema.png){ width="400" }
 /// caption
 Schematic representation of the relationship between surface reflectance and land surface temperature together the principles of S-SEBI
 ///

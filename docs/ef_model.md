@@ -22,7 +22,7 @@ The methods for estimating dry and wet edges in the literature share common math
 * Double regression edge: *DoubleLinearEdge*
 * Parabolic edge: *ParabolicEdge*
 
-![edge](images/edge.png){ width="300" }
+![edge](images/edge.png){ width="400" }
 /// caption
 Different dry edge types: flat edge (orange line), linear edge (red line), linear edge with threshold (dashed red line), linear edge with inflexion point (dotted red line), double regression edge (dashed red line), parabolic edge (yellow line)
 ///
@@ -36,7 +36,7 @@ For each interval, the objective is to define the point used to estimate the edg
 Its LST-axis coordinate is defined by considering a percentile of points in the interval and taking the maximum (or the minimum) or the median. 
 The Figure gives an example for a dry edge estimation.
 
-![edge](images/dry_edge.png){ width="300" }
+![edge](images/dry_edge.png){ width="400" }
 /// caption
 Example of dry edge
 ///

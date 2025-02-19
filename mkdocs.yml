@@ -112,7 +112,7 @@ nav:
   - Home: 
     - Overview: index.md
     - Getting started: getting_started.md
-    - Algorith overview: algorithm.md
+    - Algorithm overview: algorithm.md
   - Usage: 
     - Overview: usage.md
     - Configuration:
