@@ -1134,6 +1134,115 @@ class ParabolicEdge(RegressionEdge):
         }
 
 
+class FlatRegressionEdge(RegressionEdge):
+    """Class for linear edge"""
+
+    coeff: float = float("inf")
+
+    def get(self, var: npt.ArrayLike) -> npt.NDArray:
+        """
+        Description
+        -----------
+        Compute edge value
+
+        Parameters
+        ----------
+        var: np.array_like
+            Variable
+
+        Returns
+        -------
+        edge: np.array
+            Temperature at the edge
+        """
+        return self.coeff * np.ones_like(np.array(var))
+
+    def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
+        """
+        Description
+        -----------
+        For each interval, compute the point coordinates used for the regression:
+          - the abscissa value is obtained by taking the median.
+          - the ordinate value is obtained by applying the
+          selection method to the percentile interval.
+        Edge is defined by the max or the min of selected point coordinates.
+
+        Parameters
+        ----------
+        lst: np.array_like
+            Land surface temperature
+        var: np.array_like
+            Variable used versus temperature (ex: Albedo)
+        """
+        # Get points for linear regression
+        _, lst_values = self.get_points(var, lst)
+        # Linear regression
+        if self.position.name == EdgePosition.TOP.name:
+            self.coeff = np.nanmax(lst_values)
+        elif self.position.name == EdgePosition.BOTTOM.name:
+            self.coeff = np.nanmin(lst_values)
+
+    def __repr__(self) -> str:
+        """
+        String conversion method
+        """
+        interval_prop = (
+            f"interval_nb={self.interval_nb}"
+            if self.interval_type == IntervalType.DENSITY
+            else f"interval_size={self.interval_size}"
+        )
+
+        return (
+            f"FlatRegressionEdge("
+            f"position={self.position.value},"
+            f"interval_type={self.interval_type.value},"
+            f"{interval_prop},"
+            f"percentile={self.percentile},"
+            f"selection={self.selection.value},"
+            f"coeff={self.coeff})"
+        )
+
+    def __str__(self) -> str:
+        """
+        String conversion method for end-users
+        """
+        interval_prop = (
+            f"interval_nb={self.interval_nb}"
+            if self.interval_type == IntervalType.DENSITY
+            else f"interval_size={self.interval_size}"
+        )
+        return (
+            f"FlatRegressionEdge:\n"
+            f"  - position={self.position.value}\n"
+            f"  - interval_type={self.interval_type.value}\n"
+            f"  - {interval_prop}\n"
+            f"  - percentile={self.percentile}\n"
+            f"  - selection={self.selection.value}\n"
+            f"  - coeff={self.coeff}"
+        )
+
+    def to_dict(self) -> dict:
+        """
+        Export to a dictionary
+        """
+        return {
+            "position": self.position.value,
+            "interval_type": self.interval_type.value,
+            (
+                "interval_nb"
+                if self.interval_type.name == IntervalType.DENSITY.name
+                else "interval_size"
+            ): (
+                self.interval_nb
+                if self.interval_type.name == IntervalType.DENSITY.name
+                else self.interval_size
+            ),
+            "percentile": self.percentile,
+            "selection": self.selection.value,
+            "coeff": float(self.coeff),
+        }
+
+
 class FlatEdge(Edge):
     """Class for flat edge"""
 
@@ -1201,5 +1310,114 @@ class FlatEdge(Edge):
         """
         return {
             "position": self.position.value,
+            "value": float(self.value),
+        }
+
+
+class FlatPercentileEdge(Edge):
+    """Class for flat edge"""
+
+    model_config = ConfigDict(allow_inf_nan=True, ser_json_inf_nan="strings")
+    percentile: tuple[float, float]
+    selection: SelectionMethod = SelectionMethod.MEDIAN
+    value: float = float("inf")
+
+    @field_validator("percentile")
+    @classmethod
+    def check_percentile(cls, p: tuple[float, float]) -> tuple[float, float]:
+        """
+        Description
+        -----------
+        Check the consistency of the percentile interval
+
+        Parameters
+        ----------
+        p: tuple[float,float]
+            Percentile interval
+
+        Returns
+        -------
+        percentile: tuple[float,float]
+            Validated percentile interval
+        """
+        if (
+            (p[0] > p[1])
+            or (p[0] < PERCENTILE_MIN)
+            or (p[0] >= PERCENTILE_MAX)
+            or (p[1] <= PERCENTILE_MIN)
+            or (p[1] > PERCENTILE_MAX)
+        ):
+            msg = "Percentile must be an interval between [0,100]"
+            raise ValueError(msg)
+        return p
+
+    def get(self, var: npt.ArrayLike) -> npt.NDArray:
+        """
+        Description
+        -----------
+        Compute edge value at var value.
+
+        Parameters
+        ----------
+        var : np.array_like
+            Variable
+
+        Returns
+        -------
+        temperature : np.array
+            Temperature at the edge
+        """
+        return self.value * np.ones_like(np.array(var))
+
+    def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
+        """
+        Description
+        -----------
+        Edge is defined by the max or the min of LST
+
+        Parameters
+        ----------
+        lst : np.array_like
+            Land surface temperature
+        var : np.array_like
+            Variable used versus temperature (ex: Albedo)
+        """
+        df = self._prepare(np.array(var), np.array(lst))
+        self.value = df["lst"][
+            (df["lst"] >= np.percentile(df["lst"], self.percentile[0]))
+            & (df["lst"] <= np.percentile(df["lst"], self.percentile[1]))
+        ].agg(self.selection.value)
+
+    def __repr__(self) -> str:
+        """
+        String conversion method
+        """
+        return (
+            f"FlatEdge(position: {self.position.value},"
+            f"percentile={self.percentile},"
+            f"selection={self.selection.value},"
+            f"value: {float(self.value)})"
+        )
+
+    def __str__(self) -> str:
+        """
+        String conversion method for end-users
+        """
+        return (
+            f"FlatEdge\n"
+            f"  - position={self.position.value}\n"
+            f"  - percentile={self.percentile}\n"
+            f"  - selection={self.selection.value}\n"
+            f"  - value={self.value}\n"
+        )
+
+    def to_dict(self) -> dict:
+        """
+        Export to a dictionary
+        """
+        return {
+            "position": self.position.value,
+            "percentile": self.percentile,
+            "selection": self.selection.value,
             "value": float(self.value),
         }

@@ -371,12 +371,20 @@
             {
                 "name": "EF3a",
                 "dry_edge": {
-                    "type": "FlatEdge"
+                    "type": "FlatPercentileEdge",
+                    "config": {
+                        "percentile": [99.9, 100],
+                        "selection": "median"
+                    }
                 },
                 "wet_edge": {
-                    "type": "FlatEdge"
+                    "type": "FlatPercentileEdge",
+                    "config": {
+                        "percentile": [0, 0.1],
+                        "selection": "median"
+                    }
                 },
-                "var": "albedo"
+                "var": "ndvi"
             },
             {
                 "name": "EF4a",
@@ -469,10 +477,18 @@
             {
                 "name": "EF3v",
                 "dry_edge": {
-                    "type": "FlatEdge"
+                    "type": "FlatPercentileEdge",
+                    "config": {
+                        "percentile": [99.9, 100],
+                         "selection": "median"
+                    }
                 },
                 "wet_edge": {
-                    "type": "FlatEdge"
+                    "type": "FlatPercentileEdge",
+                    "config": {
+                        "percentile": [0, 0.1],
+                        "selection": "median"
+                    }
                 },
                 "var": "ndvi"
             },

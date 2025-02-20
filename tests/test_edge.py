@@ -11,6 +11,8 @@ from evaspa.edge import (
     EdgeError,
     FlatEdge,
     FlatLinearEdge,
+    FlatPercentileEdge,
+    FlatRegressionEdge,
     LinearEdge,
     ParabolicEdge,
     ThresholdLinearEdge,
@@ -112,6 +114,53 @@ def test_flat_edge_error(config) -> None:
 @pytest.mark.parametrize(
     "config",
     [
+        '{"position":"top","percentile":[99,100],"selection":"max"}',
+        '{"position":"top","percentile":[99.99,100],"selection":"median"}',
+        '{"position":"top","percentile":[99.99,100],"selection":"min"}',
+        '{"position":"top","percentile":[99.99,100],"selection":"mean"}',
+    ],
+)
+def test_flat_percentile_edge(config) -> None:
+    """
+    Test LinearEdge
+    """
+    # Generate data
+    var, lst = setup_data(
+        var_min=0.0,
+        var_max=0.6,
+        dry_c0=330.0,
+        dry_c1=-13.0,
+        wet_c0=300,
+        wet_c1=30,
+        size=80,
+    )
+    edge = FlatPercentileEdge.model_validate_json(config)
+    edge.fit(var, lst)
+    np.testing.assert_allclose(edge.value, 330, atol=1.0)
+    np.testing.assert_allclose(edge.get(0.3), 330.0, atol=1.0)
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        '{"position":"top","percentile":[90,100],"selection":"foo"}',
+        '{"position":"top","percentile":[46,12],"selection":"median"}',
+        '{"position":"bottom","percentile":[-1,5],"selection":"median"}',
+        '{"position":"top","percentile":[99,105],"selection":"median"}',
+        '{"percentile":[99,100],"selection":"median"}',
+    ],
+)
+def test_flat_percentile_edge_error(config) -> None:
+    """
+    Test LinearEdge
+    """
+    with pytest.raises(ValidationError):
+        FlatPercentileEdge.model_validate_json(config)
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
         '{"position":"top","interval_type":"size","interval_size":0.05,"percentile":[98,100],"selection":"max"}',
         '{"position":"top","interval_type":"density","interval_nb":20,"percentile":[98,100],"selection":"max"}',
         '{"position":"top","interval_type":"density","interval_nb":100,"percentile":[99,100],"selection":"min"}',
@@ -151,7 +200,7 @@ def test_linear_edge(config) -> None:
         '{"position":"top","interval_type":"density","interval_nb":20,"percentile":[46,12],"selection":"median"}',
         '{"position":"bottom","interval_type":"density","interval_nb":20,"percentile":[-1,5],"selection":"median"}',
         '{"position":"top","interval_type":"density","interval_nb":20,"percentile":[99,105],"selection":"median"}',
-        '{"interval_type":"density","interval_nb":20,"percentile":[99,105],"selection":"median"}',
+        '{"interval_type":"density","interval_nb":20,"percentile":[99,100],"selection":"median"}',
     ],
 )
 def test_linear_edge_error(config) -> None:
@@ -206,7 +255,7 @@ def test_parabolic_edge(config) -> None:
         '{"position":"top","interval_type":"density","interval_nb":20,"percentile":[46,12],"selection":"median"}',
         '{"position":"bottom","interval_type":"density","interval_nb":20,"percentile":[-1,5],"selection":"median"}',
         '{"position":"top","interval_type":"density","interval_nb":20,"percentile":[99,105],"selection":"median"}',
-        '{"interval_type":"density","interval_nb":20,"percentile":[99,105],"selection":"median"}',
+        '{"interval_type":"density","interval_nb":20,"percentile":[99,100],"selection":"median"}',
         '{"interval_type":"size","interval_nb":20,"selection":"max"}',
     ],
 )
@@ -429,6 +478,58 @@ def test_flat_linear_edge_error(config) -> None:
     """
     with pytest.raises(ValidationError):
         FlatLinearEdge.model_validate_json(config)
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        '{"position":"top","interval_type":"size","interval_size":0.05,"percentile":[98,100],"selection":"max"}',
+        '{"position":"top","interval_type":"density","interval_nb":20,"percentile":[98,100],"selection":"max"}',
+        '{"position":"top","interval_type":"density","interval_nb":100,"percentile":[99,100],"selection":"min"}',
+        '{"position":"top","interval_type":"size","interval_size":0.05,"percentile":[98,100],"selection":"median"}',
+        '{"position":"top","interval_type":"density","percentile":[98,100]}',
+    ],
+)
+def test_flat_regression_edge(config) -> None:
+    """
+    Test LinearEdge
+    """
+    # Generate data
+    var, lst = setup_data(
+        var_min=0.0,
+        var_max=0.6,
+        dry_c0=330.0,
+        dry_c1=-13.0,
+        wet_c0=300,
+        wet_c1=30,
+        size=80,
+    )
+    edge = FlatRegressionEdge.model_validate_json(config)
+    edge.fit(var, lst)
+    np.testing.assert_allclose(edge.coeff, 330, atol=1.0)
+    np.testing.assert_allclose(edge.get(0.3), 330.0, atol=1.0)
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        '{"position":"top","interval_type":"size","interval_nb":20,"selection":"max"}',
+        '{"position":"top","interval_type":"foo","interval_nb":20,"percentile":[98,100],"selection":"max"}',
+        '{"position":"top","interval_type":"size","interval_size":0.5,"percentile":[98,100],"selection":"foo"}',
+        '{"position":"top","interval_type":"size","interval_size":0,"percentile":[98,100],"selection":"median"}',
+        '{"position":"top","interval_type":"density","interval_nb":0,"percentile":[98,100],"selection":"median"}',
+        '{"position":"top","interval_type":"density","interval_nb":20,"percentile":[46,12],"selection":"median"}',
+        '{"position":"bottom","interval_type":"density","interval_nb":20,"percentile":[-1,5],"selection":"median"}',
+        '{"position":"top","interval_type":"density","interval_nb":20,"percentile":[99,105],"selection":"median"}',
+        '{"interval_type":"density","interval_nb":20,"percentile":[99,105],"selection":"median"}',
+    ],
+)
+def test_flat_regression_edge_error(config) -> None:
+    """
+    Test LinearEdge
+    """
+    with pytest.raises(ValidationError):
+        FlatRegressionEdge.model_validate_json(config)
 
 
 @pytest.mark.parametrize(

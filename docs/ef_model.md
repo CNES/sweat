@@ -51,6 +51,9 @@ Therefore, an edge is characterized by:
     - **interval_nb**: a number of intervals (for density interval type) or **interval_size**: a size of intervals (for fixed size type)
     - **percentile**: a percentile interval to considered for point selection 
     - **selection**: a regression point selection criteria (*median*,*mean*,*max*,*min*)
+* for flat edge with percentile, a configuration **config**: 
+    - **percentile**: a percentile interval to considered for point selection 
+    - **selection**: a regression point selection criteria (*median*,*mean*,*max*,*min*)
 
 ### Examples
 
@@ -59,6 +62,18 @@ Therefore, an edge is characterized by:
 ```json
 {
     "type": "FlatEdge"
+}
+```
+
+* Flat edge with percentile: 
+
+```json
+{
+    "type": "FlatPercentileEdge",
+    "config": {
+        "percentile": [99.9, 100],
+        "selection": "median"
+    }
 }
 ```
 
