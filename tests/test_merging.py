@@ -10,8 +10,8 @@ from evaspa.merging import MergeMethod, merge, merge_to_dataset
 @pytest.mark.parametrize(
     ("method", "expected"),
     [
-        pytest.param(MergeMethod.MEAN, 0.4),
-        pytest.param(MergeMethod.MEDIAN, 0.4),
+        pytest.param(MergeMethod.MEAN, (0.4, 0.15)),
+        pytest.param(MergeMethod.MEDIAN, (0.4, 0.15)),
     ],
 )
 def test_merge(method, expected) -> None:
@@ -29,15 +29,16 @@ def test_merge(method, expected) -> None:
         },
         attrs={"description": "EF models"},
     )
-    merged = merge(data, method=method)
-    np.testing.assert_almost_equal(merged.mean(), expected, decimal=1)
+    merged, uncertainty = merge(data, method=method)
+    np.testing.assert_almost_equal(merged.mean(), expected[0], decimal=2)
+    np.testing.assert_almost_equal(uncertainty.mean(), expected[1], decimal=2)
 
 
 @pytest.mark.parametrize(
     ("method", "expected"),
     [
-        pytest.param(MergeMethod.MEAN, 0.4),
-        pytest.param(MergeMethod.MEDIAN, 0.4),
+        pytest.param(MergeMethod.MEAN, (0.4, 0.15)),
+        pytest.param(MergeMethod.MEDIAN, (0.4, 0.15)),
     ],
 )
 def test_merge_to_dataset(method, expected) -> None:
@@ -55,5 +56,10 @@ def test_merge_to_dataset(method, expected) -> None:
         },
         attrs={"description": "EF models"},
     )
-    merged = merge_to_dataset(data, method=method)
-    np.testing.assert_almost_equal(merged.merged.mean(), expected, decimal=1)
+    merged = merge_to_dataset(data, method=method, name="merged")
+    np.testing.assert_almost_equal(
+        merged["merged"].mean(), expected[0], decimal=2
+    )
+    np.testing.assert_almost_equal(
+        merged["uncertainty_merged"].mean(), expected[1], decimal=2
+    )

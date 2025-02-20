@@ -105,9 +105,14 @@ EVASPA produces the following files in the output directory:
 
 ```bash
 output_dir/
+out/
 ├── config.json
 ├── debug
+│   ├── evaspa.ef_run_0.nc
+│   ├── evaspa.ef_run_1.nc
 │   ├── evaspa.filter_determine_valid_pixels.nc
+│   ├── evaspa.seb_create_net_radiation.nc
+│   ├── evaspa.seb_create_ratio.nc
 │   ├── evaspa.seb_run_0.nc
 │   └── evaspa.seb_run_1.nc
 ├── evaspa_daily
@@ -116,7 +121,9 @@ output_dir/
 └── evaspa_inst
     ├── evaspa_inst_ef.tif
     ├── evaspa_inst_et.tif
-    └── evaspa_inst_le.tif
+    ├── evaspa_inst_le.tif
+    ├── evaspa_inst_uncertainty_ef.tif
+    └── evaspa_inst_uncertainty_le.tif
 ```
 
 * `config.json` corresponds to the exact configurtaion used to run EVASPA.

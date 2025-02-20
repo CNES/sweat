@@ -1,7 +1,9 @@
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
+import warnings
 from enum import Enum
 
+import scipy
 import xarray as xr
 
 from evaspa.logging import LoggerManager
@@ -20,11 +22,11 @@ class MergeMethod(Enum):
 
 def merge(
     data: xr.Dataset, method: MergeMethod = MergeMethod.MEAN
-) -> xr.DataArray:
+) -> tuple[xr.DataArray, xr.DataArray]:
     """
     Description
     -----------
-    Merge data
+    Merge data and compute uncertainty
 
     Parameters
     ----------
@@ -35,16 +37,33 @@ def merge(
 
     Returns
     -------
-    return: xr.DataArray
+    merged: xr.DataArray
         Merged data
+    uncertainty: xr.DataArray
+        Uncertainty of merged data
     """
     if len(data.data_vars) == 0:
         msg = "Unable to merge, dataset is empty"
         raise ValueError(msg)
     if method.value == MergeMethod.MEAN.value:
-        return data.to_array(dim="new").mean("new")
+        xarr = data.to_dataarray(dim="new")
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="Degrees of freedom <= 0 for slice.",
+                category=RuntimeWarning,
+            )
+            return xarr.mean("new"), xarr.std(dim="new", skipna=True, ddof=1)
     if method.value == MergeMethod.MEDIAN.value:
-        return data.to_array(dim="new").median("new")
+        xarr = data.to_dataarray(dim="new")
+        return xarr.median("new"), xr.apply_ufunc(
+            scipy.stats.median_abs_deviation,
+            xarr,
+            input_core_dims=[
+                ["new"],
+            ],
+            kwargs={"axis": -1, "nan_policy": "propagate", "scale": "normal"},
+        )
     msg = f"Merge method unknown: {method}"
     raise ValueError(msg)
 
@@ -71,7 +90,8 @@ def merge_to_dataset(
     return: xr.DataArray
         Merged data
     """
-    merged_arr = merge(data, method)
+    merged_arr, uncertainty_arr = merge(data, method)
     merged = merged_arr.to_dataset(name=name)
+    merged[f"uncertainty_{name}"] = uncertainty_arr
     merged.attrs = data.attrs.copy()
     return merged
