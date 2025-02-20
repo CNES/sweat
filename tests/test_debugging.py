@@ -28,8 +28,8 @@ def foo2():
 def test_register() -> None:
     """Test register functions for debugging"""
     res = get_registered_functions()
-    assert "foo1" in sorted(res.keys())
-    assert "foo2" in sorted(res.keys())
+    assert "tests.test_debugging.foo1" in sorted(res.keys())
+    assert "tests.test_debugging.foo2" in sorted(res.keys())
 
 
 def test_configure() -> None:

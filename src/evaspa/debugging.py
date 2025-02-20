@@ -55,7 +55,7 @@ class _DebugDecorator:
         result = self.func(*args, **kwargs)
         end_time = time.perf_counter()
         if self.profile:
-            msg = f"Function {self.name!r} executed in {(end_time-start_time):.4f}s"
+            msg = f"Function {self.module}.{self.name} executed in {(end_time-start_time):.4f}s"
             logger.info(msg)
         if self.verbose and result is not None:
             msg = f"Write results from {self.module}.{self.name}"
@@ -116,7 +116,7 @@ def register_debugging(func):
     Register a function for debugging
     """
     decorated_func = _DebugDecorator(func, profile=False, verbose=False)
-    REGISTERED_FUNCTIONS[func.__name__] = decorated_func
+    REGISTERED_FUNCTIONS[f"{func.__module__}.{func.__name__}"] = decorated_func
     return decorated_func
 
 
