@@ -259,6 +259,7 @@ But, it is also possible to use pre-defined configuration:
 - "default_evaspa"
 - "hsm_evaspa"
 - "avignon_evaspa"
+- "global_evaspa" (Merge of HSM and Avignon configurations)
 
 For instance 
 
