@@ -226,6 +226,7 @@ def _compute_rn(
     )
 
 
+@register_debugging
 def create_net_radiation(
     data: xr.Dataset, use_topo: bool = False
 ) -> xr.Dataset:
@@ -414,6 +415,7 @@ def _ratio_from_choudhury(
     return c1 * np.exp(-c2 * np.array(lai))
 
 
+@register_debugging
 def create_ratio(
     data: xr.Dataset,
     models: list[RatioModel] = DEFAULT_MODELS,
