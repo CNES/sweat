@@ -118,6 +118,7 @@ def test_flat_edge_error(config) -> None:
         '{"position":"top","percentile":[99.99,100],"selection":"median"}',
         '{"position":"top","percentile":[99.99,100],"selection":"min"}',
         '{"position":"top","percentile":[99.99,100],"selection":"mean"}',
+        '{"position":"top","percentile":[90,100],"percentile_limit":10, "selection":"mean"}',
     ],
 )
 def test_flat_percentile_edge(config) -> None:
@@ -147,6 +148,7 @@ def test_flat_percentile_edge(config) -> None:
         '{"position":"top","percentile":[46,12],"selection":"median"}',
         '{"position":"bottom","percentile":[-1,5],"selection":"median"}',
         '{"position":"top","percentile":[99,105],"selection":"median"}',
+        '{"position":"top","percentile":[90,100],"percentile_limit":0, "selection":"mean"}',
         '{"percentile":[99,100],"selection":"median"}',
     ],
 )
@@ -165,6 +167,7 @@ def test_flat_percentile_edge_error(config) -> None:
         '{"position":"top","interval_type":"density","interval_nb":20,"percentile":[98,100],"selection":"max"}',
         '{"position":"top","interval_type":"density","interval_nb":100,"percentile":[99,100],"selection":"min"}',
         '{"position":"top","interval_type":"size","interval_size":0.05,"percentile":[98,100],"selection":"median"}',
+        '{"position":"top","interval_type":"size","interval_size":0.05,"percentile":[98,100],"percentile_limit": 20, "selection":"median"}',
         '{"position":"top","interval_type":"density","percentile":[98,100]}',
     ],
 )
@@ -200,6 +203,7 @@ def test_linear_edge(config) -> None:
         '{"position":"top","interval_type":"density","interval_nb":20,"percentile":[46,12],"selection":"median"}',
         '{"position":"bottom","interval_type":"density","interval_nb":20,"percentile":[-1,5],"selection":"median"}',
         '{"position":"top","interval_type":"density","interval_nb":20,"percentile":[99,105],"selection":"median"}',
+        '{"position":"top","interval_type":"size","interval_size":0.05,"percentile":[98,100],"percentile_limit": 0, "selection":"median"}',
         '{"interval_type":"density","interval_nb":20,"percentile":[99,100],"selection":"median"}',
     ],
 )

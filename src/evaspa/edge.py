@@ -182,6 +182,7 @@ class RegressionEdge(Edge, ABC):
     interval_nb: int = 20
     interval_size: float = 0.05
     percentile: tuple[int, int]
+    percentile_limit: int | None = None
     selection: SelectionMethod = SelectionMethod.MEDIAN
 
     @field_validator("percentile")
@@ -212,6 +213,29 @@ class RegressionEdge(Edge, ABC):
             msg = "Percentile must be an interval between [0,100]"
             raise ValueError(msg)
         return p
+
+    @field_validator("percentile_limit")
+    @classmethod
+    def check_percentile_limit(cls, limit: int) -> int:
+        """
+        Description
+        -----------
+        Check the percentile limit (number of points to keep)
+
+        Parameters
+        ----------
+        limit: int
+            Percentile limit
+
+        Returns
+        -------
+        check_limit: int
+            Validated percentile limit
+        """
+        if limit <= 0:
+            msg = "Percentile limit must be greater than 0"
+            raise ValueError(msg)
+        return limit
 
     @field_validator("interval_nb")
     @classmethod
@@ -269,6 +293,20 @@ class RegressionEdge(Edge, ABC):
             )
         return size
 
+    def _select(self, df: pd.Series) -> float:
+        """
+        Point selection in an interval
+        """
+        if self.percentile_limit is not None:
+            if self.position.name == EdgePosition.TOP.name:
+                return df.nlargest(self.percentile_limit, keep="all").agg(
+                    self.selection.value
+                )
+            return df.nsmallest(self.percentile_limit, keep="all").agg(
+                self.selection.value
+            )
+        return df.agg(self.selection.value)
+
     def get_points(
         self, var: npt.ArrayLike, lst: npt.ArrayLike
     ) -> tuple[npt.NDArray, npt.NDArray]:
@@ -302,6 +340,7 @@ class RegressionEdge(Edge, ABC):
         lst_values = []
         df = self._prepare(np.array(var), np.array(lst))
         intervals = self._get_intervals(df["var"])
+
         # Compute point coordinates for regression
         for _, group in df.groupby(intervals):
             value = group["lst"][
@@ -313,7 +352,7 @@ class RegressionEdge(Edge, ABC):
                     group["lst"]
                     <= np.percentile(group["lst"], self.percentile[1])
                 )
-            ].agg(self.selection.value)
+            ].pipe(self._select)
             if not np.isnan(value):
                 var_values.append(group["var"].median())
                 lst_values.append(value)
@@ -384,6 +423,76 @@ class RegressionEdge(Edge, ABC):
             Temperature at the edge
         """
 
+    def _common_repr(self) -> str:
+        """
+        String conversion method
+        """
+        interval_prop = (
+            f"interval_nb={self.interval_nb}"
+            if self.interval_type == IntervalType.DENSITY
+            else f"interval_size={self.interval_size}"
+        )
+        percentile_prop = (
+            f"percentile={self.percentile}, percentile_limit={self.percentile_limit}"
+            if self.percentile_limit is not None
+            else f"percentile={self.percentile}"
+        )
+
+        return (
+            f"position={self.position.value},"
+            f"interval_type={self.interval_type.value},"
+            f"{interval_prop},"
+            f"{percentile_prop},"
+            f"selection={self.selection.value}"
+        )
+
+    def _common_str(self) -> str:
+        """
+        String conversion method for end-users
+        """
+        interval_prop = (
+            f"interval_nb={self.interval_nb}"
+            if self.interval_type == IntervalType.DENSITY
+            else f"interval_size={self.interval_size}"
+        )
+        percentile_prop = (
+            f"percentile={self.percentile} (limit={self.percentile_limit})"
+            if self.percentile_limit is not None
+            else f"percentile={self.percentile}"
+        )
+        return (
+            f"  - position={self.position.value}\n"
+            f"  - interval_type={self.interval_type.value}\n"
+            f"  - {interval_prop}\n"
+            f"  - {percentile_prop}\n"
+            f"  - selection={self.selection.value}"
+        )
+
+    def to_dict(self) -> dict:
+        """
+        Export to a dictionary
+        """
+        return {
+            "position": self.position.value,
+            "interval_type": self.interval_type.value,
+            (
+                "interval_nb"
+                if self.interval_type.name == IntervalType.DENSITY.name
+                else "interval_size"
+            ): (
+                self.interval_nb
+                if self.interval_type.name == IntervalType.DENSITY.name
+                else self.interval_size
+            ),
+            "percentile": self.percentile,
+            **(
+                {"percentile_limit": self.percentile_limit}
+                if self.percentile_limit is not None
+                else {}
+            ),
+            "selection": self.selection.value,
+        }
+
 
 class LinearEdge(RegressionEdge):
     """Class for linear edge"""
@@ -434,38 +543,15 @@ class LinearEdge(RegressionEdge):
         """
         String conversion method
         """
-        interval_prop = (
-            f"interval_nb={self.interval_nb}"
-            if self.interval_type == IntervalType.DENSITY
-            else f"interval_size={self.interval_size}"
-        )
-
-        return (
-            f"LinearEdge("
-            f"position={self.position.value},"
-            f"interval_type={self.interval_type.value},"
-            f"{interval_prop},"
-            f"percentile={self.percentile},"
-            f"selection={self.selection.value},"
-            f"coeffs={self.coeffs})"
-        )
+        return f"LinearEdge(" f"{self._common_repr()}," f"coeffs={self.coeffs})"
 
     def __str__(self) -> str:
         """
         String conversion method for end-users
         """
-        interval_prop = (
-            f"interval_nb={self.interval_nb}"
-            if self.interval_type == IntervalType.DENSITY
-            else f"interval_size={self.interval_size}"
-        )
         return (
             f"LinearEdge:\n"
-            f"  - position={self.position.value}\n"
-            f"  - interval_type={self.interval_type.value}\n"
-            f"  - {interval_prop}\n"
-            f"  - percentile={self.percentile}\n"
-            f"  - selection={self.selection.value}\n"
+            f"{self._common_str()}\n"
             f"  - coeffs={self.coeffs}"
         )
 
@@ -473,22 +559,9 @@ class LinearEdge(RegressionEdge):
         """
         Export to a dictionary
         """
-        return {
-            "position": self.position.value,
-            "interval_type": self.interval_type.value,
-            (
-                "interval_nb"
-                if self.interval_type.name == IntervalType.DENSITY.name
-                else "interval_size"
-            ): (
-                self.interval_nb
-                if self.interval_type.name == IntervalType.DENSITY.name
-                else self.interval_size
-            ),
-            "percentile": self.percentile,
-            "selection": self.selection.value,
-            "coeffs": tuple(float(coeff) for coeff in self.coeffs),
-        }
+        common_dict = super().to_dict()
+        common_dict["coeffs"] = tuple(float(coeff) for coeff in self.coeffs)
+        return common_dict
 
 
 class ThresholdLinearEdge(RegressionEdge):
@@ -594,19 +667,9 @@ class ThresholdLinearEdge(RegressionEdge):
         """
         String conversion method
         """
-        interval_prop = (
-            f"interval_nb={self.interval_nb}"
-            if self.interval_type == IntervalType.DENSITY
-            else f"interval_size={self.interval_size}"
-        )
-
         return (
             "ThresholdLinearEdge("
-            f"position={self.position.value},"
-            f"interval_type={self.interval_type.value},"
-            f"{interval_prop},"
-            f"percentile={self.percentile},"
-            f"selection={self.selection.value},"
+            f"{self._common_repr()},"
             f"coeffs={self.coeffs},"
             f"threshold={self.threshold}"
         )
@@ -615,18 +678,9 @@ class ThresholdLinearEdge(RegressionEdge):
         """
         String conversion method for end-users
         """
-        interval_prop = (
-            f"interval_nb={self.interval_nb}"
-            if self.interval_type == IntervalType.DENSITY
-            else f"interval_size={self.interval_size}"
-        )
         return (
             f"ThresholdLinearEdge:\n"
-            f"  - position={self.position.value}\n"
-            f"  - interval_type={self.interval_type.value}\n"
-            f"  - {interval_prop}\n"
-            f"  - percentile={self.percentile}\n"
-            f"  - selection={self.selection.value}\n"
+            f"  - {self._common_str()}\n"
             f"  - coeffs={self.coeffs}\n"
             f"  - threshold={self.threshold}"
         )
@@ -635,23 +689,10 @@ class ThresholdLinearEdge(RegressionEdge):
         """
         Export to a dictionary
         """
-        return {
-            "position": self.position.value,
-            "interval_type": self.interval_type.value,
-            (
-                "interval_nb"
-                if self.interval_type.name == IntervalType.DENSITY.name
-                else "interval_size"
-            ): (
-                self.interval_nb
-                if self.interval_type.name == IntervalType.DENSITY.name
-                else self.interval_size
-            ),
-            "percentile": self.percentile,
-            "selection": self.selection.value,
-            "coeffs": tuple(float(coeff) for coeff in self.coeffs),
-            "threshold": float(self.threshold),
-        }
+        common_dict = super().to_dict()
+        common_dict["coeffs"] = tuple(float(coeff) for coeff in self.coeffs)
+        common_dict["threshold"] = float(self.threshold)
+        return common_dict
 
 
 class DoubleLinearEdge(RegressionEdge):
@@ -769,19 +810,9 @@ class DoubleLinearEdge(RegressionEdge):
         """
         String conversion method
         """
-        interval_prop = (
-            f"interval_nb={self.interval_nb}"
-            if self.interval_type == IntervalType.DENSITY
-            else f"interval_size={self.interval_size}"
-        )
-
         return (
             f"DoubleLinearEdge("
-            f"position={self.position.value},"
-            f"interval_type={self.interval_type.value},"
-            f"{interval_prop},"
-            f"percentile={self.percentile},"
-            f"selection={self.selection.value},"
+            f"{self._common_repr()},"
             f"coeffs1={self.coeffs1},"
             f"coeffs2={self.coeffs2},"
             f"inflection={self.inflection})"
@@ -791,18 +822,9 @@ class DoubleLinearEdge(RegressionEdge):
         """
         String conversion method for end-users
         """
-        interval_prop = (
-            f"interval_nb={self.interval_nb}"
-            if self.interval_type == IntervalType.DENSITY
-            else f"interval_size={self.interval_size}"
-        )
         return (
             f"DoubleLinearEdge:\n"
-            f"  - position={self.position.value}\n"
-            f"  - interval_type={self.interval_type.value}\n"
-            f"  - {interval_prop}\n"
-            f"  - percentile={self.percentile}\n"
-            f"  - selection={self.selection.value}\n"
+            f"  - {self._common_str()}\n"
             f"  - coeffs1={self.coeffs1}\n"
             f"  - coeffs2={self.coeffs2}\n"
             f"  - inflection={self.inflection}"
@@ -812,24 +834,11 @@ class DoubleLinearEdge(RegressionEdge):
         """
         Export to a dictionary
         """
-        return {
-            "position": self.position.value,
-            "interval_type": self.interval_type.value,
-            (
-                "interval_nb"
-                if self.interval_type == IntervalType.DENSITY
-                else "interval_size"
-            ): (
-                self.interval_nb
-                if self.interval_type == IntervalType.DENSITY
-                else self.interval_size
-            ),
-            "percentile": self.percentile,
-            "selection": self.selection.value,
-            "coeffs1": tuple(float(coeff) for coeff in self.coeffs1),
-            "coeffs2": tuple(float(coeff) for coeff in self.coeffs2),
-            "inflection": float(self.inflection),
-        }
+        common_dict = super().to_dict()
+        common_dict["coeffs1"] = tuple(float(coeff) for coeff in self.coeffs1)
+        common_dict["coeffs2"] = tuple(float(coeff) for coeff in self.coeffs2)
+        common_dict["inflection"] = float(self.inflection)
+        return common_dict
 
 
 class FlatLinearEdge(RegressionEdge):
@@ -958,19 +967,9 @@ class FlatLinearEdge(RegressionEdge):
         """
         String conversion method
         """
-        interval_prop = (
-            f"interval_nb={self.interval_nb}"
-            if self.interval_type == IntervalType.DENSITY
-            else f"interval_size={self.interval_size}"
-        )
-
         return (
             f"FlatLinearEdge("
-            f"position={self.position.value},"
-            f"interval_type={self.interval_type.value},"
-            f"{interval_prop},"
-            f"percentile={self.percentile},"
-            f"selection={self.selection.value},"
+            f"{self._common_repr()},"
             f"coeffs1={self.coeffs1},"
             f"coeffs2={self.coeffs2},"
             f"inflection={self.inflection})"
@@ -980,18 +979,9 @@ class FlatLinearEdge(RegressionEdge):
         """
         String conversion method for end-users
         """
-        interval_prop = (
-            f"interval_nb={self.interval_nb}"
-            if self.interval_type == IntervalType.DENSITY
-            else f"interval_size={self.interval_size}"
-        )
         return (
             f"FlatLinearEdge\n"
-            f"  - position={self.position.value}\n"
-            f"  - interval_type={self.interval_type.value}\n"
-            f"  - {interval_prop}\n"
-            f"  - percentile={self.percentile}\n"
-            f"  - selection={self.selection.value}\n"
+            f"  - {self._common_str()}\n"
             f"  - coeffs1={self.coeffs1}\n"
             f"  - coeffs2={self.coeffs2}\n"
             f"  - inflection={self.inflection}"
@@ -1001,24 +991,11 @@ class FlatLinearEdge(RegressionEdge):
         """
         Export to a dictionary
         """
-        return {
-            "position": self.position.value,
-            "interval_type": self.interval_type.value,
-            (
-                "interval_nb"
-                if self.interval_type == IntervalType.DENSITY
-                else "interval_size"
-            ): (
-                self.interval_nb
-                if self.interval_type == IntervalType.DENSITY
-                else self.interval_size
-            ),
-            "percentile": self.percentile,
-            "selection": self.selection.value,
-            "coeffs1": float(self.coeffs1),
-            "coeffs2": tuple(float(coeff) for coeff in self.coeffs2),
-            "inflection": float(self.inflection),
-        }
+        common_dict = super().to_dict()
+        common_dict["coeffs1"] = float(self.coeffs1)
+        common_dict["coeffs2"] = tuple(float(coeff) for coeff in self.coeffs2)
+        common_dict["inflection"] = float(self.inflection)
+        return common_dict
 
 
 class ParabolicEdge(RegressionEdge):
@@ -1077,38 +1054,17 @@ class ParabolicEdge(RegressionEdge):
         """
         String conversion method
         """
-        interval_prop = (
-            f"interval_nb={self.interval_nb}"
-            if self.interval_type == IntervalType.DENSITY
-            else f"interval_size={self.interval_size}"
-        )
-
         return (
-            f"ParabolicEdge("
-            f"position={self.position.value},"
-            f"interval_type={self.interval_type.value},"
-            f"{interval_prop},"
-            f"percentile={self.percentile},"
-            f"selection={self.selection.value},"
-            f"coeffs={self.coeffs})"
+            f"ParabolicEdge(" f"{self._common_repr()}," f"coeffs={self.coeffs})"
         )
 
     def __str__(self) -> str:
         """
         String conversion method for end-users
         """
-        interval_prop = (
-            f"interval_nb={self.interval_nb}"
-            if self.interval_type == IntervalType.DENSITY
-            else f"interval_size={self.interval_size}"
-        )
         return (
             f"ParabolicEdge\n"
-            f"  - position={self.position.value}\n"
-            f"  - interval_type={self.interval_type.value}\n"
-            f"  - {interval_prop}\n"
-            f"  - percentile={self.percentile}\n"
-            f"  - selection={self.selection.value}\n"
+            f"  - {self._common_str()}\n"
             f"  - coeffs={self.coeffs}\n"
         )
 
@@ -1116,22 +1072,9 @@ class ParabolicEdge(RegressionEdge):
         """
         Export to a dictionary
         """
-        return {
-            "position": self.position.value,
-            "interval_type": self.interval_type.value,
-            (
-                "interval_nb"
-                if self.interval_type == IntervalType.DENSITY
-                else "interval_size"
-            ): (
-                self.interval_nb
-                if self.interval_type == IntervalType.DENSITY
-                else self.interval_size
-            ),
-            "percentile": self.percentile,
-            "selection": self.selection.value,
-            "coeffs": tuple(float(coeff) for coeff in self.coeffs),
-        }
+        common_dict = super().to_dict()
+        common_dict["coeffs"] = tuple(float(coeff) for coeff in self.coeffs)
+        return common_dict
 
 
 class FlatRegressionEdge(RegressionEdge):
@@ -1186,19 +1129,9 @@ class FlatRegressionEdge(RegressionEdge):
         """
         String conversion method
         """
-        interval_prop = (
-            f"interval_nb={self.interval_nb}"
-            if self.interval_type == IntervalType.DENSITY
-            else f"interval_size={self.interval_size}"
-        )
-
         return (
             f"FlatRegressionEdge("
-            f"position={self.position.value},"
-            f"interval_type={self.interval_type.value},"
-            f"{interval_prop},"
-            f"percentile={self.percentile},"
-            f"selection={self.selection.value},"
+            f"{self._common_repr()},"
             f"coeff={self.coeff})"
         )
 
@@ -1206,18 +1139,9 @@ class FlatRegressionEdge(RegressionEdge):
         """
         String conversion method for end-users
         """
-        interval_prop = (
-            f"interval_nb={self.interval_nb}"
-            if self.interval_type == IntervalType.DENSITY
-            else f"interval_size={self.interval_size}"
-        )
         return (
             f"FlatRegressionEdge:\n"
-            f"  - position={self.position.value}\n"
-            f"  - interval_type={self.interval_type.value}\n"
-            f"  - {interval_prop}\n"
-            f"  - percentile={self.percentile}\n"
-            f"  - selection={self.selection.value}\n"
+            f"  - {self._common_str()}\n"
             f"  - coeff={self.coeff}"
         )
 
@@ -1225,22 +1149,9 @@ class FlatRegressionEdge(RegressionEdge):
         """
         Export to a dictionary
         """
-        return {
-            "position": self.position.value,
-            "interval_type": self.interval_type.value,
-            (
-                "interval_nb"
-                if self.interval_type.name == IntervalType.DENSITY.name
-                else "interval_size"
-            ): (
-                self.interval_nb
-                if self.interval_type.name == IntervalType.DENSITY.name
-                else self.interval_size
-            ),
-            "percentile": self.percentile,
-            "selection": self.selection.value,
-            "coeff": float(self.coeff),
-        }
+        common_dict = super().to_dict()
+        common_dict["coeff"] = float(self.coeff)
+        return common_dict
 
 
 class FlatEdge(Edge):
@@ -1319,6 +1230,7 @@ class FlatPercentileEdge(Edge):
 
     model_config = ConfigDict(allow_inf_nan=True, ser_json_inf_nan="strings")
     percentile: tuple[float, float]
+    percentile_limit: int | None = None
     selection: SelectionMethod = SelectionMethod.MEDIAN
     value: float = float("inf")
 
@@ -1351,6 +1263,29 @@ class FlatPercentileEdge(Edge):
             raise ValueError(msg)
         return p
 
+    @field_validator("percentile_limit")
+    @classmethod
+    def check_percentile_limit(cls, limit: int) -> int:
+        """
+        Description
+        -----------
+        Check the percentile limit (number of points to keep)
+
+        Parameters
+        ----------
+        limit: int
+            Percentile limit
+
+        Returns
+        -------
+        check_limit: int
+            Validated percentile limit
+        """
+        if limit <= 0:
+            msg = "Percentile limit must be greater than 0"
+            raise ValueError(msg)
+        return limit
+
     def get(self, var: npt.ArrayLike) -> npt.NDArray:
         """
         Description
@@ -1369,6 +1304,20 @@ class FlatPercentileEdge(Edge):
         """
         return self.value * np.ones_like(np.array(var))
 
+    def _select(self, df: pd.Series) -> float:
+        """
+        Point selection in an interval
+        """
+        if self.percentile_limit is not None:
+            if self.position.name == EdgePosition.TOP.name:
+                return df.nlargest(self.percentile_limit, keep="all").agg(
+                    self.selection.value
+                )
+            return df.nsmallest(self.percentile_limit, keep="all").agg(
+                self.selection.value
+            )
+        return df.agg(self.selection.value)
+
     def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
         """
         Description
@@ -1386,15 +1335,21 @@ class FlatPercentileEdge(Edge):
         self.value = df["lst"][
             (df["lst"] >= np.percentile(df["lst"], self.percentile[0]))
             & (df["lst"] <= np.percentile(df["lst"], self.percentile[1]))
-        ].agg(self.selection.value)
+        ].pipe(self._select)
 
     def __repr__(self) -> str:
         """
         String conversion method
         """
+        percentile_prop = (
+            f"percentile={self.percentile}, percentile_limit={self.percentile_limit}"
+            if self.percentile_limit is not None
+            else f"percentile={self.percentile}"
+        )
+
         return (
             f"FlatEdge(position: {self.position.value},"
-            f"percentile={self.percentile},"
+            f"{percentile_prop},"
             f"selection={self.selection.value},"
             f"value: {float(self.value)})"
         )
@@ -1403,10 +1358,15 @@ class FlatPercentileEdge(Edge):
         """
         String conversion method for end-users
         """
+        percentile_prop = (
+            f"percentile={self.percentile} (limit={self.percentile_limit})"
+            if self.percentile_limit is not None
+            else f"percentile={self.percentile}"
+        )
         return (
             f"FlatEdge\n"
             f"  - position={self.position.value}\n"
-            f"  - percentile={self.percentile}\n"
+            f"  - {percentile_prop}\n"
             f"  - selection={self.selection.value}\n"
             f"  - value={self.value}\n"
         )
@@ -1418,6 +1378,11 @@ class FlatPercentileEdge(Edge):
         return {
             "position": self.position.value,
             "percentile": self.percentile,
+            **(
+                {"percentile_limit": self.percentile_limit}
+                if self.percentile_limit is not None
+                else {}
+            ),
             "selection": self.selection.value,
             "value": float(self.value),
         }
