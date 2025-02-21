@@ -123,7 +123,7 @@ def test_flat_edge_error(config) -> None:
 )
 def test_flat_percentile_edge(config) -> None:
     """
-    Test LinearEdge
+    Test FlatPercentileEdge
     """
     # Generate data
     var, lst = setup_data(
@@ -154,7 +154,7 @@ def test_flat_percentile_edge(config) -> None:
 )
 def test_flat_percentile_edge_error(config) -> None:
     """
-    Test LinearEdge
+    Test FlatPercentileEdge with exception raising
     """
     with pytest.raises(ValidationError):
         FlatPercentileEdge.model_validate_json(config)
@@ -195,6 +195,94 @@ def test_linear_edge(config) -> None:
 @pytest.mark.parametrize(
     "config",
     [
+        '{"position":"top","interval_type":"size","interval_size":0.01,"percentile":[98,100],"selection":"median","use_breakpoint":true}',
+    ],
+)
+def test_top_linear_edge_using_breakpoint(config) -> None:
+    """
+    Test LinearEdge (top) using breakpoint
+    """
+    # Generate data
+    var1, lst1 = setup_data(
+        var_min=0.0,
+        var_max=0.3,
+        dry_c0=325.0,
+        dry_c1=37.0,
+        dry_c2=0.0,
+        wet_c0=290,
+        wet_c1=70,
+        wet_c2=0.0,
+        dry_cut=0.0,
+        wet_cut=0.0,
+    )
+    var2, lst2 = setup_data(
+        var_min=0.3,
+        var_max=0.5,
+        dry_c0=348.0,
+        dry_c1=-40.0,
+        dry_c2=0.0,
+        wet_c0=305,
+        wet_c1=20,
+        wet_c2=0.0,
+        dry_cut=0.0,
+        wet_cut=0.0,
+    )
+    var = np.concatenate([var1, var2])
+    lst = np.concatenate([lst1, lst2])
+    edge = LinearEdge.model_validate_json(config)
+    edge.fit(var, lst)
+    np.testing.assert_allclose(edge.coeffs[1], 348, atol=1.0)
+    np.testing.assert_allclose(edge.coeffs[0], -40, atol=2.0)
+    np.testing.assert_allclose(edge.get(0.3), 348 - 40.0 * 0.3, atol=1.0)
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        '{"position":"bottom","interval_type":"size","interval_size":0.01,"percentile":[0,2],"selection":"median","use_breakpoint":true}',
+    ],
+)
+def test_bottom_linear_edge_using_breakpoint(config) -> None:
+    """
+    Test LinearEdge (bottom) using breakpoint
+    """
+    # Generate data
+    var1, lst1 = setup_data(
+        var_min=0.0,
+        var_max=0.3,
+        dry_c0=325.0,
+        dry_c1=37.0,
+        dry_c2=0.0,
+        wet_c0=290,
+        wet_c1=70,
+        wet_c2=0.0,
+        dry_cut=0.0,
+        wet_cut=0.0,
+    )
+    var2, lst2 = setup_data(
+        var_min=0.3,
+        var_max=0.5,
+        dry_c0=348.0,
+        dry_c1=-40.0,
+        dry_c2=0.0,
+        wet_c0=305,
+        wet_c1=20,
+        wet_c2=0.0,
+        dry_cut=0.0,
+        wet_cut=0.0,
+    )
+    var = np.concatenate([var1, var2])
+    lst = np.concatenate([lst1, lst2])
+    edge = LinearEdge.model_validate_json(config)
+    edge.fit(var, lst)
+    np.testing.assert_allclose(edge.coeffs[1], 290, atol=1.0)
+    np.testing.assert_allclose(edge.coeffs[0], 70, atol=2.0)
+    np.testing.assert_allclose(edge.get(0.2), 290 + 70.0 * 0.2, atol=1.0)
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
         '{"position":"top","interval_type":"size","interval_nb":20,"selection":"max"}',
         '{"position":"top","interval_type":"foo","interval_nb":20,"percentile":[98,100],"selection":"max"}',
         '{"position":"top","interval_type":"size","interval_size":0.5,"percentile":[98,100],"selection":"foo"}',
@@ -209,7 +297,7 @@ def test_linear_edge(config) -> None:
 )
 def test_linear_edge_error(config) -> None:
     """
-    Test LinearEdge
+    Test LinearEdge with exception raising
     """
     with pytest.raises(ValidationError):
         LinearEdge.model_validate_json(config)
@@ -224,7 +312,7 @@ def test_linear_edge_error(config) -> None:
 )
 def test_parabolic_edge(config) -> None:
     """
-    Test LinearEdge
+    Test ParabolicEdge
     """
     # Generate data
     var, lst = setup_data(
@@ -265,7 +353,7 @@ def test_parabolic_edge(config) -> None:
 )
 def test_parabolic_edge_error(config) -> None:
     """
-    Test LinearEdge
+    Test ParabolicEdge with exception raising
     """
     with pytest.raises(ValidationError):
         ParabolicEdge.model_validate_json(config)
@@ -281,7 +369,7 @@ def test_parabolic_edge_error(config) -> None:
 )
 def test_top_linear_edge_with_threshold(config) -> None:
     """
-    Test LinearEdge
+    Test ThresholdLinearEdge (top)
     """
     # Generate data
     var, lst = setup_data(
@@ -313,7 +401,7 @@ def test_top_linear_edge_with_threshold(config) -> None:
 )
 def test_bottom_linear_edge_with_threshold(config) -> None:
     """
-    Test LinearEdge
+    Test ThresholdLinearEdge (bottom)
     """
     # Generate data
     var, lst = setup_data(
@@ -339,6 +427,50 @@ def test_bottom_linear_edge_with_threshold(config) -> None:
 @pytest.mark.parametrize(
     "config",
     [
+        '{"position":"top","interval_type":"size","interval_size":0.01,"percentile":[98,100],"selection":"median","use_breakpoint":true}',
+    ],
+)
+def test_top_linear_edge_with_threshold_using_breakpoint(config) -> None:
+    """
+    Test ThresholdLinearEdge (top) using breakpoint
+    """
+    # Generate data
+    var1, lst1 = setup_data(
+        var_min=0.0,
+        var_max=0.3,
+        dry_c0=325.0,
+        dry_c1=37.0,
+        dry_c2=0.0,
+        wet_c0=290,
+        wet_c1=70,
+        wet_c2=0.0,
+        dry_cut=0.0,
+        wet_cut=0.0,
+    )
+    var2, lst2 = setup_data(
+        var_min=0.3,
+        var_max=0.5,
+        dry_c0=348.0,
+        dry_c1=-40.0,
+        dry_c2=0.0,
+        wet_c0=305,
+        wet_c1=20,
+        wet_c2=0.0,
+        dry_cut=0.0,
+        wet_cut=0.0,
+    )
+    var = np.concatenate([var1, var2])
+    lst = np.concatenate([lst1, lst2])
+    edge = ThresholdLinearEdge.model_validate_json(config)
+    edge.fit(var, lst)
+    np.testing.assert_allclose(edge.coeffs[1], 348, atol=1.0)
+    np.testing.assert_allclose(edge.coeffs[0], -40, atol=2.0)
+    np.testing.assert_allclose(edge.get(0.4), 348 - 40.0 * 0.4, atol=1.0)
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
         '{"position":"top","interval_type":"size","interval_nb":20,"selection":"max"}',
         '{"position":"top","interval_type":"foo","interval_nb":20,"percentile":[98,100],"selection":"max"}',
         '{"position":"top","interval_type":"size","interval_size":0.5,"percentile":[98,100],"selection":"foo"}',
@@ -352,7 +484,7 @@ def test_bottom_linear_edge_with_threshold(config) -> None:
 )
 def test_linear_edge_with_threshold_error(config) -> None:
     """
-    Test LinearEdge
+    Test ThresholdLinearEdge with exception raising
     """
     with pytest.raises(ValidationError):
         ThresholdLinearEdge.model_validate_json(config)
@@ -367,7 +499,7 @@ def test_linear_edge_with_threshold_error(config) -> None:
 )
 def test_double_linear_edge(config) -> None:
     """
-    Test LinearEdge
+    Test DoubleLinearEdge
     """
     # Generate data
     var1, lst1 = setup_data(
@@ -404,7 +536,53 @@ def test_double_linear_edge(config) -> None:
     np.testing.assert_allclose(edge.coeffs2[0], -13, atol=1.0)
     np.testing.assert_allclose(edge.get(0.2), 325.0 + 37.0 * 0.2, atol=1.0)
     np.testing.assert_allclose(edge.get(0.4), 340.0 - 13.0 * 0.4, atol=1.0)
-    np.testing.assert_allclose(edge.inflection, 0.3, atol=0.05)
+    np.testing.assert_allclose(edge.fit_breakpoint, 0.3, atol=0.05)
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        '{"position":"top","interval_type":"size","interval_size":0.01,"percentile":[98,100],"selection":"median","use_breakpoint":true}',
+    ],
+)
+def test_double_linear_edge_using_breakpoint(config) -> None:
+    """
+    Test DoubleLinearEdge using breakpoint
+    """
+    # Generate data
+    var1, lst1 = setup_data(
+        var_min=0.0,
+        var_max=0.3,
+        dry_c0=325.0,
+        dry_c1=37.0,
+        dry_c2=0.0,
+        wet_c0=290,
+        wet_c1=70,
+        wet_c2=0.0,
+        dry_cut=0.0,
+        wet_cut=0.0,
+    )
+    var2, lst2 = setup_data(
+        var_min=0.3,
+        var_max=0.5,
+        dry_c0=348.0,
+        dry_c1=-40.0,
+        dry_c2=0.0,
+        wet_c0=305,
+        wet_c1=20,
+        wet_c2=0.0,
+        dry_cut=0.0,
+        wet_cut=0.0,
+    )
+    var = np.concatenate([var1, var2])
+    lst = np.concatenate([lst1, lst2])
+    edge = DoubleLinearEdge.model_validate_json(config)
+    edge.fit(var, lst)
+    np.testing.assert_allclose(edge.coeffs1[1], 325, atol=1.0)
+    np.testing.assert_allclose(edge.coeffs1[0], 37, atol=2.0)
+    np.testing.assert_allclose(edge.coeffs2[1], 348, atol=1.0)
+    np.testing.assert_allclose(edge.coeffs2[0], -40, atol=2.0)
+    np.testing.assert_allclose(edge.get(0.3), 348 - 40.0 * 0.3, atol=1.0)
 
 
 @pytest.mark.parametrize(
@@ -423,7 +601,7 @@ def test_double_linear_edge(config) -> None:
 )
 def test_double_linear_edge_error(config) -> None:
     """
-    Test LinearEdge
+    Test DoubleLinearEdge with exception raising
     """
     with pytest.raises(ValidationError):
         DoubleLinearEdge.model_validate_json(config)
@@ -439,7 +617,7 @@ def test_double_linear_edge_error(config) -> None:
 )
 def test_flat_linear_edge(config) -> None:
     """
-    Test LinearEdge
+    Test FlatLinearEdge
     """
     # Generate data
     var, lst = setup_data(
@@ -459,7 +637,52 @@ def test_flat_linear_edge(config) -> None:
     np.testing.assert_allclose(edge.coeffs2[1], 330, atol=1.0)
     np.testing.assert_allclose(edge.coeffs2[0], -13, atol=1.0)
     np.testing.assert_allclose(edge.get(0.3), 330.0 - 13.0 * 0.3, atol=1.0)
-    np.testing.assert_allclose(edge.inflection, 0.2, atol=0.05)
+    np.testing.assert_allclose(edge.fit_breakpoint, 0.2, atol=0.05)
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        '{"position":"top","interval_type":"size","interval_size":0.01,"percentile":[98,100],"selection":"median","use_breakpoint":true}',
+    ],
+)
+def test_flat_linear_edge_using_breakpoint(config) -> None:
+    """
+    Test FlatLinearEdge using breakpoint
+    """
+    # Generate data
+    var1, lst1 = setup_data(
+        var_min=0.0,
+        var_max=0.3,
+        dry_c0=325.0,
+        dry_c1=37.0,
+        dry_c2=0.0,
+        wet_c0=290,
+        wet_c1=70,
+        wet_c2=0.0,
+        dry_cut=0.0,
+        wet_cut=0.0,
+    )
+    var2, lst2 = setup_data(
+        var_min=0.3,
+        var_max=0.5,
+        dry_c0=348.0,
+        dry_c1=-40.0,
+        dry_c2=0.0,
+        wet_c0=305,
+        wet_c1=20,
+        wet_c2=0.0,
+        dry_cut=0.0,
+        wet_cut=0.0,
+    )
+    var = np.concatenate([var1, var2])
+    lst = np.concatenate([lst1, lst2])
+    edge = FlatLinearEdge.model_validate_json(config)
+    edge.fit(var, lst)
+    np.testing.assert_allclose(edge.coeffs1, 335, atol=1.0)
+    np.testing.assert_allclose(edge.coeffs2[1], 348, atol=1.0)
+    np.testing.assert_allclose(edge.coeffs2[0], -40, atol=2.0)
+    np.testing.assert_allclose(edge.get(0.4), 348 - 40.0 * 0.4, atol=1.0)
 
 
 @pytest.mark.parametrize(
@@ -478,7 +701,7 @@ def test_flat_linear_edge(config) -> None:
 )
 def test_flat_linear_edge_error(config) -> None:
     """
-    Test LinearEdge
+    Test FlatLinearEdge with exception raising
     """
     with pytest.raises(ValidationError):
         FlatLinearEdge.model_validate_json(config)
@@ -496,7 +719,7 @@ def test_flat_linear_edge_error(config) -> None:
 )
 def test_flat_regression_edge(config) -> None:
     """
-    Test LinearEdge
+    Test FlatRegressionEdge
     """
     # Generate data
     var, lst = setup_data(
@@ -530,7 +753,7 @@ def test_flat_regression_edge(config) -> None:
 )
 def test_flat_regression_edge_error(config) -> None:
     """
-    Test LinearEdge
+    Test FlatRegressionEdge with exception raising
     """
     with pytest.raises(ValidationError):
         FlatRegressionEdge.model_validate_json(config)
@@ -655,7 +878,7 @@ def test_flat_regression_edge_error(config) -> None:
 )
 def test_create_edge(name, config) -> None:
     """
-    Test LinearEdge
+    Test edge creation
     """
     Edge.create(name, config)
 
@@ -681,7 +904,7 @@ def test_create_edge(name, config) -> None:
 )
 def test_create_edge_error(name, config) -> None:
     """
-    Test LinearEdge
+    Test edge creation with exception raising
     """
     with pytest.raises(EdgeError):
         Edge.create(name, config)

@@ -184,6 +184,8 @@ class RegressionEdge(Edge, ABC):
     percentile: tuple[int, int]
     percentile_limit: int | None = None
     selection: SelectionMethod = SelectionMethod.MEDIAN
+    use_breakpoint: bool = False
+    breakpoint: float | None = None
 
     @field_validator("percentile")
     @classmethod
@@ -249,6 +251,8 @@ class RegressionEdge(Edge, ABC):
         ----------
         nb: int
             Interval number
+        info: ValidationInfo
+            Information
 
         Returns
         -------
@@ -277,6 +281,8 @@ class RegressionEdge(Edge, ABC):
         ----------
         size: float
             Interval size
+        info: ValidationInfo
+            Information
 
         Returns
         -------
@@ -292,6 +298,30 @@ class RegressionEdge(Edge, ABC):
                 "Size of intervals is ignored for interval type DENSITY"
             )
         return size
+
+    @field_validator("use_breakpoint")
+    @classmethod
+    def check_use_breakpoint(cls, use_bp: bool, info: ValidationInfo) -> int:
+        """
+        Description
+        -----------
+        If breakpoint is porvided, use_breakpoint is set to True
+
+        Parameters
+        ----------
+        use_bp: bool
+            Use breakpoint option
+        info: ValidationInfo
+            Information
+
+        Returns
+        -------
+        use_bp_ckecked: bool
+            Check use breakpoint
+        """
+        if info.data.get("breakpoint") is not None:
+            use_bp = True
+        return use_bp
 
     def _select(self, df: pd.Series) -> float:
         """
@@ -390,6 +420,80 @@ class RegressionEdge(Edge, ABC):
 
         return intervals
 
+    def search_breakpoint(
+        self, var: npt.ArrayLike, lst: npt.ArrayLike
+    ) -> tuple[float, float]:
+        """
+        Description
+        -----------
+        This method is intended for use with albedo.
+        The mean temperature increases when albedo increases for low albedo values
+        (not necessarily linearly), and the mean temperature decreases when albedo
+        increases for high albedo values (linearly).
+        The break point is around 0.25 and 0.3.
+
+        Parameters
+        ----------
+        lst: np.array_like
+            Land surface temperature
+        var: np.array_like
+            Variable used versus temperature (ex: Albedo)
+
+        Returns
+        ----------
+        break: tuple[float,float]
+            Coordinates of breakpoint point
+        """
+        var_values = []
+        lst_values = []
+        df = self._prepare(np.array(var), np.array(lst))
+        intervals = self._get_intervals(df["var"])
+
+        # Compute point coordinates for regression
+        for _, group in df.groupby(intervals):
+            value = group["lst"].median()
+            if not np.isnan(value):
+                var_values.append(group["var"].median())
+                lst_values.append(value)
+        break_indice = np.nanargmax(lst_values[::-1])
+        break_indice = len(lst_values) - break_indice - 1
+        if break_indice == len(lst_values) - 1:
+            break_indice = break_indice - 1
+        elif break_indice == 0:
+            break_indice = break_indice + 1
+        return var_values[break_indice], lst_values[break_indice]
+
+    def search_extremum_point(
+        self, var: npt.NDArray, lst: npt.NDArray
+    ) -> tuple[float, float]:
+        """
+        Description
+        -----------
+        Return extrema of selected points
+
+        Parameters
+        ----------
+        lst: np.array_like
+            Land surface temperature
+        var: np.array_like
+            Variable used versus temperature (ex: Albedo)
+
+        Returns
+        ----------
+        break: tuple[float,float]
+            Coordinates of extremum point
+        """
+        if self.position.name == EdgePosition.TOP.name:
+            extremum_indice = np.nanargmax(lst[::-1])
+        else:
+            extremum_indice = np.nanargmin(lst[::-1])
+        extremum_indice = len(lst) - extremum_indice - 1
+        if extremum_indice == len(lst) - 1:
+            extremum_indice = extremum_indice - 1
+        elif extremum_indice == 0:
+            extremum_indice = extremum_indice + 1
+        return var[extremum_indice], lst[extremum_indice]
+
     @abstractmethod
     def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
         """
@@ -428,22 +532,26 @@ class RegressionEdge(Edge, ABC):
         String conversion method
         """
         interval_prop = (
-            f"interval_nb={self.interval_nb}"
+            f"interval_nb={self.interval_nb},"
             if self.interval_type == IntervalType.DENSITY
-            else f"interval_size={self.interval_size}"
+            else f"interval_size={self.interval_size},"
         )
         percentile_prop = (
-            f"percentile={self.percentile}, percentile_limit={self.percentile_limit}"
+            f"percentile={self.percentile}, percentile_limit={self.percentile_limit},"
             if self.percentile_limit is not None
-            else f"percentile={self.percentile}"
+            else f"percentile={self.percentile},"
+        )
+        break_prop = (
+            f"breakpoint={self.breakpoint}," if self.use_breakpoint else ""
         )
 
         return (
             f"position={self.position.value},"
             f"interval_type={self.interval_type.value},"
-            f"{interval_prop},"
-            f"{percentile_prop},"
-            f"selection={self.selection.value}"
+            f"{interval_prop}"
+            f"{percentile_prop}"
+            f"selection={self.selection.value},"
+            f"{break_prop}"
         )
 
     def _common_str(self) -> str:
@@ -451,21 +559,25 @@ class RegressionEdge(Edge, ABC):
         String conversion method for end-users
         """
         interval_prop = (
-            f"interval_nb={self.interval_nb}"
+            f"  - interval_nb={self.interval_nb}\n"
             if self.interval_type == IntervalType.DENSITY
-            else f"interval_size={self.interval_size}"
+            else f"  - interval_size={self.interval_size}\n"
         )
         percentile_prop = (
-            f"percentile={self.percentile} (limit={self.percentile_limit})"
+            f"  - percentile={self.percentile} (limit={self.percentile_limit})\n"
             if self.percentile_limit is not None
-            else f"percentile={self.percentile}"
+            else f"  - percentile={self.percentile}\n"
+        )
+        break_prop = (
+            f"breakpoint={self.breakpoint}," if self.use_breakpoint else ""
         )
         return (
             f"  - position={self.position.value}\n"
             f"  - interval_type={self.interval_type.value}\n"
-            f"  - {interval_prop}\n"
-            f"  - {percentile_prop}\n"
-            f"  - selection={self.selection.value}"
+            f"{interval_prop}"
+            f"{percentile_prop}"
+            f"  - selection={self.selection.value}\n"
+            f"{break_prop}"
         )
 
     def to_dict(self) -> dict:
@@ -491,6 +603,8 @@ class RegressionEdge(Edge, ABC):
                 else {}
             ),
             "selection": self.selection.value,
+            "use_breakpoint": self.use_breakpoint,
+            **({"breakpoint": self.breakpoint} if self.use_breakpoint else {}),
         }
 
 
@@ -536,6 +650,19 @@ class LinearEdge(RegressionEdge):
         """
         # Get points for linear regression
         var_values, lst_values = self.get_points(var, lst)
+        # If the option use_break_point is activated, the regression
+        # occurs only on a part of the selected point: after the break point
+        # for top eadge and before the break point for bottom edge.
+        if self.use_breakpoint:
+            break_var, _ = self.search_breakpoint(var, lst)
+            if self.position.name == EdgePosition.TOP.name:
+                tmp = var_values[var_values >= break_var]
+                lst_values = lst_values[var_values >= break_var]
+                var_values = tmp
+            else:
+                tmp = var_values[var_values <= break_var]
+                lst_values = lst_values[var_values <= break_var]
+                var_values = tmp
         # Linear regression
         self.coeffs = tuple(np.polyfit(var_values, lst_values, 1))
 
@@ -640,12 +767,11 @@ class ThresholdLinearEdge(RegressionEdge):
         """
         # Get points for linear regression
         var_values, lst_values = self.get_points(var, lst)
-        if self.position.name == EdgePosition.TOP.name:
-            cut = np.nanargmax(lst_values[::-1])
+        if self.use_breakpoint:
+            guess, _ = self.search_breakpoint(var, lst)
+            self.breakpoint = guess
         else:
-            cut = np.nanargmin(lst_values[::-1])
-        cut = len(lst_values) - cut - 1
-        guess = var_values[cut]
+            guess, _ = self.search_extremum_point(var_values, lst_values)
         # Initialize piecewise linear fit
         # Seed is fixed to garantee reproductible results
         pwlf_solver = pwlf.PiecewiseLinFit(
@@ -700,7 +826,7 @@ class DoubleLinearEdge(RegressionEdge):
 
     coeffs1: tuple[float, float] = (float("inf"), float("inf"))
     coeffs2: tuple[float, float] = (float("inf"), float("inf"))
-    inflection: float = float("inf")
+    fit_breakpoint: float = float("inf")
 
     def get(self, var: npt.ArrayLike) -> npt.NDArray:
         """
@@ -721,7 +847,7 @@ class DoubleLinearEdge(RegressionEdge):
         x = np.array(var)
         return np.piecewise(
             x,
-            [x < self.inflection, x >= self.inflection],
+            [x < self.fit_breakpoint, x >= self.fit_breakpoint],
             [
                 lambda x: self.coeffs1[0] * x + self.coeffs1[1],
                 lambda x: self.coeffs2[0] * x + self.coeffs2[1],
@@ -753,7 +879,7 @@ class DoubleLinearEdge(RegressionEdge):
         else:
             cut = np.nanargmin(lst_values[::-1])
         cut = len(lst_values) - cut - 1
-        self.inflection = var_values[cut]
+        self.fit_breakpoint = var_values[cut]
         if cut == len(lst_values) - 1:
             logger.warning("DoubleLinearEdge: second regression impossible")
             self.coeffs1 = tuple(np.polyfit(var_values, lst_values, 1))
@@ -785,13 +911,19 @@ class DoubleLinearEdge(RegressionEdge):
         """
         # Get points for linear regression
         var_values, lst_values = self.get_points(var, lst)
+        if self.use_breakpoint:
+            self.breakpoint, _ = self.search_breakpoint(var, lst)
         # Initialize piecewise linear fit
         pwlf_solver = pwlf.PiecewiseLinFit(
             var_values, lst_values, degree=1, seed=123
         )
         # fit the data for 2 line segments
-        pwlf_solver.fit(2)
-        self.inflection = pwlf_solver.fit_breaks[1]
+        if self.use_breakpoint:
+            breaks = pwlf_solver.fit_guess([self.breakpoint])
+            self.fit_breakpoint = breaks[1]
+        else:
+            pwlf_solver.fit(2)
+            self.fit_breakpoint = pwlf_solver.fit_breaks[1]
         self.coeffs1 = (
             pwlf_solver.beta[1],
             +pwlf_solver.beta[0]
@@ -815,7 +947,7 @@ class DoubleLinearEdge(RegressionEdge):
             f"{self._common_repr()},"
             f"coeffs1={self.coeffs1},"
             f"coeffs2={self.coeffs2},"
-            f"inflection={self.inflection})"
+            f"fit_breakpoint={self.fit_breakpoint})"
         )
 
     def __str__(self) -> str:
@@ -827,7 +959,7 @@ class DoubleLinearEdge(RegressionEdge):
             f"  - {self._common_str()}\n"
             f"  - coeffs1={self.coeffs1}\n"
             f"  - coeffs2={self.coeffs2}\n"
-            f"  - inflection={self.inflection}"
+            f"  - fit_breakpoint={self.fit_breakpoint}"
         )
 
     def to_dict(self) -> dict:
@@ -837,7 +969,7 @@ class DoubleLinearEdge(RegressionEdge):
         common_dict = super().to_dict()
         common_dict["coeffs1"] = tuple(float(coeff) for coeff in self.coeffs1)
         common_dict["coeffs2"] = tuple(float(coeff) for coeff in self.coeffs2)
-        common_dict["inflection"] = float(self.inflection)
+        common_dict["fit_breakpoint"] = float(self.fit_breakpoint)
         return common_dict
 
 
@@ -846,7 +978,7 @@ class FlatLinearEdge(RegressionEdge):
 
     coeffs1: float = float("inf")
     coeffs2: tuple[float, float] = (float("inf"), float("inf"))
-    inflection: float = float("inf")
+    fit_breakpoint: float = float("inf")
 
     def get(self, var: npt.ArrayLike) -> npt.NDArray:
         """
@@ -867,7 +999,7 @@ class FlatLinearEdge(RegressionEdge):
         x = np.array(var)
         return np.piecewise(
             x,
-            [x < self.inflection, x >= self.inflection],
+            [x < self.fit_breakpoint, x >= self.fit_breakpoint],
             [
                 self.coeffs1,
                 lambda x: self.coeffs2[0] * x + self.coeffs2[1],
@@ -899,7 +1031,7 @@ class FlatLinearEdge(RegressionEdge):
         else:
             cut = np.nanargmin(lst_values[::-1])
         cut = len(lst_values) - cut - 1
-        self.inflection = var_values[cut]
+        self.fit_breakpoint = var_values[cut]
         if cut == len(lst_values) - 1:
             logger.warning("FlatLinearEdge: second regression impossible")
             self.coeffs1 = lst_values[cut]
@@ -934,12 +1066,11 @@ class FlatLinearEdge(RegressionEdge):
         """
         # Get points for linear regression
         var_values, lst_values = self.get_points(var, lst)
-        if self.position.name == EdgePosition.TOP.name:
-            cut = np.nanargmax(lst_values[::-1])
+        if self.use_breakpoint:
+            guess, _ = self.search_breakpoint(var, lst)
+            self.breakpoint = guess
         else:
-            cut = np.nanargmin(lst_values[::-1])
-        cut = len(lst_values) - cut - 1
-        guess = var_values[cut]
+            guess, _ = self.search_extremum_point(var_values, lst_values)
         # Initialize piecewise linear fit
         pwlf_solver = pwlf.PiecewiseLinFit(
             var_values,
@@ -948,9 +1079,9 @@ class FlatLinearEdge(RegressionEdge):
         )
         breaks = pwlf_solver.fit_guess([guess])
         # fit the data for 2 line segments
-        self.inflection = breaks[1]
+        self.fit_breakpoint = breaks[1]
         self.coeffs1 = (
-            pwlf_solver.beta[1] * self.inflection
+            pwlf_solver.beta[1] * self.fit_breakpoint
             + pwlf_solver.beta[0]
             - pwlf_solver.beta[1] * pwlf_solver.fit_breaks[0]
         )
@@ -972,7 +1103,7 @@ class FlatLinearEdge(RegressionEdge):
             f"{self._common_repr()},"
             f"coeffs1={self.coeffs1},"
             f"coeffs2={self.coeffs2},"
-            f"inflection={self.inflection})"
+            f"fit_breakpoint={self.fit_breakpoint})"
         )
 
     def __str__(self) -> str:
@@ -984,7 +1115,7 @@ class FlatLinearEdge(RegressionEdge):
             f"  - {self._common_str()}\n"
             f"  - coeffs1={self.coeffs1}\n"
             f"  - coeffs2={self.coeffs2}\n"
-            f"  - inflection={self.inflection}"
+            f"  - fit_breakpoint={self.fit_breakpoint}"
         )
 
     def to_dict(self) -> dict:
@@ -994,7 +1125,7 @@ class FlatLinearEdge(RegressionEdge):
         common_dict = super().to_dict()
         common_dict["coeffs1"] = float(self.coeffs1)
         common_dict["coeffs2"] = tuple(float(coeff) for coeff in self.coeffs2)
-        common_dict["inflection"] = float(self.inflection)
+        common_dict["fit_breakpoint"] = float(self.fit_breakpoint)
         return common_dict
 
 
