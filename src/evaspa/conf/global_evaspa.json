@@ -332,7 +332,8 @@
                         "interval_type": "density",
                         "interval_nb": 20,
                         "percentile": [95, 100],
-                        "selection": "median"
+                        "selection": "median",
+                        "use_breakpoint": true
                     }
                 },
                 "wet_edge": {
@@ -341,7 +342,8 @@
                         "interval_type": "density",
                         "interval_nb": 20,
                         "percentile": [0, 5],
-                        "selection": "median"
+                        "selection": "median",
+                        "use_breakpoint": true
                     }
                 },
                 "var": "albedo"
@@ -354,7 +356,8 @@
                         "interval_type": "density",
                         "interval_nb": 20,
                         "percentile": [95, 100],
-                        "selection": "mean"
+                        "selection": "mean",
+                        "use_breakpoint": true
                     }
                 },
                 "wet_edge": {
@@ -363,7 +366,8 @@
                         "interval_type": "density",
                         "interval_nb": 20,
                         "percentile": [0, 5],
-                        "selection": "mean"
+                        "selection": "mean",
+                        "use_breakpoint": true
                     }
                 },
                 "var": "albedo"
@@ -384,7 +388,7 @@
                         "selection": "median"
                     }
                 },
-                "var": "ndvi"
+                "var": "albedo"
             },
             {
                 "name": "EF4a",
@@ -394,7 +398,8 @@
                         "interval_type": "size",
                         "interval_size": 0.01,
                         "percentile": [95, 100],
-                        "selection": "median"
+                        "selection": "median",
+                        "use_breakpoint": true
                     }
                 },
                 "wet_edge": {
@@ -403,7 +408,8 @@
                         "interval_type": "size",
                         "interval_size": 0.01,
                         "percentile": [0, 5],
-                        "selection": "median"
+                        "selection": "median",
+                        "use_breakpoint": true
                     }
                 },
                 "var": "albedo"
@@ -416,7 +422,8 @@
                         "interval_type": "density",
                         "interval_nb": 20,
                         "percentile": [95, 100],
-                        "selection": "mean"
+                        "selection": "mean",
+                        "use_breakpoint": true
                     }
                 },
                 "wet_edge": {
@@ -425,7 +432,8 @@
                         "interval_type": "density",
                         "interval_nb": 20,
                         "percentile": [0, 5],
-                        "selection": "mean"
+                        "selection": "mean",
+                        "use_breakpoint": true
                     }
                 },
                 "var": "albedo"
@@ -512,7 +520,7 @@
                         "selection": "median"
                     }
                 },
-                "var": "albedo"
+                "var": "ndvi"
             },
             {
                 "name": "EF6v",
