@@ -15,22 +15,24 @@ By varying the characteristics of the EF model, we can create a wide range of mo
 ### Definition
 The methods for estimating dry and wet edges in the literature share common mathematical basis. May it be wet or dry, an edge's shape is picked amongst six possible shapes, each with a unique mathematical function:
 
-* Flat edge: *FlatEdge*
+* Flat edges: *FlatEdge*, *FlatRegressionEdge*, *FlatPercentileEdge*
 * Linear edge: *LinearEdge*
 * Linear edge with threshold: *ThresholdLinearEdge*
-* Linear edge with inflexion point : *FlatLinearEdge*
+* Linear edge with break point : *FlatLinearEdge*
 * Double regression edge: *DoubleLinearEdge*
 * Parabolic edge: *ParabolicEdge*
 
 ![edge](images/edge.png){ width="400" }
 /// caption
-Different dry edge types: flat edge (orange line), linear edge (red line), linear edge with threshold (dashed red line), linear edge with inflexion point (dotted red line), double regression edge (dashed red line), parabolic edge (yellow line)
+Different dry edge types: flat edge (orange line), linear edge (red line), linear edge with threshold (dashed red line), linear edge with break point (dotted red line), double regression edge (dashed red line), parabolic edge (yellow line)
 ///
 
 
-For flat edges, the principle is to take the maximum for dry edge (or minimum for wet edge), excluding outliers or not. For other types of edge, 
-the principle is to define points and then estimate the chosen regression. In these cases, each method divides the space (in relation to albedo or Fcover) into intervals. 
-In our case, we could choose between intervals with same size or intervals with the same density of points.  
+For flat edges, the principle is to take the maximum for dry edge (or minimum for wet edge). The extremum of the edge can be computed considering all the data (*FlatEdge*)or data in a percentile interval (*FlatPercentileEdge*) or only selected points (*FlatRegressionEdge*).   
+
+For other edges (based on piecewise polynomial regression), 
+the principle is to define selected points and then estimate the chosen regression. In these cases, each method divides the space (in relation to albedo or Fcover) into intervals. 
+It is possible to choose between intervals with same size or intervals with the same density of points.  
 The number of intervals can be modified according to the method being used or tile being processed. 
 For each interval, the objective is to define the point used to estimate the edge. Its x-axis coordinate is defined by taking the median of the points in the interval. 
 Its LST-axis coordinate is defined by considering a percentile of points in the interval and taking the maximum (or the minimum) or the median. 
@@ -45,12 +47,30 @@ Example of dry edge
 
 Therefore, an edge is characterized by:
 
-* **type**: edge class,
-* for regression edge, a configuration **config**: 
+* **type**: edge class to be chosen from the following classes:  
+    - *FlatEdge*
+    - *FlatPercentileEdge*
+    - *FlatRegressionEdge*
+    - *LinearEdge*
+    - *ThresholdLinearEdge*
+    - *FlatLinearEdge*
+    - *DoubleLinearEdge*
+    - *ParabolicEdge*
+     
+* for edge based on a point selection for regression (inherited from *RegressionEdge*), a configuration **config**: 
     - **interval_type**: an interval type either fixed size *size* or fixed density *density*
     - **interval_nb**: a number of intervals (for density interval type) or **interval_size**: a size of intervals (for fixed size type)
     - **percentile**: a percentile interval to considered for point selection 
+    - **percentile_limit** (*optional*): the maximum number of points to be considered in the percentile interval 
     - **selection**: a regression point selection criteria (*median*,*mean*,*max*,*min*)
+    - **use_breakpoint**: Use the breakpoint to compute the edge (to be used only with albedo). The mean temperature increases when
+     albedo increases for low albedo values (not necessarily linearly), and the mean temperature decreases when albedo increases
+     for high albedo values (linearly). The break point occurs around 0.25 and 0.3. Once the option is activated, the breakpoint 
+     is used to computed the edge. For *LinearEdge*, if the option use_break_point is activated, the regression occurs only on a 
+     part of the selected point: after the break point for top eadge and before the break point for bottom edge.
+     For *ThresholdLinearEdge* and *FlatLinearEdge*, if the option use_break_point is activated, the breakpoint is used as guess
+     during the regression.  
+
 * for flat edge with percentile, a configuration **config**: 
     - **percentile**: a percentile interval to considered for point selection 
     - **selection**: a regression point selection criteria (*median*,*mean*,*max*,*min*)
@@ -119,7 +139,7 @@ or
 }
 ```
 
- * Linear edge with inflexion point : 
+ * Linear edge with break point : 
 
 ```json
 {
