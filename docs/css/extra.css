@@ -1,0 +1,15 @@
+.md-nav {
+    font-size: .66rem;  /* Change la taille des éléments du menu de navigation */
+}
+
+.md-content {
+    font-size: .7rem;  /* Change la taille du texte dans le contenu principal */
+}
+
+.md-typeset {
+    font-size: .7rem;  /* Change la taille du texte dans le contenu principal */
+}
+
+.md-typeset .footnote {
+    font-size: .5rem;  /* Change la taille du texte dans le pied de page */
+}
