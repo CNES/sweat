@@ -62,9 +62,37 @@ Example:
 }
 ```
 
+#### Format of input data
+
+Input data can be supplied in the form of a single file or a directory containing all files. 
+Data must be supplied in GeoTIFF format.
+For each band, a *band description* option/tag must be used when writing the GeoTIFF file.
+The code uses this information to find out which band it is. 
+The table below lists the expected nomenclature for band names. 
+
+| Band | Tag name |
+|------|----------|
+| Land surface temperature | `lst` |
+| DEM elevation | `height` |
+| DEM slope | `slope` |
+| DEM aspect | `aspect` |
+| Downward shortwave radiation | `rsdXXXX` | 
+| Downward longwave radiation | `rldXXXX` |
+| LAI | `lai` |
+| NDVI | `ndvi` |
+| Fcover | `fcover` |
+| Albedo | `albedo` |
+
+Only consider one LST data is considered in the input data. The LAnd Surface temperature is expected to be in Kelvin.  
+  
+It is possible to use several radiation data. 
+The only constraint is in the naming convention. For each radiation data, te code expects to have two bands, respectively named `rsdXXXX` for shortwave radiation and `rldXXXX` for longwave radiation.
+*For example*: if one want to take into account 3 kinds of radiation (MSG, ERA5, MERRA), one can have in the input data the following bands: `rsd_msg`/`rld_msg` for MSG data,
+`rsd_era5`/`rld_rea5` for ERA5 data and `rsd_merra`/`rld_merra` for MERRA data. The code will then compute 3 net radiations corresponding to the each radiation datasets.
+
 ### Output section
 
-The **input** section is composed of:
+The **output** section is composed of:
 
 | Name | Description | Type | Mandatory | Default value |
 |------|-------------|------|-----------|---------------|
