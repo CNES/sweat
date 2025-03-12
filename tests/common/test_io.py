@@ -1,11 +1,13 @@
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
 import os
+from pathlib import Path
 
 import numpy as np
 import pytest
 import rasterio as rio
 import xarray as xr
+from pydantic import ValidationError
 from pyproj import CRS
 
 from evaspa.common import io
@@ -125,3 +127,51 @@ def test_write_data(georef, separated, expected, tmp_path) -> None:
     io.write_dataset(data, "test.tif", d, separated)
     files = list(d.glob("**/*.tif"))
     assert len(files) == expected
+
+
+@pytest.mark.parametrize(
+    "entry",
+    [
+        {"path": "tests/data/modis_test.tif"},
+        {
+            "path": "tests/data/modis_test.tif",
+            "date": "2018-05-16T10:00:00-00:00",
+        },
+    ],
+)
+def test_inputconfig(entry) -> None:
+    """
+    Test InputConfig
+    """
+    io.InputConfig.model_validate(entry)
+
+
+@pytest.mark.parametrize(
+    ("entry", "exception"),
+    [
+        pytest.param({"foo": "foo"}, pytest.raises(ValidationError)),
+        pytest.param(
+            {"path": "foo"}, pytest.raises(OSError, match="Path not found")
+        ),
+        pytest.param(
+            {"path": "tests/data/modis_test.tif", "date": "foo"},
+            pytest.raises(ValidationError),
+        ),
+    ],
+)
+def test_inputconfig_exc(entry, exception) -> None:
+    """
+    Test InputConfig with error
+    """
+    with exception:
+        io.InputConfig.model_validate(entry)
+
+
+def test_outputconfig(tmp_path) -> None:
+    """
+    Test OutputConfig
+    """
+    d = Path(tmp_path) / "out"
+    output = {"path": str(d)}
+    io.OutputConfig.model_validate(output)
+    assert d.exists()

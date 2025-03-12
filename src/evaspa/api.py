@@ -17,8 +17,9 @@ if TYPE_CHECKING:
     import xarray as xr
 
 from evaspa.aux import trishna
+from evaspa.common.io import InputConfig
 from evaspa.debugging import DebuggingConfig, configure_debugging
-from evaspa.evaspa.config import InputConfig, ParamsConfig
+from evaspa.evaspa.config import EVASPAParamsConfig
 from evaspa.logging import LoggerManager
 
 logger = LoggerManager.get_logger(__name__)
@@ -151,7 +152,7 @@ def run_evaspa(
     # Validate parameters config
     msg = f"Params: {params}"
     logger.debug(msg)
-    params_config = ParamsConfig.model_validate(params)
+    params_config = EVASPAParamsConfig.model_validate(params)
     # Validate debug config
     msg = f"Debug: {debug}"
     logger.debug(msg)

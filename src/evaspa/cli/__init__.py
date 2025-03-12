@@ -7,8 +7,9 @@ import click
 
 from evaspa.__about__ import __version__
 from evaspa.api import generate_tiles, regroup_tiles, run_evaspa
+from evaspa.common.config import read_config, write_config
 from evaspa.common.io import write_dataset
-from evaspa.evaspa.config import InputFile, read_config, write_config
+from evaspa.evaspa.config import EVASPAInputFile
 from evaspa.evaspa.tiling import write_regroup
 from evaspa.logging import LoggerManager
 
@@ -102,7 +103,7 @@ def evaspa(verbose, input_file):
     logger.debug(msg)
     dict_config = read_config(input_file)
     # Verify config and manage default parameters
-    config = InputFile.model_validate(dict_config)
+    config = EVASPAInputFile.model_validate(dict_config)
     output_dir = Path(config.output.path)
     # Run
     logger.debug("Run evaspa...")
@@ -111,7 +112,7 @@ def evaspa(verbose, input_file):
     # Save configuration
     logger.debug("Write results...")
     write_config(config.model_dump(), output_dir, fmt="json")
-    logger.info("Write configiguration: OK")
+    logger.info("Write configuration: OK")
     # Write results
     if res is not None:
         # Write instantaneous results

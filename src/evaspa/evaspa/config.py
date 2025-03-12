@@ -5,16 +5,10 @@ Module for configuration management
 
 from __future__ import annotations
 
-import datetime as dt
-import json
 import os
-from enum import Enum
-from pathlib import Path
-from typing import Annotated
 
 from packaging.version import Version
 from pydantic import (
-    AfterValidator,
     BaseModel,
     ConfigDict,
     Field,
@@ -25,15 +19,16 @@ from pydantic import (
 from evaspa.__about__ import __version__
 from evaspa.common.daily import DailyConfig
 from evaspa.common.filter import FilterConfig
+from evaspa.common.io import InputConfig, OutputConfig
 from evaspa.debugging import DebuggingConfig
-from evaspa.evaspa.ef import EFConfig  # noqa TC001
+from evaspa.evaspa.ef import EFConfig
 from evaspa.evaspa.seb import SEBConfig
 from evaspa.logging import LoggerManager
 
 logger = LoggerManager.get_logger(__name__)
 
 
-class InputFile(BaseModel):
+class EVASPAInputFile(BaseModel):
     """
     Class describing the format of the input file
     """
@@ -42,7 +37,7 @@ class InputFile(BaseModel):
 
     input: InputConfig
     output: OutputConfig
-    params: ParamsConfig
+    params: EVASPAParamsConfig
     debug: DebuggingConfig = Field(default=DebuggingConfig())
     version: str = Field(default=str(__version__))
 
@@ -70,44 +65,7 @@ class InputFile(BaseModel):
         return self
 
 
-class InputConfig(BaseModel):
-    """
-    Configuration for input data
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    path: str
-    date: dt.datetime | None = Field(default=None)
-
-    @field_validator("path")
-    @classmethod
-    def test_path(cls, v: str) -> str:
-        if not os.path.exists(v):
-            msg = f"Path not found: {v}"
-            raise OSError(msg)
-        return v
-
-
-def create_path(v: str):
-    os.makedirs(v, exist_ok=True)
-    return v
-
-
-OutputPath = Annotated[str, AfterValidator(create_path)]
-
-
-class OutputConfig(BaseModel):
-    """
-    Configuration for output data
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    path: OutputPath
-
-
-class ParamsConfig(BaseModel):
+class EVASPAParamsConfig(BaseModel):
     """
     Configuration for parameters to run EVASPA
     """
@@ -120,71 +78,11 @@ class ParamsConfig(BaseModel):
     daily: DailyConfig = Field(default=DailyConfig())
 
 
-def read_config(path: str) -> dict:
+def check_config_evaspa(config: dict) -> dict:
     """
     Description
     -----------
-    Read configuration and return a dict
-
-    Parameters
-    ----------
-    path: str
-        Path to configuration file
-
-    Return
-    ------
-    config: dict
-        Dictionary containing the configuration parameters
-    """
-    suffix = Path(path).suffix
-    if suffix == ".json":
-        with open(path) as json_file:
-            return json.load(json_file)
-    else:
-        msg = "Unable to read configuration file (unknown format)"
-        raise OSError(msg)
-
-
-def json_serial(obj):
-    """JSON serializer for objects not serializable by default json code"""
-
-    if isinstance(obj, (dt.datetime, dt.date)):
-        return obj.isoformat()
-    elif isinstance(obj, Enum):  # noqa I001
-        return obj.value
-    msg = f"Type {type(obj)} not serializable"
-    raise TypeError(msg)
-
-
-def write_config(config: dict, path: str, fmt: str = "json") -> None:
-    """
-    Description
-    -----------
-    Write configuration and return a dict
-
-    Parameters
-    ----------
-    config: dict
-        Dictionary containing the configuration parameters
-    path: str
-        Directory path
-    fmt: str
-        Configuration file format (default=JSON)
-    """
-    output_dir = Path(path)
-    if fmt.lower() == "json":
-        with open(output_dir / "config.json", "w") as f:
-            json.dump(config, f, indent=4, default=json_serial)
-    else:
-        msg = f"Unsupported format for configuration file ({fmt})"
-        raise ValueError(msg)
-
-
-def check_config(config: dict) -> dict:
-    """
-    Description
-    -----------
-    Check configuration
+    Check configuration for EVASPA
 
     Parameters
     ----------
@@ -196,5 +94,5 @@ def check_config(config: dict) -> dict:
     checked_config: dict
         Checked dictionary containing the configuration parameters
     """
-    cfg = InputFile.model_validate(config)
+    cfg = EVASPAInputFile.model_validate(config)
     return cfg.model_dump(mode="json")
