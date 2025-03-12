@@ -52,6 +52,7 @@ plugins:
           paths: [src]  # search packages in the src folder
           options:
             show_submodules: true
+            docstring_style: numpy
             docstring_section_style: list
             filters:
               - "!^_"
