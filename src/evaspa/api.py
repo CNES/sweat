@@ -9,13 +9,16 @@ from typing import TYPE_CHECKING
 
 import geopandas as gpd
 
+from evaspa.common import daily, filter, io
+from evaspa.evaspa import ef, seb, tiling
+
 if TYPE_CHECKING:
     import pandas as pd
     import xarray as xr
 
-from evaspa import daily, ef, filter, io, seb, tiling, trishna
-from evaspa.config import InputConfig, ParamsConfig
+from evaspa.aux import trishna
 from evaspa.debugging import DebuggingConfig, configure_debugging
+from evaspa.evaspa.config import InputConfig, ParamsConfig
 from evaspa.logging import LoggerManager
 
 logger = LoggerManager.get_logger(__name__)

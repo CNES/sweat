@@ -11,7 +11,7 @@ dist/
 # Notebooks
 .ipynb_checkpoints/
 Untitled*.ipynb
-notebooks/groups.*
+notebooks/evaspa/groups.*
 
 # Data
 *.tif

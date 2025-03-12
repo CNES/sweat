@@ -7,10 +7,10 @@ import click
 
 from evaspa.__about__ import __version__
 from evaspa.api import generate_tiles, regroup_tiles, run_evaspa
-from evaspa.config import InputFile, read_config, write_config
-from evaspa.io import write_dataset
+from evaspa.common.io import write_dataset
+from evaspa.evaspa.config import InputFile, read_config, write_config
+from evaspa.evaspa.tiling import write_regroup
 from evaspa.logging import LoggerManager
-from evaspa.tiling import write_regroup
 
 logger = LoggerManager.get_logger(__name__)
 

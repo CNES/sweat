@@ -5,7 +5,8 @@ import os
 import geopandas as gpd
 import pytest
 
-from evaspa import api, tiling
+from evaspa import api
+from evaspa.evaspa import tiling
 
 
 def get_data_path() -> str:
