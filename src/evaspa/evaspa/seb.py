@@ -274,7 +274,7 @@ def create_net_radiation(
         if v not in data.data_vars:
             msg = (
                 f"No RLD data ({v}) associated to RSD"
-                f" data ({str.replace(v,'rld','rsd')})"
+                f" data ({str.replace(v, 'rld', 'rsd')})"
             )
             raise ValueError(msg)
     msg = f"RLD data available: {rld_data}"

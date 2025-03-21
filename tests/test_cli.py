@@ -41,7 +41,7 @@ def test_command_evaspa_tiling(tmp_path):
     runner = CliRunner()
     result = runner.invoke(
         cli.evaspa_tiling,
-        args=f'--roi {os.path.join("tests", "data", "corsica.gpkg")} '
+        args=f"--roi {os.path.join('tests', 'data', 'corsica.gpkg')} "
         f"--output {filename}",
     )
     assert result.exit_code == 0

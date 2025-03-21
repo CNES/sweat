@@ -148,7 +148,7 @@ def read_config(path: str) -> dict:
 def json_serial(obj):
     """JSON serializer for objects not serializable by default json code"""
 
-    if isinstance(obj, (dt.datetime, dt.date)):
+    if isinstance(obj, (dt.datetime | dt.date)):
         return obj.isoformat()
     elif isinstance(obj, Enum):  # noqa I001
         return obj.value
