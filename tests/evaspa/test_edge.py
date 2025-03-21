@@ -118,7 +118,7 @@ def test_flat_edge_error(config) -> None:
         '{"position":"top","percentile":[99.99,100],"selection":"median"}',
         '{"position":"top","percentile":[99.99,100],"selection":"min"}',
         '{"position":"top","percentile":[99.99,100],"selection":"mean"}',
-        '{"position":"top","percentile":[90,100],"percentile_limit":10, "selection":"mean"}',
+        '{"position":"top","nb_points":10, "selection":"median"}',
     ],
 )
 def test_flat_percentile_edge(config) -> None:
@@ -148,7 +148,9 @@ def test_flat_percentile_edge(config) -> None:
         '{"position":"top","percentile":[46,12],"selection":"median"}',
         '{"position":"bottom","percentile":[-1,5],"selection":"median"}',
         '{"position":"top","percentile":[99,105],"selection":"median"}',
-        '{"position":"top","percentile":[90,100],"percentile_limit":0, "selection":"mean"}',
+        '{"position":"top","percentile":[99,105],"nb_points":10,"selection":"median"}',
+        '{"position":"top","nb_points":0, "selection":"mean"}',
+        '{"position":"top", "selection":"mean"}',
         '{"percentile":[99,100],"selection":"median"}',
     ],
 )
@@ -161,13 +163,55 @@ def test_flat_percentile_edge_error(config) -> None:
 
 
 @pytest.mark.parametrize(
+    ("config", "expected"),
+    [
+        pytest.param(
+            {
+                "position": "top",
+                "interval_type": "size",
+                "interval_size": 0.5,
+                "nb_points": 1,
+                "selection": "median",
+            },
+            np.array([-0.68, -0.19, 0.26, 0.69, 1.16, 1.63]),
+        ),
+        pytest.param(
+            {
+                "position": "top",
+                "interval_type": "density",
+                "interval_nb": 10,
+                "nb_points": 1,
+                "selection": "median",
+            },
+            np.array(
+                [-0.32, -0.03, 0.15, 0.29, 0.41, 0.53, 0.66, 0.8, 0.98, 1.33]
+            ),
+        ),
+    ],
+)
+def test_get_points(config, expected) -> None:
+    """
+    Test method get_points in RegressionEdge
+    """
+    # Generate data
+    np.random.seed(0)
+    var = np.random.normal(0.5, 0.5, 1000)
+    lst = np.ones(1000)
+    # Compute
+    edge = Edge.create("LinearEdge", config)
+    points = edge.get_points(var, lst)  # type: ignore
+    # Check
+    np.testing.assert_array_almost_equal(points[0], expected, decimal=2)
+
+
+@pytest.mark.parametrize(
     "config",
     [
         '{"position":"top","interval_type":"size","interval_size":0.05,"percentile":[98,100],"selection":"max"}',
         '{"position":"top","interval_type":"density","interval_nb":20,"percentile":[98,100],"selection":"max"}',
         '{"position":"top","interval_type":"density","interval_nb":100,"percentile":[99,100],"selection":"min"}',
         '{"position":"top","interval_type":"size","interval_size":0.05,"percentile":[98,100],"selection":"median"}',
-        '{"position":"top","interval_type":"size","interval_size":0.05,"percentile":[98,100],"percentile_limit": 20, "selection":"median"}',
+        '{"position":"top","interval_type":"size","interval_size":0.05,"nb_points": 20, "selection":"median"}',
         '{"position":"top","interval_type":"density","percentile":[98,100]}',
     ],
 )
@@ -291,7 +335,9 @@ def test_bottom_linear_edge_using_breakpoint(config) -> None:
         '{"position":"top","interval_type":"density","interval_nb":20,"percentile":[46,12],"selection":"median"}',
         '{"position":"bottom","interval_type":"density","interval_nb":20,"percentile":[-1,5],"selection":"median"}',
         '{"position":"top","interval_type":"density","interval_nb":20,"percentile":[99,105],"selection":"median"}',
-        '{"position":"top","interval_type":"size","interval_size":0.05,"percentile":[98,100],"percentile_limit": 0, "selection":"median"}',
+        '{"position":"top","interval_type":"size","interval_size":0.05,"nb_points": 0, "selection":"median"}',
+        '{"position":"top","interval_type":"size","interval_size":0.05,"percentile":[99,100],"nb_points": 10, "selection":"median"}',
+        '{"position":"top","interval_type":"size","interval_size":0.05,"selection":"median"}',
         '{"interval_type":"density","interval_nb":20,"percentile":[99,100],"selection":"median"}',
     ],
 )
@@ -347,6 +393,9 @@ def test_parabolic_edge(config) -> None:
         '{"position":"top","interval_type":"density","interval_nb":20,"percentile":[46,12],"selection":"median"}',
         '{"position":"bottom","interval_type":"density","interval_nb":20,"percentile":[-1,5],"selection":"median"}',
         '{"position":"top","interval_type":"density","interval_nb":20,"percentile":[99,105],"selection":"median"}',
+        '{"position":"top","interval_type":"size","interval_size":0.05,"nb_points": 0, "selection":"median"}',
+        '{"position":"top","interval_type":"size","interval_size":0.05,"percentile":[99,100],"nb_points": 10, "selection":"median"}',
+        '{"position":"top","interval_type":"size","interval_size":0.05,"selection":"median"}',
         '{"interval_type":"density","interval_nb":20,"percentile":[99,100],"selection":"median"}',
         '{"interval_type":"size","interval_nb":20,"selection":"max"}',
     ],
@@ -479,6 +528,8 @@ def test_top_linear_edge_with_threshold_using_breakpoint(config) -> None:
         '{"position":"bottom","interval_type":"density","interval_nb":20,"percentile":[46,12],"selection":"median"}',
         '{"position":"bottom","interval_type":"density","interval_nb":20,"percentile":[-1,5],"selection":"median"}',
         '{"position":"top","interval_type":"density","interval_nb":20,"percentile":[99,105],"selection":"median"}',
+        '{"position":"top","interval_type":"size","interval_size":0.05,"nb_points": 0, "selection":"median"}',
+        '{"position":"top","interval_type":"size","interval_size":0.05,"percentile":[99,100],"nb_points": 10, "selection":"median"}',
         '{"interval_type":"density","interval_nb":20,"percentile":[99,100],"selection":"median"}',
     ],
 )
@@ -596,6 +647,8 @@ def test_double_linear_edge_using_breakpoint(config) -> None:
         '{"position":"bottom","interval_type":"density","interval_nb":20,"percentile":[46,12],"selection":"median"}',
         '{"position":"bottom","interval_type":"density","interval_nb":20,"percentile":[-1,5],"selection":"median"}',
         '{"position":"top","interval_type":"density","interval_nb":20,"percentile":[99,105],"selection":"median"}',
+        '{"position":"top","interval_type":"size","interval_size":0.05,"nb_points": 0, "selection":"median"}',
+        '{"position":"top","interval_type":"size","interval_size":0.05,"percentile":[99,100],"nb_points": 10, "selection":"median"}',
         '{"interval_type":"density","interval_nb":20,"percentile":[99,100],"selection":"median"}',
     ],
 )
@@ -696,6 +749,8 @@ def test_flat_linear_edge_using_breakpoint(config) -> None:
         '{"position":"bottom","interval_type":"density","interval_nb":20,"percentile":[46,12],"selection":"median"}',
         '{"position":"bottom","interval_type":"density","interval_nb":20,"percentile":[-1,5],"selection":"median"}',
         '{"position":"top","interval_type":"density","interval_nb":20,"percentile":[99,105],"selection":"median"}',
+        '{"position":"top","interval_type":"size","interval_size":0.05,"nb_points": 0, "selection":"median"}',
+        '{"position":"top","interval_type":"size","interval_size":0.05,"percentile":[99,100],"nb_points": 10, "selection":"median"}',
         '{"interval_type":"density","interval_nb":20,"percentile":[99,100],"selection":"median"}',
     ],
 )
@@ -748,6 +803,8 @@ def test_flat_regression_edge(config) -> None:
         '{"position":"top","interval_type":"density","interval_nb":20,"percentile":[46,12],"selection":"median"}',
         '{"position":"bottom","interval_type":"density","interval_nb":20,"percentile":[-1,5],"selection":"median"}',
         '{"position":"top","interval_type":"density","interval_nb":20,"percentile":[99,105],"selection":"median"}',
+        '{"position":"top","interval_type":"size","interval_size":0.05,"nb_points": 0, "selection":"median"}',
+        '{"position":"top","interval_type":"size","interval_size":0.05,"percentile":[99,100],"nb_points": 10, "selection":"median"}',
         '{"interval_type":"density","interval_nb":20,"percentile":[99,105],"selection":"median"}',
     ],
 )
