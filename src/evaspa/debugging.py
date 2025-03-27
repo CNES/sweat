@@ -55,17 +55,17 @@ class _DebugDecorator:
         result = self.func(*args, **kwargs)
         end_time = time.perf_counter()
         if self.profile:
-            msg = f"Function {self.module}.{self.name} executed in {(end_time-start_time):.4f}s"
+            msg = f"Function {self.module}.{self.name} executed in {(end_time - start_time):.4f}s"
             logger.info(msg)
         if self.verbose and result is not None:
             msg = f"Write results from {self.module}.{self.name}"
             logger.debug(msg)
-            if isinstance(result, (Dataset, DataArray)):
+            if isinstance(result, Dataset | DataArray):
                 filename = f"{self.module}_{self.name}.nc"
                 self._to_netcdf(result, filename)
             elif isinstance(result, tuple):
                 for i, sub_result in enumerate(result):
-                    if isinstance(sub_result, (Dataset, DataArray)):
+                    if isinstance(sub_result, Dataset | DataArray):
                         filename = f"{self.module}_{self.name}_{i}.nc"
                         self._to_netcdf(sub_result, filename)
             else:
