@@ -218,7 +218,6 @@ def write_dataset(
         msg = "Dataset empty"
         raise ValueError(msg)
     # Get col/row
-    dims = tuple(i for i in xrds.dims)
     row = xrds.sizes['y']
     col = xrds.sizes['x']
     # Get bands
