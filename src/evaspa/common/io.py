@@ -219,8 +219,8 @@ def write_dataset(
         raise ValueError(msg)
     # Get col/row
     dims = tuple(i for i in xrds.dims)
-    row = xrds.sizes[dims[0]]
-    col = xrds.sizes[dims[1]]
+    row = xrds.sizes['y']
+    col = xrds.sizes['x']
     # Get bands
     bands = list(xrds.data_vars)
     # Get georeference data
