@@ -16,10 +16,10 @@ if TYPE_CHECKING:
     import pandas as pd
     import xarray as xr
 
-from evaspa.aux import trishna
 from evaspa.debugging import DebuggingConfig, configure_debugging
 from evaspa.evaspa.config import InputConfig, ParamsConfig
 from evaspa.logging import LoggerManager
+from evaspa.misc import trishna
 
 logger = LoggerManager.get_logger(__name__)
 

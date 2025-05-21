@@ -1,7 +1,7 @@
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
 
-from evaspa.aux import trishna
+from evaspa.misc import trishna
 
 
 def test_get_trishna_tiles() -> None:
