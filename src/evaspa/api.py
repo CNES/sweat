@@ -5,22 +5,19 @@ Module containing the API for EVASPA
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import geopandas as gpd
-
-from evaspa.common import daily, filter, io
-from evaspa.evaspa import ef, seb, tiling
-
-if TYPE_CHECKING:
-    import pandas as pd
-    import xarray as xr
+import numpy as np
+import pandas as pd
+import xarray as xr
 
 from evaspa.aux import trishna
+from evaspa.common import daily, filter, io
 from evaspa.common.io import InputConfig
 from evaspa.debugging import DebuggingConfig, configure_debugging
+from evaspa.evaspa import ef, seb, tiling
 from evaspa.evaspa.config import EVASPAParamsConfig
 from evaspa.logging import LoggerManager
+from evaspa.stic.config import STICParamsConfig
 
 logger = LoggerManager.get_logger(__name__)
 
@@ -138,12 +135,12 @@ def run_evaspa(
     params: dict
         Parameter configuration
 
-    Return
-    ------
-    ef: xr.Dataset
-        Instant evaporative fraction
-    le: xr.Dataset
-        Instant latent heat flux
+    Returns
+    -------
+    inst_xr: xr.Dataset
+        Dataset containing instant values (EF, ET, LE)
+    daily_xr: xr.Dataset
+        Dataset containing daily values (EF, ET, LE)
     """
     # Validate input config
     msg = f"Input: {entry}"
@@ -195,6 +192,77 @@ def run_evaspa(
     ]
     if len(dem_data) > 0:
         dem = data[dem_data]
+    daily_xr = daily.extrapolate_at_daily_scale(
+        inst_xr,
+        variables=["le", "et"],
+        dem=dem,
+        **params_config.daily.model_dump(),
+    )
+    logger.debug("Daily extrapolation: OK")
+    return inst_xr, daily_xr
+
+
+def run_stic(
+    entry: dict, params: dict, debug: dict | None = None
+) -> tuple[xr.Dataset, xr.Dataset] | None:
+    """
+    Description
+    -----------
+    Run STIC
+
+    Parameters
+    ----------
+    entry: dict
+        Input configuration
+    params: dict
+        Parameter configuration
+
+    Returns
+    -------
+    inst_xr: xr.Dataset
+        Dataset containing instant values (EF, ET, LE)
+    daily_xr: xr.Dataset
+        Dataset containing daily values (EF, ET, LE)
+    """
+    # Validate input config
+    msg = f"Input: {entry}"
+    logger.debug(msg)
+    input_config = InputConfig.model_validate(entry)
+    # Validate parameters config
+    msg = f"Params: {params}"
+    logger.debug(msg)
+    params_config = STICParamsConfig.model_validate(params)
+    # Validate debug config
+    msg = f"Debug: {debug}"
+    logger.debug(msg)
+    if debug is not None:
+        debug_config = DebuggingConfig.model_validate(debug)
+    else:
+        debug_config = DebuggingConfig()
+    configure_debugging(**debug_config.model_dump())
+    logger.debug("Check configuration: OK")
+    # Read input data
+    data = io.read_input(input_config.model_dump())
+    logger.debug("Read input data: OK")
+    # Filter data
+    data["valid"] = filter.determine_valid_pixels(
+        data, **params_config.filtering.model_dump()
+    )
+    logger.debug("Filter data: OK")
+    # Compute instant ET/LE
+    # TODO: compute ET
+    inst_xr = xr.Dataset()
+    inst_xr["le"] = data["lst"].copy(data=np.zeros_like(data["lst"].data))
+    inst_xr["et"] = data["lst"].copy(data=np.zeros_like(data["lst"].data))
+    inst_xr.attrs = data.attrs.copy()
+    # Extract DEM data
+    dem = None
+    dem_data = [
+        d for d in data.data_vars if d in ["elevation", "slope", "aspect"]
+    ]
+    if len(dem_data) > 0:
+        dem = data[dem_data]
+    # Extrapolate at daily scale
     daily_xr = daily.extrapolate_at_daily_scale(
         inst_xr,
         variables=["le", "et"],

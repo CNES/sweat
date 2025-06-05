@@ -6,12 +6,13 @@ from pathlib import Path
 import click
 
 from evaspa.__about__ import __version__
-from evaspa.api import generate_tiles, regroup_tiles, run_evaspa
+from evaspa.api import generate_tiles, regroup_tiles, run_evaspa, run_stic
 from evaspa.common.config import read_config, write_config
 from evaspa.common.io import write_dataset
 from evaspa.evaspa.config import EVASPAInputFile
 from evaspa.evaspa.tiling import write_regroup
 from evaspa.logging import LoggerManager
+from evaspa.stic.config import STICInputFile
 
 logger = LoggerManager.get_logger(__name__)
 
@@ -121,6 +122,51 @@ def evaspa(verbose, input_file):
             res[0], filename=filename, directory=output_dir, separate=True
         )
         filename = "evaspa_daily.tif"
+        write_dataset(
+            res[1], filename=filename, directory=output_dir, separate=True
+        )
+    logger.info("Writing results: OK")
+
+
+@click.command(context_settings={"help_option_names": ["-h", "--help"]})
+@click.option(
+    "--verbose/--no-verbose",
+    default=False,
+    help="Debug logging mode",
+)
+@click.argument(
+    "input_file", type=click.Path(exists=True, file_okay=True, readable=True)
+)
+@click.version_option(version=__version__, prog_name="stic")
+def stic(verbose, input_file):
+    # Configure logging
+    log_level = logging.INFO
+    if verbose:
+        log_level = logging.DEBUG
+    LoggerManager.set_level(log_level)
+    # Set configuration
+    msg = f"Configuration file: {input_file}"
+    logger.debug(msg)
+    dict_config = read_config(input_file)
+    # Verify config and manage default parameters
+    config = STICInputFile.model_validate(dict_config)
+    output_dir = Path(config.output.path)
+    # Run
+    logger.debug("Run stic...")
+    res = run_stic(config.input, config.params, config.debug)
+    logger.info("Run stic: OK")
+    # Save configuration
+    logger.debug("Write results...")
+    write_config(config.model_dump(), output_dir, fmt="json")
+    logger.info("Write configuration: OK")
+    # Write results
+    if res is not None:
+        # Write instantaneous results
+        filename = "stic_inst.tif"
+        write_dataset(
+            res[0], filename=filename, directory=output_dir, separate=True
+        )
+        filename = "stic_daily.tif"
         write_dataset(
             res[1], filename=filename, directory=output_dir, separate=True
         )
