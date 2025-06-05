@@ -6,9 +6,9 @@ import affine
 import numpy as np
 from shapely.geometry import Polygon
 
-from evaspa.aux import trishna
-from evaspa.aux.dem import get_dem_from_tiles
 from evaspa.evaspa import zones
+from evaspa.misc import trishna
+from evaspa.misc.dem import get_dem_from_tiles
 
 
 def get_test_data_path() -> str:
