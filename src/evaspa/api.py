@@ -10,13 +10,13 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from evaspa.aux import trishna
 from evaspa.common import daily, filter, io
 from evaspa.common.io import InputConfig
 from evaspa.debugging import DebuggingConfig, configure_debugging
 from evaspa.evaspa import ef, seb, tiling
 from evaspa.evaspa.config import EVASPAParamsConfig
 from evaspa.logging import LoggerManager
+from evaspa.misc import trishna
 from evaspa.stic.config import STICParamsConfig
 
 logger = LoggerManager.get_logger(__name__)

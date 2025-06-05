@@ -218,9 +218,15 @@ def write_dataset(
         msg = "Dataset empty"
         raise ValueError(msg)
     # Get col/row
-    dims = tuple(i for i in xrds.dims)
-    row = xrds.sizes[dims[0]]
-    col = xrds.sizes[dims[1]]
+    da = next(iter(xrds.data_vars.values()))
+    dim_names = da.dims
+    shape = da.shape
+    dim_map = dict(zip(dim_names, shape, strict=False))
+    row_names = ["y", "lat", "latitude"]
+    col_names = ["x", "lon", "longitude"]
+    coords = xrds.coords
+    row = next((dim_map[name] for name in row_names if name in coords), None)
+    col = next((dim_map[name] for name in col_names if name in coords), None)
     # Get bands
     bands = list(xrds.data_vars)
     # Get georeference data

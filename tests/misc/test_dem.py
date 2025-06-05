@@ -4,7 +4,7 @@ import os
 
 import numpy as np
 
-from evaspa.aux.dem import get_dem_from_tile, get_dem_from_tiles
+from evaspa.misc.dem import get_dem_from_tile, get_dem_from_tiles
 
 
 def get_test_data_path() -> str:

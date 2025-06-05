@@ -16,7 +16,7 @@ import skimage.morphology as skm
 import xarray as xr
 from shapely.geometry import MultiPolygon, Polygon, shape
 
-from evaspa.aux.dem import get_dem_from_tiles
+from evaspa.misc.dem import get_dem_from_tiles
 
 if TYPE_CHECKING:
     import affine
