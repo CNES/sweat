@@ -65,7 +65,7 @@ def toa_daily_estimate(
         else:
             slope = dem["slope"]
             aspect = dem["aspect"]
-    # Get lon/lat coordinates
+    # Get CRS
     crs = data.attrs.get("crs", None)
     if crs is None:
         msg = "Impossible to compute TOA extrapolation because CRS is missing in the metadata"
