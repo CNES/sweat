@@ -108,17 +108,73 @@ def test_to_localtime(date, lat, lon, expected):
 
 
 @pytest.mark.parametrize(
-    ("day", "expected"),
+    ("date", "expected"),
     [
-        pytest.param(8, -6.70),
-        pytest.param(156, 1.72),
+        pytest.param(dt.date(2025, 6, 25), 3.012),
+        pytest.param(dt.date(2024, 6, 24), 3.004),
     ],
 )
-def test_equation_of_time(day, expected):
+def test_day_angle(date, expected):
+    """
+    Test day angle function function
+    """
+    res = solar._day_angle(date)  # noqa: SLF001
+    np.testing.assert_almost_equal(res, expected, decimal=2)
+
+
+@pytest.mark.parametrize(
+    ("date", "expected"),
+    [
+        pytest.param(
+            dt.datetime(2025, 6, 25, 12, 0, 0, tzinfo=dt.timezone.utc), 3.012
+        ),
+        pytest.param(
+            dt.datetime(2024, 6, 24, 12, 0, 0, tzinfo=dt.timezone.utc), 3.004
+        ),
+        pytest.param(
+            dt.datetime(2024, 6, 24, 10, 0, 0, tzinfo=dt.timezone.utc), 3.003
+        ),
+    ],
+)
+def test_fractional_year_angle(date, expected):
+    """
+    Test fractional year angle function function
+    """
+    res = solar._fractional_year_angle(date)  # noqa: SLF001
+    np.testing.assert_almost_equal(res, expected, decimal=2)
+
+
+@pytest.mark.parametrize(
+    ("date", "expected"),
+    [
+        pytest.param(dt.date(2025, 1, 8), -6.70),
+        pytest.param(dt.date(2025, 6, 5), 1.72),
+        pytest.param(
+            dt.datetime(2025, 6, 25, 2, 50, 0, tzinfo=dt.timezone.utc), -2.28
+        ),
+    ],
+)
+def test_equation_of_time_milne(date, expected):
     """
     Test equation of time function
     """
-    tc = solar._equation_of_time(day)  # noqa: SLF001
+    tc = solar._equation_of_time_milne(date)  # noqa: SLF001
+    np.testing.assert_almost_equal(tc, expected, decimal=2)
+
+
+@pytest.mark.parametrize(
+    ("date", "expected"),
+    [
+        pytest.param(
+            dt.datetime(2025, 6, 25, 6, 50, 0, tzinfo=dt.timezone.utc), -2.15
+        ),
+    ],
+)
+def test_equation_of_time_noaa(date, expected):
+    """
+    Test equation of time function
+    """
+    tc = solar._equation_of_time_noaa(date)  # noqa: SLF001
     np.testing.assert_almost_equal(tc, expected, decimal=2)
 
 
@@ -126,16 +182,16 @@ def test_equation_of_time(day, expected):
     ("date", "lon", "lat", "expected"),
     [
         pytest.param(
-            dt.datetime(2024, 6, 4, 10, 30, 00, tzinfo=dt.timezone.utc),
+            dt.datetime(2025, 6, 4, 10, 30, 00, tzinfo=dt.timezone.utc),
             1.0,
             43.1,
-            -21.07,
+            -21.03,
         ),
         pytest.param(
-            dt.datetime(2024, 12, 10, 17, 50, 00, tzinfo=dt.timezone.utc),
+            dt.datetime(2025, 12, 10, 17, 50, 00, tzinfo=dt.timezone.utc),
             -74.0,
             40.5,
-            14.99,
+            15.11,
         ),
     ],
 )
@@ -151,45 +207,49 @@ def test_declination_angle():
     """
     Test declination angle function
     """
-    days = np.arange(1, 365)
-    res = solar._declination_angle(days)  # noqa: SLF001
-    expected = np.deg2rad(23.45 * np.sin(2 * np.pi / 365.0 * (days + 284)))
+    dates = np.array(
+        [dt.date(2025, 1, 1) + dt.timedelta(days=d) for d in range(365)]
+    )
+    res = np.array([solar._declination_angle(date) for date in dates])  # noqa: SLF001
+    expected = np.deg2rad(
+        23.45 * np.sin(2 * np.pi / 365.0 * (np.arange(1, 366) + 284))
+    )
     np.testing.assert_array_almost_equal(res, expected, decimal=0)
 
 
 @pytest.mark.parametrize(
-    ("day", "expected"),
+    ("date", "expected"),
     [
-        pytest.param(1, 1.03505),
-        pytest.param(92, 1.00082),
+        pytest.param(dt.date(2025, 1, 1), 1.03505),
+        pytest.param(dt.date(2024, 4, 1), 1.00082),
     ],
 )
-def test_sun_earth_distance(day, expected):
+def test_sun_earth_distance(date, expected):
     """
     Test Sun-Earth distance function
     """
-    res = solar._sun_earth_distance(day)  # noqa: SLF001
+    res = solar._sun_earth_distance(date)  # noqa: SLF001
     np.testing.assert_approx_equal(res, expected, significant=4)
 
 
 @pytest.mark.parametrize(
-    ("day", "lat", "expected"),
+    ("date", "lat", "expected"),
     [
-        pytest.param(80, 45.0, -1.57),
-        pytest.param(1, 70.0, 0.0),
-        pytest.param(180, 70.0, -np.pi),
+        pytest.param(dt.date(2025, 3, 21), 45.0, -1.57),
+        pytest.param(dt.date(2025, 1, 1), 70.0, 0.0),
+        pytest.param(dt.date(2025, 6, 29), 70.0, -np.pi),
         pytest.param(
-            10,
+            dt.date(2025, 1, 10),
             np.array([[30.0, 70.0], [-70.0, 0.0]]),
             np.array([[-1.33, -0.0], [-np.pi, -1.57]]),
         ),
     ],
 )
-def test_sunrise_angle(day, lat, expected):
+def test_sunrise_angle(date, lat, expected):
     """
     Test sunrise angle function
     """
-    res = solar._sunrise_angle(day, np.deg2rad(lat))  # noqa: SLF001
+    res = solar._sunrise_angle(date, np.deg2rad(lat))  # noqa: SLF001
     np.testing.assert_array_almost_equal(res, expected, decimal=2)
 
 
@@ -430,3 +490,37 @@ def test_compute_diffuse_fraction():
     )
     fdiff = solar.compute_diffuse_fraction(date, data["rsd"])
     np.testing.assert_almost_equal(fdiff.data, 0.24, decimal=2)
+
+
+@pytest.mark.parametrize(
+    ("date", "x", "y", "crs", "expected"),
+    [
+        pytest.param(
+            dt.datetime(2025, 6, 16, 12, 0, 0, tzinfo=dt.timezone.utc),
+            -74,
+            40,
+            None,
+            25416.05,
+        ),
+        pytest.param(
+            dt.datetime(2025, 6, 16, 12, 0, 0, tzinfo=dt.timezone.utc),
+            -74,
+            40,
+            4326,
+            25416.05,
+        ),
+        pytest.param(
+            dt.datetime(2025, 6, 16, 12, 0, 0, tzinfo=dt.timezone.utc),
+            585360,
+            4428236,
+            32618,
+            25416.05,
+        ),
+    ],
+)
+def test_convert_to_local_time(date, x, y, crs, expected):
+    """
+    Test function for converting to local time
+    """
+    res = solar.convert_to_local_time(date, x, y, crs)
+    np.testing.assert_almost_equal(res, expected, decimal=0)

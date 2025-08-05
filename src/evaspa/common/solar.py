@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import numpy.typing as npt
 import xarray as xr
-from pyproj import CRS
+from pyproj import CRS, Transformer
 from rasterio import warp
 from timezonefinder import TimezoneFinder
 
@@ -65,7 +65,32 @@ def _to_localtime(date: dt.datetime, lat: float, lon: float) -> dt.datetime:
     return date.astimezone(ZoneInfo(str(tz)))
 
 
-def _day_angle(day: npt.ArrayLike, offset: int = 1) -> npt.NDArray:
+def _is_leap_year(year) -> bool:
+    """
+    Description
+    -----------
+    Determine whether a year is a leap year.
+
+    Parameters
+    ----------
+    year: int
+       Year
+
+    Returns
+    -------
+    is_leap_year : bool
+    """
+    return year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
+
+
+def _to_date_of_year(date: dt.datetime) -> int:
+    """
+    Function to convert datetime to day of year
+    """
+    return date.timetuple().tm_yday
+
+
+def _day_angle(date: dt.datetime, offset: int = 1) -> float:
     """
     Description
     -----------
@@ -73,25 +98,43 @@ def _day_angle(day: npt.ArrayLike, offset: int = 1) -> npt.NDArray:
 
     Parameters
     ----------
-    day: np.array_like
-       Day of the year ranging form 1 to 365 or 366
+    date: dt.datetime
+       Date
+    offset: int
+       Offset
 
     Returns
     -------
     day_angle : np.array
-        Day angle
+        Day angle (in radians)
     """
-    return (2.0 * np.pi / 365.0) * (np.array(day) - offset)
+    day = _to_date_of_year(date)
+    days_in_year = 366 if _is_leap_year(date.year) else 365
+    return (2.0 * np.pi / days_in_year) * (day - offset)
 
 
-def _to_dateofyear(date: dt.datetime) -> int:
+def _fractional_year_angle(date: dt.datetime) -> float:
     """
-    Function to convert datetime to day of year
+    Description
+    -----------
+    Compute the fractional year angle for the Earth's orbit around the Sun.
+
+    Parameters
+    ----------
+    date: dt.datetime
+       Date
+
+    Returns
+    -------
+    fractional_year_angle : np.array
+        Fractional year angle (in radians)
     """
-    return date.timetuple().tm_yday
+    day = _to_date_of_year(date)
+    days_in_year = 366 if _is_leap_year(date.year) else 365
+    return (2.0 * np.pi / days_in_year) * (day - 1 + (date.hour - 12) / 24)
 
 
-def _equation_of_time(day: int) -> float:
+def _equation_of_time_milne(date: dt.datetime) -> float:
     """
     Description
     -----------
@@ -105,8 +148,8 @@ def _equation_of_time(day: int) -> float:
 
     Parameters
     ----------
-    day : int
-        Day of the year
+    date : dt.datetime
+        Date
 
     Returns
     -------
@@ -114,9 +157,39 @@ def _equation_of_time(day: int) -> float:
         Time correction factor (in minutes)
     """
     # day angle relative to Vernal Equinox, typically March 22 (day number 81)
-    bday = _day_angle(day, offset=81)
+    bday = _day_angle(date, offset=81)
     return float(
         9.87 * np.sin(2.0 * bday) - 7.53 * np.cos(bday) - 1.5 * np.sin(bday)
+    )
+
+
+def _equation_of_time_noaa(date: dt.datetime) -> float:
+    """
+    Description
+    -----------
+    Equation of time from NOAA
+    https://gml.noaa.gov/grad/solcalc/solareqns.PDF
+
+    Parameters
+    ----------
+    date : dt.datetime
+        Date
+
+    Returns
+    -------
+    equation_of_time : float
+        Time correction factor (in minutes)
+    """
+    frac_year = _fractional_year_angle(date)
+    return float(
+        229.18
+        * (
+            0.000075
+            + 0.001868 * np.cos(frac_year)
+            - 0.032077 * np.sin(frac_year)
+            - 0.014615 * np.cos(2 * frac_year)
+            - 0.040849 * np.sin(2 * frac_year)
+        )
     )
 
 
@@ -156,9 +229,7 @@ def _hour_angle(
     delta_utc = local_time.utcoffset().total_seconds() // 3600  # type: ignore
     lstm = 15 * delta_utc
     # time correction factor (in minutes)
-    tc = 4 * (np.rad2deg(lon_rad) - lstm) + _equation_of_time(
-        _to_dateofyear(time)
-    )
+    tc = 4 * (np.rad2deg(lon_rad) - lstm) + _equation_of_time_milne(time)
     # time after local midnight
     midnight = dt.datetime.combine(
         local_time.date(), dt.time(0), tzinfo=local_time.tzinfo
@@ -171,6 +242,68 @@ def _hour_angle(
     )
     lst = f(tc)
     return np.deg2rad(15.0 * (lst - 12.0))
+
+
+def convert_to_local_time(
+    date: dt.datetime,
+    x: npt.ArrayLike,
+    y: npt.ArrayLike,
+    crs: CRS | None = None,
+) -> npt.NDArray:
+    """
+    Description
+    -----------
+    Converting time from UTM to local solar time (in seconds)
+    See https://www.pveducation.org/pvcdrom/properties-of-sunlight/solar-time
+
+    Parameters
+    ----------
+    date: np.array_like
+        List of dates
+    x : np.array_like
+        X coordinate / Longitude (in degrees)
+    y : np.array_like
+        Y coordinate / Latitude (in degrees)
+    crs : pyproj.CRS
+        Coordinate Reference System
+
+    Return
+    ------
+    local_time: np.array
+        Local solar time
+    """
+    # Convert to lat/lon
+    if crs is None:
+        crs = CRS(4326)
+    x_grid, y_grid = np.meshgrid(x, y)
+    if np.isscalar(x) and np.isscalar(y):
+        x_grid = x  # type: ignore
+        y_grid = y  # type: ignore
+    # Convert to lat/lon
+    transformer = Transformer.from_crs(crs, "EPSG:4326", always_xy=True)
+    # Apply transformation to the grid
+    lon, lat = transformer.transform(x_grid, y_grid)
+    # Local time
+    local_time = _to_localtime(
+        date, np.deg2rad(np.mean(lat)), np.deg2rad(np.mean(lon))
+    )
+    # local standard meridian time
+    delta_utc = local_time.utcoffset().total_seconds() // 3600  # type: ignore
+    lstm = 15 * delta_utc
+    # time correction factor (in minutes)
+    tc = 4 * (lon - lstm) + _equation_of_time_milne(date)
+    # time after local midnight
+    midnight = dt.datetime.combine(
+        local_time.date(), dt.time(0), tzinfo=local_time.tzinfo
+    )
+    delta_time = local_time - midnight
+    # local solar time (in hours)
+    f = np.vectorize(
+        lambda x: (delta_time + dt.timedelta(hours=x) / 60.0).total_seconds()
+        / 3600
+    )
+    time_ls = f(tc)
+    return time_ls * 3600
 
 
 def _sun_zenith_angle(
@@ -245,12 +378,12 @@ def _sun_azimuth_angle(
     return np.where(np.array(hour_angle) > 0, 2 * np.pi - saa, saa)
 
 
-def _declination_angle(day: npt.ArrayLike) -> npt.NDArray:
+def _declination_angle(date: dt.datetime) -> float:
     """
     Compute declination in radians
     """
     # Day angle
-    gamma = _day_angle(day)
+    gamma = _day_angle(date)
     # Solar declinaison given by Spencer, J. W. (1971).
     # Fourier series representation of the position
     # of the sun. Search, 2(5), 172-172.
@@ -265,7 +398,7 @@ def _declination_angle(day: npt.ArrayLike) -> npt.NDArray:
     )
 
 
-def _sun_earth_distance(day: npt.ArrayLike) -> npt.NDArray:
+def _sun_earth_distance(date: dt.datetime) -> float:
     """
     Description
     -----------
@@ -276,16 +409,15 @@ def _sun_earth_distance(day: npt.ArrayLike) -> npt.NDArray:
 
     Parameters
     ----------
-    day: int
-        Day of the year, ranging from 1 on January 1st to
-        365 or 366 on December 31th.
+    date: dt.datetime
+        Date
 
     Return
     ------
     factor: float
         Sun-Earth distance factor
     """
-    gamma = _day_angle(day)
+    gamma = _day_angle(date)
     return (
         1.00011
         + 0.034221 * np.cos(gamma)
@@ -295,7 +427,7 @@ def _sun_earth_distance(day: npt.ArrayLike) -> npt.NDArray:
     )
 
 
-def _sunrise_angle(day: int, lat: npt.ArrayLike) -> npt.NDArray:
+def _sunrise_angle(date: dt.datetime, lat: npt.ArrayLike) -> npt.NDArray:
     """
     Description
     -----------
@@ -303,8 +435,8 @@ def _sunrise_angle(day: int, lat: npt.ArrayLike) -> npt.NDArray:
 
     Parameters
     ----------
-    day : int
-        Day of the year
+    date: dt.datetime
+        Date
     lat : np.array_like
         Latitude (in radians)
 
@@ -313,7 +445,7 @@ def _sunrise_angle(day: int, lat: npt.ArrayLike) -> npt.NDArray:
     sunrise: np.array
         Sunrise time from midnight (in hours)
     """
-    decl_angle = _declination_angle(day)
+    decl_angle = _declination_angle(date)
     cos = -np.sin(lat) * np.sin(decl_angle) / np.cos(lat) / np.cos(decl_angle)
 
     def func(cos_angle: float) -> float:
@@ -370,9 +502,8 @@ def compute_sun_angles(
     lon, lat = _to_lonlat(crs, x_grid, y_grid)  # type: ignore
     lon_rad = np.deg2rad(lon)
     lat_rad = np.deg2rad(lat)
-    day = _to_dateofyear(date)
     hour_angle = _hour_angle(date, lon_rad, lat_rad)
-    decl_angle = _declination_angle(day)
+    decl_angle = _declination_angle(date)
     sza_rad = _sun_zenith_angle(lat_rad, hour_angle, decl_angle)
     saa_rad = _sun_azimuth_angle(sza_rad, lat_rad, hour_angle, decl_angle)
     return np.rad2deg(sza_rad), np.rad2deg(saa_rad)
@@ -423,8 +554,6 @@ def compute_toa_solar_radiation_from_sun_angles(
     toa_irradiance: np.array
         TOA instant irradiance (W.m-2)
     """
-    # Convert to day of the year
-    day = _to_dateofyear(date)  # type: ignore
     # Convert in radians
     sza_rad = np.deg2rad(sza)
     saa_rad = np.deg2rad(saa)
@@ -438,7 +567,7 @@ def compute_toa_solar_radiation_from_sun_angles(
         aspect_rad - saa_rad
     ) + np.cos(sza_rad) * np.cos(slope_rad)
     cos_theta = np.where(cos_theta < 0, 0, cos_theta)
-    return SOLAR_FLUX * _sun_earth_distance(day) * cos_theta
+    return SOLAR_FLUX * _sun_earth_distance(date) * cos_theta
 
 
 def compute_toa_solar_radiation_from_hour_angle(
@@ -507,8 +636,6 @@ def compute_toa_solar_radiation_from_hour_angle(
     toa_irradiance: np.array
         TOA instant irradiance (W.m-2)
     """
-    # Convert to day of the year
-    day = _to_dateofyear(date)  # type: ignore
     # Convert in radians
     if crs is None:
         crs = CRS(4326)
@@ -522,7 +649,7 @@ def compute_toa_solar_radiation_from_hour_angle(
     # Hour ange
     hour_angle = _hour_angle(date, lon_rad, lat_rad)
     # Declination angle
-    decl_angle = _declination_angle(day)
+    decl_angle = _declination_angle(date)
     # Slope and aspect
     slope_rad = np.zeros_like(lat_rad) if slope is None else np.deg2rad(slope)
     aspect_rad = (
@@ -551,7 +678,7 @@ def compute_toa_solar_radiation_from_hour_angle(
         * np.sin(hour_angle)
     )
     cos_theta = np.where(cos_theta < 0, 0, cos_theta)
-    return SOLAR_FLUX * _sun_earth_distance(day) * cos_theta
+    return SOLAR_FLUX * _sun_earth_distance(date) * cos_theta
 
 
 def compute_toa_solar_radiation(
@@ -650,12 +777,10 @@ def _toa_daily_irradiance(
         x_grid = x  # type: ignore
         y_grid = y  # type: ignore
     _, lat = _to_lonlat(crs, x_grid, y_grid)  # type: ignore
-    # convert to day of year
-    day = _to_dateofyear(date)
     # convert angle in radians
     lat = np.deg2rad(lat)
     # Solar declinaison
-    delta = _declination_angle(day)
+    delta = _declination_angle(date)
     # Sunrise hour angle
     cosh0 = -np.tan(lat) * np.tan(delta)
     if cosh0 > 1:
@@ -669,7 +794,7 @@ def _toa_daily_irradiance(
         24.0
         * 3600
         * SOLAR_FLUX
-        * _sun_earth_distance(day)
+        * _sun_earth_distance(date)
         / np.pi
         * (
             h0 * np.sin(lat) * np.sin(delta)
@@ -759,12 +884,10 @@ def compute_daily_toa_solar_radiation_from_hour_angle(
     slope_rad = np.zeros_like(lat) if slope is None else np.deg2rad(slope)
     aspect_rad = np.zeros_like(lat) if aspect is None else np.deg2rad(aspect)
     aspect_rad -= np.pi  # convention for aspect
-    # convert to day of year
-    day = _to_dateofyear(date)
     # Solar declinaison
-    delta = _declination_angle(day)
+    delta = _declination_angle(date)
     # Sunrise and sunset angles (in radians)
-    sunrise_angle = _sunrise_angle(day, lat_rad)
+    sunrise_angle = _sunrise_angle(date, lat_rad)
     # Integration with 15 minutes interval (15° per hour)
     hstep = np.deg2rad(15 / 4)  # 15 minutes
     nbsteps = np.max(np.ceil(-2.0 * sunrise_angle / hstep).astype(int))
@@ -799,7 +922,7 @@ def compute_daily_toa_solar_radiation_from_hour_angle(
         h1 += hstep
         h2 += hstep
     return (
-        toa_daily * 12.0 * 3600 * SOLAR_FLUX * _sun_earth_distance(day) / np.pi
+        toa_daily * 12.0 * 3600 * SOLAR_FLUX * _sun_earth_distance(date) / np.pi
     )
 
 
@@ -880,12 +1003,10 @@ def compute_daily_toa_solar_radiation(
     # Slope and aspect
     slope_rad = np.zeros_like(lat) if slope is None else np.deg2rad(slope)
     aspect_rad = np.zeros_like(lat) if aspect is None else np.deg2rad(aspect)
-    # convert to day of year
-    day = _to_dateofyear(date)
     # Solar declinaison
-    delta = _declination_angle(day)
+    delta = _declination_angle(date)
     # Sunrise angle (in radians)
-    sunrise_angle = np.min(_sunrise_angle(day, lat_rad))
+    sunrise_angle = np.min(_sunrise_angle(date, lat_rad))
     # Integration with 15 minutes interval (15° per hour)
     hstep = np.deg2rad(15 / 4)  # 15 minutes
     nbsteps = int(np.ceil(-2 * sunrise_angle / hstep))
@@ -910,7 +1031,7 @@ def compute_daily_toa_solar_radiation(
         * 12.0
         * 3600
         * SOLAR_FLUX
-        * _sun_earth_distance(day)
+        * _sun_earth_distance(date)
         / np.pi
         * hstep
     )
