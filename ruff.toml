@@ -15,6 +15,9 @@ exclude = [
     "site-packages",
 ]
 
+# In addition to the standard set of exclusions, omit all tests, plus a specific file.
+extend-exclude = ["notebooks/stic"]
+
 line-length = 80
 
 [format]
