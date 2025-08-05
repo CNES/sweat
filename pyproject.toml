@@ -41,6 +41,7 @@ dependencies = [
 dev = [
   "hatch",
   "pytest",
+  "pytest-cov",
   "pre-commit",
   "pip-review",
 ]
@@ -114,11 +115,13 @@ branch = true
 parallel = true
 omit = [
   "src/evaspa/__about__.py",
+  "./.pixi/*",
+  "./hooks/*"
 ]
 
 [tool.coverage.paths]
-evaspa = ["src/evaspa", "*/evaspa/src/evaspa"]
-tests = ["tests", "*/evaspa/tests"]
+evaspa = ["src/evaspa"]
+tests = ["tests"]
 
 [tool.coverage.report]
 exclude_lines = [
