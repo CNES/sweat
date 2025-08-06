@@ -4,7 +4,7 @@
 import numpy as np
 import pytest
 
-from evaspa.stic import radiation
+from evaspa.stic import flux
 
 
 @pytest.mark.parametrize(
@@ -18,5 +18,5 @@ def test_f_g_actualsurface(rn, lai, local_time, m, expected) -> None:
     """
     Test function for converting to local time
     """
-    res = radiation.f_g_actualsurface(rn, lai, local_time, m)
+    res = flux.f_g_actualsurface(rn, lai, local_time, m)
     np.testing.assert_almost_equal(res, expected, decimal=3)
