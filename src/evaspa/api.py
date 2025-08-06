@@ -1,22 +1,23 @@
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 """
-Module containing the API for EVASPA
+Module containing the API
 """
 
 from __future__ import annotations
 
 import geopandas as gpd
-import numpy as np
 import pandas as pd
 import xarray as xr
 
 from evaspa.common import daily, filter, io
+from evaspa.common.constant import MSK_INPUT_FILTERED, ETVar
 from evaspa.common.io import InputConfig
 from evaspa.debugging import DebuggingConfig, configure_debugging
 from evaspa.evaspa import ef, seb, tiling
 from evaspa.evaspa.config import EVASPAParamsConfig
 from evaspa.logging import LoggerManager
 from evaspa.misc import trishna
+from evaspa.stic import main as stic
 from evaspa.stic.config import STICParamsConfig
 
 logger = LoggerManager.get_logger(__name__)
@@ -244,17 +245,23 @@ def run_stic(
     # Read input data
     data = io.read_input(input_config.model_dump())
     logger.debug("Read input data: OK")
+    # Prepare data
+    data = stic.prepare(data, **params_config.prepare.model_dump())
+    logger.debug("Prepare input data: OK")
     # Filter data
-    data["valid"] = filter.determine_valid_pixels(
-        data, **params_config.filtering.model_dump()
+    valid_mask = filter.filter_valid_pixels(
+        data, params_config.filtering.model_dump()
     )
-    logger.debug("Filter data: OK")
+    data[ETVar.VALID.value] = data[ETVar.VALID.value] & valid_mask
+    data[ETVar.FLAGS.value] = xr.where(
+        valid_mask == 0,
+        data[ETVar.FLAGS.value] | MSK_INPUT_FILTERED,
+        data[ETVar.FLAGS.value],
+    )
+    logger.debug("Filter input data: OK")
     # Compute instant ET/LE
-    # TODO: compute ET
-    inst_xr = xr.Dataset()
-    inst_xr["le"] = data["lst"].copy(data=np.zeros_like(data["lst"].data))
-    inst_xr["et"] = data["lst"].copy(data=np.zeros_like(data["lst"].data))
-    inst_xr.attrs = data.attrs.copy()
+    inst_xr = stic.run(data, **params_config.stic.model_dump())
+    logger.debug("Compute instant ET/LE: OK")
     # Extract DEM data
     dem = None
     dem_data = [

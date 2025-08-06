@@ -50,7 +50,7 @@ def test_regroup() -> None:
 
 
 @pytest.mark.parametrize(
-    ("entry", "params"),
+    ("entry", "params", "debug"),
     [
         pytest.param(
             {
@@ -62,6 +62,7 @@ def test_regroup() -> None:
                     "models": "default_evaspa",
                 },
             },
+            None,
         ),
         pytest.param(
             {
@@ -121,6 +122,7 @@ def test_regroup() -> None:
                 },
                 "daily": {"use_topo": True, "method": "toa"},
             },
+            None,
         ),
         pytest.param(
             {
@@ -180,12 +182,68 @@ def test_regroup() -> None:
                 },
                 "daily": {"use_topo": True, "method": "toa"},
             },
+            {
+                "path": "out/debug",
+                "profile": True,
+                "verbose": False,
+            },
         ),
     ],
 )
-def test_run_evaspa(entry, params) -> None:
+def test_run_evaspa(entry, params, debug) -> None:
     """
     Test run EVASPA
     """
-    res = api.run_evaspa(entry, params)
+    res = api.run_evaspa(entry, params, debug)
+    assert res
+
+
+@pytest.mark.parametrize(
+    ("entry", "params", "debug"),
+    [
+        pytest.param(
+            {
+                "path": "tests/data/modis_test_full.tif",
+                "date": "2018-05-16T10:00:00-00:00",
+            },
+            {},
+            None,
+        ),
+        pytest.param(
+            {
+                "path": "tests/data/modis_test_full.tif",
+                "date": "2018-05-16T10:00:00-00:00",
+            },
+            {
+                "prepare": {"use_topo": True},
+                "filtering": {"tdp": {"op": ">=", "value": -30.0}},
+                "stic": {"threshold": 0.01, "nb_steps": 15},
+                "daily": {"method": "toa", "use_topo": True},
+            },
+            None,
+        ),
+        pytest.param(
+            {
+                "path": "tests/data/modis_test_full.tif",
+                "date": "2018-05-16T10:00:00-00:00",
+            },
+            {
+                "prepare": {"use_topo": True},
+                "filtering": {"tdp": {"op": ">=", "value": -30.0}},
+                "stic": {"threshold": 0.01, "nb_steps": 15},
+                "daily": {"method": "toa", "use_topo": True},
+            },
+            {
+                "path": "out/debug",
+                "profile": True,
+                "verbose": False,
+            },
+        ),
+    ],
+)
+def test_run_stic(entry, params, debug) -> None:
+    """
+    Test run EVASPA
+    """
+    res = api.run_stic(entry, params, debug)
     assert res
