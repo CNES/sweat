@@ -73,3 +73,22 @@ def test_check() -> None:
         },
     }
     assert cfg.check_config_evaspa(config)
+
+
+def test_check_debug() -> None:
+    """
+    Test check method
+    """
+    config = {
+        "input": {"path": "tests/data/modis_test.tif"},
+        "output": {"path": "out"},
+        "params": {
+            "ef": {
+                "check": {"threshold": 10},
+                "models": "default_evaspa",
+                "options": {"merging": "mean"},
+            },
+        },
+        "debug": {"profile": True, "verbose": True},
+    }
+    assert cfg.check_config_evaspa(config)

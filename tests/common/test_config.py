@@ -11,7 +11,7 @@ def test_read_config() -> None:
     """
     Test read configuration
     """
-    p = Path(".") / "tests" / "data" / "input.json"
+    p = Path(".") / "tests" / "data" / "evaspa_input.json"
     config = cfg.read_config(str(p))
     assert config
 

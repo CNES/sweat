@@ -1,0 +1,8 @@
+
+{
+    "input": {
+        "path": "tests/data/modis_test_full.tif",
+        "date": "2018-05-16T10:00:00-00:00"
+    },
+    "output": {"path": "out"}
+}

@@ -1,0 +1,17 @@
+{
+    "input": {
+        "path": "tests/data/modis_test_full.tif",
+        "date": "2018-05-16T10:00:00-00:00"
+    },
+    "output": {"path": "out"},
+    "params": {
+        "prepare": {"use_topo": true},
+        "filtering": {"tdp": {"op": ">=", "value": -30.0}},
+        "stic": {"threshold": 0.01, "nb_steps": 15},
+        "daily": {"method": "toa", "use_topo": true}
+    },
+    "debug": {
+        "profile": true,
+        "verbose": true
+    }
+}
