@@ -2,27 +2,23 @@
 
 from __future__ import annotations
 
-import datetime as dt
 from enum import Enum
 
 import numpy as np
 import numpy.typing as npt
 import xarray as xr
 from pydantic import BaseModel, ConfigDict, Field
-from pyproj import CRS
-from scipy.constants import c, h, k, pi
 
-from evaspa.common.solar import compute_diffuse_fraction, compute_sun_angles
+from evaspa.common.flux import (
+    compute_et_from_le,
+    compute_rn,
+    correct_shortwave_radiation,
+)
 from evaspa.debugging import register_debugging
 from evaspa.evaspa.merging import MergeMethod, merge_to_dataset
 from evaspa.logging import LoggerManager
 
 logger = LoggerManager.get_logger(__name__)
-
-# Constant list
-LATENT_HEAT_VAPORIZATION = 2.45e6  # J.kg-2
-# Stefan-Boltzmann constant
-CST_SB = ((2 * pi**5) * (k**4)) / (15 * (c**2) * (h**3))
 
 
 class RatioModel(Enum):
@@ -47,183 +43,6 @@ class SEBConfig(BaseModel):
     use_topo: bool = Field(default=False)
     models: list[RatioModel] = Field(default=DEFAULT_MODELS)
     merging: MergeMethod = Field(default=MergeMethod.MEDIAN)
-
-
-def _correct_direct_radiation(
-    rsd: npt.ArrayLike,
-    sza: npt.ArrayLike,
-    saa: npt.ArrayLike,
-    slope: npt.ArrayLike,
-    aspect: npt.ArrayLike,
-) -> npt.NDArray:
-    """
-    Description
-    -----------
-    Correct instant direct downward shortwave radiation
-    for arbitrary terrains and sun positions.
-    The instant direct downward shortwave radiation has been computed
-    by taking cos(SZA) as the cosine of the solar incidence angle
-    relative to the normal to the land surface.
-    The objective is to take into account slope and aspect
-    impact on direct shortwave radiation.
-
-    RSD_corr = RSD x cos(i) / cos(sza)
-    cos(i) = cos(slope)cos(sza) + sin(slope)sin(sza)cos(aspect-saa)
-
-    G. E. Liston and K. Elder, “A meteorological distribution system
-    for high-resolution terrestrial modeling (MicroMet),” vol. 7,
-    no. 2, pp. 217-234, 2006, Journal of Hydrometeorology
-
-    Parameters
-    ----------
-    rsd: np.array_like
-        Direct downward shortwave radiation
-    sza: np.array_like
-        Sun Zenith Angle
-    saa: np.array_like
-        Sun Azimuth Angle
-    slope: np.array_like
-        Slope
-    aspect: np.array_like
-        Aspect
-
-    Return
-    ------
-    rsd_corr: np.array
-        Direct downward shortwave radiation corrected with topography
-    """
-    # convert deg to rad
-    slope_rad = np.deg2rad(slope)
-    aspect_rad = np.deg2rad(aspect)
-    sza_rad = np.deg2rad(sza)
-    saa_rad = np.deg2rad(saa)
-    cos_i = np.cos(slope_rad) * np.cos(sza_rad) + np.sin(slope_rad) * np.sin(
-        sza_rad
-    ) * np.cos(aspect_rad - saa_rad)
-    cos_i = np.where(cos_i < 0, 0, cos_i)
-    return np.array(rsd) * cos_i / np.cos(sza_rad)
-
-
-def correct_shortwave_radiation(
-    rsd: xr.DataArray,
-    slope: xr.DataArray,
-    aspect: xr.DataArray,
-    fdiff: xr.DataArray | None = None,
-    date: dt.datetime | None = None,
-    sza: xr.DataArray | None = None,
-    saa: xr.DataArray | None = None,
-    crs: CRS | None = None,
-) -> xr.DataArray:
-    """
-    Description
-    -----------
-    This method corrects instant direct downward shortwave radiation
-    for arbitrary terrains and sun positions.
-    The instant direct downward shortwave radiation has been computed
-    by taking cos(SZA) as the cosine of the solar incidence angle
-    relative to the normal to the land surface.
-    The objective is to take into account slope and aspect
-    impact on direct shortwave radiation.
-
-    G. E. Liston and K. Elder, “A meteorological distribution system
-    for high-resolution terrestrial modeling (MicroMet),” vol. 7,
-    no. 2, pp. 217-234, 2006, Journal of Hydrometeorology
-
-    Parameters
-    ----------
-    rsd: xr.DataArray
-        Global radiation data
-    slope: xr.DataArray
-        Slope
-    aspect: xr.DataArray
-        Aspect
-    fdiff: xr.DataArray
-        Diffuse Fraction
-    date: dt.datetime
-        Date
-    sza: xr.DataArray
-        Sun Zenith Angle
-    saa: xr.DataArray
-        Sun Azimuth Angle
-    crs: CRS
-        Coordinate Reference System
-
-    Return
-    ------
-    rsd_corr: xr.DataArray
-        Corrected shortwave radiation
-    """
-    if crs is None:
-        crs = CRS(4326)
-    # Sun zenith angle
-    if sza is None or saa is None:
-        logger.warning("Sun angle not present, theoretical calculation done")
-        if date is None:
-            msg = "Date is missing"
-            raise ValueError(msg)
-        sza_arr, saa_arr = compute_sun_angles(
-            date, x=rsd.coords["x"], y=rsd.coords["y"], crs=crs
-        )
-        sza = rsd.copy(data=sza_arr)
-        saa = rsd.copy(data=saa_arr)
-    if fdiff is None:
-        msg = (
-            "No diffuse fraction data for shortwave radiation. "
-            "Use theoritical equation."
-        )
-        logger.warning(msg)
-        if date is None:
-            msg = "Date is missing"
-            raise ValueError(msg)
-        fdiff = compute_diffuse_fraction(date, rsd, sza, saa, crs)
-    rsd_diff = rsd * fdiff
-    rsd_direct = rsd.copy(
-        data=_correct_direct_radiation(
-            rsd.data - rsd_diff.data,
-            sza.data,
-            saa.data,
-            slope.data,
-            aspect.data,
-        )
-    )
-    return rsd_direct + rsd_diff
-
-
-def _compute_rn(
-    lst: npt.ArrayLike,
-    emis: npt.ArrayLike,
-    albedo: npt.ArrayLike,
-    rsd: npt.ArrayLike,
-    rld: npt.ArrayLike,
-) -> npt.NDArray:
-    """
-    Description
-    -----------
-    Compute net radiation Rn
-
-    Parameters
-    ----------
-    lst : np.array_like
-        Land surface temperature
-    emis : np.array_like
-        Land surface emissivity
-    albedo : np.array_like
-        Land surface albedo
-    rsd : np.array_like
-        Downward Shortwave Radiation
-    rld : np.array_like
-        Downward Longwave Radiation
-
-    Returns
-    -------
-    rn: np.array
-        Net radiation
-    """
-    return (
-        (1 - np.array(albedo)) * np.array(rsd)
-        - np.array(emis) * CST_SB * (np.array(lst) ** 4)
-        + np.array(emis) * np.array(rld)
-    )
 
 
 @register_debugging
@@ -302,13 +121,13 @@ def create_net_radiation(
         # Compute Rn
         name = str.replace(rsd_name, "rsd", "rn", 1)
         rn[name] = xr.DataArray(
-            data=_compute_rn(
+            data=compute_rn(
                 lst=data["lst"],
                 emis=data["emis"],
                 albedo=data["albedo"],
                 rsd=rsd,
                 rld=rld,
-            ),
+            )[0],
             dims=data.dims,
             coords=data.coords.copy(),
         )
@@ -549,25 +368,6 @@ def create_le(ef: xr.Dataset, rn: xr.Dataset, ratio: xr.Dataset) -> xr.Dataset:
     return xr.Dataset(data_vars, attrs=attrs)
 
 
-def _compute_et_from_le(
-    le: npt.ArrayLike, temperature: float | None = None
-) -> npt.NDArray:
-    """
-    Description
-    -----------
-    Compute ET in mm from LE in W (J.m-2).
-    ET = LE / L with L is the latent heat vaoprization of water.
-    #TODO
-    """
-    if temperature is None:
-        latent_heat = LATENT_HEAT_VAPORIZATION
-    else:
-        msg = "The variation of latent heat of vaporization of water with temperature is not implemented yet."
-        logger.warning(msg)
-        latent_heat = LATENT_HEAT_VAPORIZATION
-    return np.array(le) / latent_heat
-
-
 @register_debugging
 def run(
     data: xr.Dataset,
@@ -623,6 +423,6 @@ def run(
     le_xr = create_le(ef, rn_xr, ratio_xr)
     merged_xr = merge_to_dataset(le_xr, method=merging, name="le")
     merged_xr["et"] = merged_xr["le"].copy(
-        data=_compute_et_from_le(merged_xr["le"])
+        data=compute_et_from_le(merged_xr["le"])
     )
     return le_xr, merged_xr
