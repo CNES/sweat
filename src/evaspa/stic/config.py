@@ -17,13 +17,41 @@ from pydantic import (
 )
 
 from evaspa.__about__ import __version__
+from evaspa.common.constant import ETVar
 from evaspa.common.daily import DailyConfig
-from evaspa.common.filter import FilterConfig
+from evaspa.common.filter import FilteringConfig
 from evaspa.common.io import InputConfig, OutputConfig
 from evaspa.debugging import DebuggingConfig
 from evaspa.logging import LoggerManager
+from evaspa.stic.main import STICModelConfig, STICPrepareConfig
 
 logger = LoggerManager.get_logger(__name__)
+
+
+class STICFilteringConfig(FilteringConfig):
+    @field_validator("root", mode="before")
+    @classmethod
+    def update_config(cls, v):
+        if isinstance(v, dict):
+            if ETVar.DEWPOINT_TEMPERATURE.value in v:
+                return v
+            return {
+                ETVar.DEWPOINT_TEMPERATURE.value: {"op": ">=", "value": -30}
+            } | v
+        return v
+
+
+class STICParamsConfig(BaseModel):
+    """
+    Configuration for parameters to run STIC
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    prepare: STICPrepareConfig = Field(default=STICPrepareConfig())
+    filtering: STICFilteringConfig = Field(default=STICFilteringConfig({}))
+    stic: STICModelConfig = Field(default=STICModelConfig())
+    daily: DailyConfig = Field(default=DailyConfig())
 
 
 class STICInputFile(BaseModel):
@@ -35,7 +63,7 @@ class STICInputFile(BaseModel):
 
     input: InputConfig
     output: OutputConfig
-    params: STICParamsConfig
+    params: STICParamsConfig = Field(default=STICParamsConfig())
     debug: DebuggingConfig = Field(default=DebuggingConfig())
     version: str = Field(default=str(__version__))
 
@@ -60,17 +88,6 @@ class STICInputFile(BaseModel):
         if self.debug.verbose:
             os.makedirs(self.debug.path, exist_ok=True)
         return self
-
-
-class STICParamsConfig(BaseModel):
-    """
-    Configuration for parameters to run EVASPA
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    filtering: FilterConfig = Field(default=FilterConfig())
-    daily: DailyConfig = Field(default=DailyConfig())
 
 
 def check_config_stic(config: dict) -> dict:
