@@ -7,6 +7,7 @@ repos:
       language: system
       types_or: [python, pyi, jupyter]
       stages: [pre-commit]
+      args: [--force-exclude]
 
     - id: mypy
       name: mypy
