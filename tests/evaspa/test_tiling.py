@@ -5,6 +5,7 @@ import os
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import pytest
 from shapely.geometry import MultiPolygon, Polygon
 
 from evaspa.evaspa import tiling
@@ -19,6 +20,7 @@ def get_data_path() -> str:
     )
 
 
+@pytest.mark.unit
 def test_groupby_multipolygon() -> None:
     """
     Test groupby_multipolygon
@@ -56,6 +58,7 @@ def test_groupby_multipolygon() -> None:
     )
 
 
+@pytest.mark.unit
 def test_intersection() -> None:
     """
     Test intersection method
@@ -86,6 +89,7 @@ def test_intersection() -> None:
     )
 
 
+@pytest.mark.unit
 def test_get_adjacent_tiles() -> None:
     """
     Test get_adjacent_tiles() method
@@ -111,6 +115,7 @@ def test_get_adjacent_tiles() -> None:
     np.testing.assert_array_equal(adjs, ["33SWC", "33TWE"])
 
 
+@pytest.mark.unit
 def test_generate_adjacents() -> None:
     """
     Test check_adjacents() method
@@ -137,6 +142,7 @@ def test_generate_adjacents() -> None:
     pd.testing.assert_frame_equal(adjs, ref)
 
 
+@pytest.mark.unit
 def test_check_adjacents() -> None:
     """
     Test check_adjacents() method
@@ -175,6 +181,7 @@ def test_check_adjacents() -> None:
     pd.testing.assert_frame_equal(checked_df, ref)
 
 
+@pytest.mark.unit
 def test_regroup() -> None:
     """
     Test methods for regroup tiles

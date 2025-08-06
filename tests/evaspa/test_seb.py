@@ -118,6 +118,7 @@ def setup_array(data: npt.NDArray) -> xr.DataArray:
     )
 
 
+@pytest.mark.functional
 @pytest.mark.parametrize(
     ("params", "expected"),
     [
@@ -134,6 +135,7 @@ def test_create_net_radiation(params, expected) -> None:
     assert len(rn.data_vars) == expected
 
 
+@pytest.mark.unit
 def test_ratio_from_kustas() -> None:
     """
     Test G/Rn ratio (kustas method)
@@ -144,6 +146,7 @@ def test_ratio_from_kustas() -> None:
     np.testing.assert_allclose(ratio, ref)
 
 
+@pytest.mark.unit
 def test_ratio_from_su() -> None:
     """
     Test G/Rn ratio (Su method)
@@ -154,6 +157,7 @@ def test_ratio_from_su() -> None:
     np.testing.assert_allclose(ratio, ref)
 
 
+@pytest.mark.unit
 def test_ratio_from_choudhury() -> None:
     """
     Test compute G flux (Choudhury method)
@@ -164,6 +168,7 @@ def test_ratio_from_choudhury() -> None:
     np.testing.assert_allclose(ratio, ref, atol=0.0001)
 
 
+@pytest.mark.functional
 @pytest.mark.parametrize(
     ("models", "expected"),
     [
@@ -185,6 +190,7 @@ def test_create_ratio(models, expected) -> None:
     assert len(ratio.data_vars) == expected
 
 
+@pytest.mark.functional
 def test_create_ratio_unknown_model(caplog) -> None:
     """
     Test create G/Rn dataset with unknown model
@@ -194,6 +200,7 @@ def test_create_ratio_unknown_model(caplog) -> None:
     assert "Unknown model for G/Rn ratio: foo" in caplog.text
 
 
+@pytest.mark.functional
 def test_create_ratio_data_missing(caplog) -> None:
     """
     Test create G/Rn dataset with missing data
@@ -204,6 +211,7 @@ def test_create_ratio_data_missing(caplog) -> None:
     assert "Data missing for kustas model" in caplog.text
 
 
+@pytest.mark.unit
 def test_compute_le() -> None:
     """
     Test compute LE
@@ -216,6 +224,7 @@ def test_compute_le() -> None:
     np.testing.assert_allclose(le, ref, atol=0.0001)
 
 
+@pytest.mark.functional
 def test_create_le() -> None:
     """
     Test create LE dataset
@@ -229,6 +238,7 @@ def test_create_le() -> None:
     assert len(le.data_vars) == 18
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -245,6 +255,7 @@ def test_sebconfig(config) -> None:
     assert seb.SEBConfig.model_validate(config)
 
 
+@pytest.mark.functional
 @pytest.mark.parametrize(
     "config",
     [

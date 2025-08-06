@@ -2,7 +2,7 @@ repos:
   - repo: local
     hooks:
     - id: hatch-fmt
-      name: hatch-fmt
+      name: Run hatch fmt (Ruff)
       entry: hatch fmt
       language: system
       types_or: [python, pyi, jupyter]
@@ -10,15 +10,23 @@ repos:
       args: [--force-exclude]
 
     - id: mypy
-      name: mypy
+      name: Run mypy
       entry: hatch run types:check
       language: system
       files: \.py$
       types: [python]
       stages: [pre-commit]
 
+    - id: pytest-unit
+      name: Run unit tests
+      entry: .pixi/envs/default/bin/pytest --no-header -m unit -W ignore
+      stages: [pre-commit]
+      language: system
+      types: [python] 
+      pass_filenames: false
+
     - id: jupyter-nb-clear-output
-      name: jupyter-nb-clear-output
+      name: Clear jupyter notebook
       files: \.ipynb$
       stages: [pre-commit]
       language: system
@@ -26,7 +34,7 @@ repos:
       entry: .pixi/envs/default/bin/jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace
     
     - id: check-file-size
-      name: check-file-size
+      name: Check file size
       entry: hooks/check-file-size.sh
       language: script
       stages: [pre-commit]

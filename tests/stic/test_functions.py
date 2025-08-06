@@ -8,6 +8,7 @@ import pytest
 from evaspa.stic import functions
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("date", "x", "y", "crs", "expected"),
     [
@@ -42,6 +43,7 @@ def test_convert_to_local_time(date, x, y, crs, expected) -> None:
     np.testing.assert_almost_equal(res, expected, decimal=0)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("temperature", "expected"),
     [
@@ -63,6 +65,7 @@ def test_convert_to_celsius(temperature, expected) -> None:
     np.testing.assert_almost_equal(res, expected, decimal=3)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("t2m", "d2m", "b", "c", "expected"),
     [
@@ -83,6 +86,7 @@ def test_convert_to_rh(t2m, d2m, b, c, expected) -> None:
     np.testing.assert_almost_equal(res, expected, decimal=2)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     (
         "ts",
@@ -218,6 +222,7 @@ def test_f_psychrometrics(
     np.testing.assert_almost_equal(cp, cp_expected, decimal=3)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     (
         "rho",

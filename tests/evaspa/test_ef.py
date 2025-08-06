@@ -147,6 +147,7 @@ def setup_models() -> list[EFModel]:
     return [EFModel.create(cfg) for cfg in config_models]
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("config", "check_ef"),
     [
@@ -250,6 +251,7 @@ def test_create_model(config, check_ef) -> None:
         )
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -336,6 +338,7 @@ def test_create_model_error(config) -> None:
         EFModel.create(config)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -412,6 +415,7 @@ def test_check_model_config(config) -> None:
     EFModel.check(config)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -475,6 +479,7 @@ def test_check_config_model_error(config) -> None:
         EFModel.check(config)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("lst", "mask", "expected"),
     [
@@ -496,6 +501,7 @@ def test_check_variability(lst, mask, expected) -> None:
     assert check_variability(lst=lst, mask=mask) == expected
 
 
+@pytest.mark.functional
 @pytest.mark.parametrize(
     ("config", "expected"),
     [
@@ -570,6 +576,7 @@ def test_initialize(config, expected) -> None:
     assert options["merging"].value == "mean"
 
 
+@pytest.mark.functional
 def test_compute() -> None:
     """
     Test compute function
@@ -590,6 +597,7 @@ def test_compute() -> None:
     assert len(ef.data_vars) == 2
 
 
+@pytest.mark.functional
 def test_select() -> None:
     """
     Test select function
@@ -609,6 +617,7 @@ def test_select() -> None:
     xr.testing.assert_identical(ef, selected)
 
 
+@pytest.mark.functional
 @pytest.mark.parametrize(
     "options",
     [
@@ -643,6 +652,7 @@ def test_run(options) -> None:
     run(models, data, **options)
 
 
+@pytest.mark.functional
 def test_all() -> None:
     """
     Test complete
@@ -706,6 +716,7 @@ def test_all() -> None:
     run(models, data)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("config", "selection_expected", "merging_expected"),
     [
@@ -727,6 +738,7 @@ def test_efoptionsconfig(config, selection_expected, merging_expected) -> None:
     assert options.merging.value == merging_expected
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("config", "expected"),
     [
@@ -742,6 +754,7 @@ def test_efcheckconfig(config, expected) -> None:
     assert check.threshold == expected
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -788,6 +801,7 @@ def test_efconfig(config) -> None:
     assert cfg
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -825,6 +839,7 @@ def test_efconfig_error(config) -> None:
         EFConfig.model_validate(config)
 
 
+@pytest.mark.unit
 def test_get_available_configuration() -> None:
     """
     Test get_available_configuration method

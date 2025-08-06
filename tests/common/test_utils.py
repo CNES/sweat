@@ -6,6 +6,7 @@ import pytest
 from evaspa.common import utils
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("nir", "red", "expected"),
     [

@@ -8,6 +8,7 @@ import evaspa.evaspa.config as cfg
 from evaspa.__about__ import __version__
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -32,6 +33,7 @@ def test_paramsconfig(config) -> None:
     assert cfg.EVASPAParamsConfig.model_validate(config)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "version",
     [None, "0"],
@@ -57,6 +59,7 @@ def test_version(version, tmp_path) -> None:
     assert entry.version == __version__
 
 
+@pytest.mark.unit
 def test_check() -> None:
     """
     Test check method
@@ -75,6 +78,7 @@ def test_check() -> None:
     assert cfg.check_config_evaspa(config)
 
 
+@pytest.mark.unit
 def test_check_debug() -> None:
     """
     Test check method

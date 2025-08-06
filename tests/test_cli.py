@@ -9,6 +9,7 @@ from click.testing import CliRunner
 from evaspa import cli
 
 
+@pytest.mark.end_to_end
 @pytest.mark.parametrize(
     "filename",
     ["evaspa_input.json", "evaspa_input_default.json"],
@@ -31,6 +32,7 @@ def test_command_evaspa(filename, tmp_path):
     assert result.exit_code == 0
 
 
+@pytest.mark.end_to_end
 def test_command_evaspa_tiling(tmp_path):
     """
     Test evaspa-tiling CLI
@@ -47,6 +49,7 @@ def test_command_evaspa_tiling(tmp_path):
     assert result.exit_code == 0
 
 
+@pytest.mark.end_to_end
 @pytest.mark.parametrize(
     "filename",
     ["stic_input.json", "stic_input_default.json"],

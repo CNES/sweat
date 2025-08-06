@@ -26,6 +26,7 @@ def convert(arr: npt.NDArray) -> xr.DataArray:
     )
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("data", "values", "invert", "expected"),
     [
@@ -48,6 +49,7 @@ def test_mask(data, values, invert, expected):
     np.testing.assert_equal(res, expected)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("params", "expected"),
     [
@@ -116,6 +118,7 @@ def test_determine_valid_pixels(params, expected) -> None:
     np.testing.assert_equal(valid.data, expected)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("config", "expected"),
     [
@@ -154,6 +157,7 @@ def test_determine_valid_pixels_config(config, expected) -> None:
     np.testing.assert_equal(valid.data, expected)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -169,6 +173,7 @@ def test_filterparams(config) -> None:
     assert FilterParams.model_validate(config)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -184,6 +189,7 @@ def test_filterconfig(config) -> None:
     assert FilterConfig.model_validate(config)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -210,6 +216,7 @@ def test_filteringconfig(config) -> None:
     assert FilteringConfig.model_validate(config)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -230,6 +237,7 @@ def test_filteringconfig_error(config) -> None:
         FilteringConfig(config)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("entry", "cond", "expected"),
     [
@@ -275,6 +283,7 @@ def test_eval_condition(entry, cond, expected) -> None:
     xr.testing.assert_equal(res, ref)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("entry", "cond", "expected"),
     [
@@ -305,6 +314,7 @@ def test_apply_condition(entry, cond, expected) -> None:
     xr.testing.assert_equal(res, ref)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("config", "expected"),
     [
@@ -364,6 +374,7 @@ def test_filter_valid_pixels(config, expected) -> None:
     xr.testing.assert_equal(res, ref)
 
 
+@pytest.mark.unit
 def test_filter_valid_pixels_with_warnings(caplog) -> None:
     """
     Test function for filtering valid pixels with warnings
@@ -389,6 +400,7 @@ def test_filter_valid_pixels_with_warnings(caplog) -> None:
     assert msg in caplog.text
 
 
+@pytest.mark.unit
 def test_filter_valid_pixels_exc() -> None:
     """
     Test function for filtering valid pixels (with exception)

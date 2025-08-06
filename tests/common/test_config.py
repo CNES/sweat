@@ -7,6 +7,7 @@ import pytest
 import evaspa.common.config as cfg
 
 
+@pytest.mark.unit
 def test_read_config() -> None:
     """
     Test read configuration
@@ -16,6 +17,7 @@ def test_read_config() -> None:
     assert config
 
 
+@pytest.mark.unit
 def test_read_config_exc() -> None:
     """
     Test read configuration (with exception)
@@ -25,6 +27,7 @@ def test_read_config_exc() -> None:
         cfg.read_config(str(p))
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "fmt",
     [
@@ -43,6 +46,7 @@ def test_write_config(fmt, tmp_path) -> None:
     assert p.exists()
 
 
+@pytest.mark.unit
 def test_write_config_exc(tmp_path) -> None:
     """
     Test read configuration (with exception)

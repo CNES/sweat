@@ -1,9 +1,12 @@
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
 
+import pytest
+
 from evaspa.misc import trishna
 
 
+@pytest.mark.functional
 def test_get_trishna_tiles() -> None:
     """
     Test get_trishna_tiles method
@@ -13,6 +16,7 @@ def test_get_trishna_tiles() -> None:
     assert tiles.crs.to_string() == "EPSG:4326"
 
 
+@pytest.mark.functional
 def test_get_land_mask() -> None:
     """
     Test get_land_mask() method
@@ -22,6 +26,7 @@ def test_get_land_mask() -> None:
     assert land.crs.to_string() == "EPSG:4326"
 
 
+@pytest.mark.functional
 def test_get_trishna_orbits() -> None:
     """
     Test get_trishna_orbits() method

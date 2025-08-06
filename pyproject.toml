@@ -95,8 +95,18 @@ cov-combine = "coverage combine"
 cov-report = "coverage report"
 
 [tool.pytest.ini_options]
+addopts = "-m 'not skip or not slow'"
 markers = [
-    "requires_test_data: Require additional test data. Use environment variables EVASPA_TEST_DATA_PATH.",
+    "unit: mark a test as a unit test.",
+    "functional: mark a test a functional test.",
+    "end_to_end: mark a test as an end-to-end test.",
+    "notebooks: mark a test that runs notebooks.",
+    "slow: mark a test that is slow to run.",
+    "skip: mark a test that must be skipped.",
+    "require_test_data: mark a test that requires EVASPA_TEST_DATA_PATH environment variable to be set to the test dataset folder",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning:jupyter_client",
 ]
 
 [[tool.hatch.envs.hatch-test.matrix]]
@@ -149,6 +159,8 @@ module = [
     "shapely.*",
     "pwlf.*",
     "mkdocs_gen_files.*",
+    "nbformat",
+    "nbconvert.*",
 ]
 ignore_missing_imports = true
 

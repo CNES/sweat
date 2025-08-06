@@ -68,6 +68,7 @@ def setup_data(
     return var, lst
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("config", "expected"),
     [
@@ -97,6 +98,7 @@ def test_flat_edge(config, expected) -> None:
     )
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -111,6 +113,7 @@ def test_flat_edge_error(config) -> None:
         FlatEdge.model_validate_json(config)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -141,6 +144,7 @@ def test_flat_percentile_edge(config) -> None:
     np.testing.assert_allclose(edge.get(0.3), 330.0, atol=1.0)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -162,6 +166,7 @@ def test_flat_percentile_edge_error(config) -> None:
         FlatPercentileEdge.model_validate_json(config)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("config", "expected"),
     [
@@ -204,6 +209,7 @@ def test_get_points(config, expected) -> None:
     np.testing.assert_array_almost_equal(points[0], expected, decimal=2)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -236,6 +242,7 @@ def test_linear_edge(config) -> None:
     np.testing.assert_allclose(edge.get(0.3), 330.0 - 13.0 * 0.3, atol=1.0)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -280,6 +287,7 @@ def test_top_linear_edge_using_breakpoint(config) -> None:
     np.testing.assert_allclose(edge.get(0.3), 348 - 40.0 * 0.3, atol=1.0)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -324,6 +332,7 @@ def test_bottom_linear_edge_using_breakpoint(config) -> None:
     np.testing.assert_allclose(edge.get(0.2), 290 + 70.0 * 0.2, atol=1.0)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -349,6 +358,7 @@ def test_linear_edge_error(config) -> None:
         LinearEdge.model_validate_json(config)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -382,6 +392,7 @@ def test_parabolic_edge(config) -> None:
     )
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -408,6 +419,7 @@ def test_parabolic_edge_error(config) -> None:
         ParabolicEdge.model_validate_json(config)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -441,6 +453,7 @@ def test_top_linear_edge_with_threshold(config) -> None:
     np.testing.assert_allclose(edge.threshold, 0.2, atol=0.05)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -473,6 +486,7 @@ def test_bottom_linear_edge_with_threshold(config) -> None:
     np.testing.assert_allclose(edge.threshold, 0.2, atol=0.05)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -517,6 +531,7 @@ def test_top_linear_edge_with_threshold_using_breakpoint(config) -> None:
     np.testing.assert_allclose(edge.get(0.4), 348 - 40.0 * 0.4, atol=1.0)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -541,6 +556,7 @@ def test_linear_edge_with_threshold_error(config) -> None:
         ThresholdLinearEdge.model_validate_json(config)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -590,6 +606,7 @@ def test_double_linear_edge(config) -> None:
     np.testing.assert_allclose(edge.fit_breakpoint, 0.3, atol=0.05)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -636,6 +653,7 @@ def test_double_linear_edge_using_breakpoint(config) -> None:
     np.testing.assert_allclose(edge.get(0.3), 348 - 40.0 * 0.3, atol=1.0)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -660,6 +678,7 @@ def test_double_linear_edge_error(config) -> None:
         DoubleLinearEdge.model_validate_json(config)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -693,6 +712,7 @@ def test_flat_linear_edge(config) -> None:
     np.testing.assert_allclose(edge.fit_breakpoint, 0.2, atol=0.05)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -738,6 +758,7 @@ def test_flat_linear_edge_using_breakpoint(config) -> None:
     np.testing.assert_allclose(edge.get(0.4), 348 - 40.0 * 0.4, atol=1.0)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -762,6 +783,7 @@ def test_flat_linear_edge_error(config) -> None:
         FlatLinearEdge.model_validate_json(config)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -792,6 +814,7 @@ def test_flat_regression_edge(config) -> None:
     np.testing.assert_allclose(edge.get(0.3), 330.0, atol=1.0)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -816,6 +839,7 @@ def test_flat_regression_edge_error(config) -> None:
         FlatRegressionEdge.model_validate_json(config)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("name", "config"),
     [
@@ -940,6 +964,7 @@ def test_create_edge(name, config) -> None:
     Edge.create(name, config)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("name", "config"),
     [

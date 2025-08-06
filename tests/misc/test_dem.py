@@ -3,6 +3,7 @@
 import os
 
 import numpy as np
+import pytest
 
 from evaspa.misc.dem import get_dem_from_tile, get_dem_from_tiles
 
@@ -16,6 +17,8 @@ def get_test_data_path() -> str:
     )
 
 
+@pytest.mark.functional
+@pytest.mark.require_test_data
 def test_get_dem_from_tile() -> None:
     """
     Test get_dem_from_tile() method
@@ -31,6 +34,8 @@ def test_get_dem_from_tile() -> None:
     )
 
 
+@pytest.mark.functional
+@pytest.mark.require_test_data
 def test_get_dem_from_tiles() -> None:
     """
     Test get_dem_from_tiles() method

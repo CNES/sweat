@@ -2,6 +2,8 @@
 
 import time
 
+import pytest
+
 from evaspa.debugging import (
     configure_debugging,
     debugging,
@@ -25,6 +27,7 @@ def foo2():
     time.sleep(1)
 
 
+@pytest.mark.unit
 def test_register() -> None:
     """Test register functions for debugging"""
     res = get_registered_functions()
@@ -32,6 +35,7 @@ def test_register() -> None:
     assert "tests.test_debugging.foo2" in sorted(res.keys())
 
 
+@pytest.mark.unit
 def test_configure() -> None:
     """Test configure debugging"""
     func = foo1
@@ -43,6 +47,7 @@ def test_configure() -> None:
     assert func.out == "out"
 
 
+@pytest.mark.unit
 def test_debugging() -> None:
     func = foo
     assert func.profile

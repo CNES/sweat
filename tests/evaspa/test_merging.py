@@ -7,6 +7,7 @@ import xarray as xr
 from evaspa.evaspa.merging import MergeMethod, merge, merge_to_dataset
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("method", "expected"),
     [
@@ -34,6 +35,7 @@ def test_merge(method, expected) -> None:
     np.testing.assert_almost_equal(uncertainty.mean(), expected[1], decimal=2)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("method", "expected"),
     [

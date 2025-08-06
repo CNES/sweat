@@ -7,6 +7,7 @@ import pytest
 from evaspa.stic import smwetness
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     (
         "slope",
@@ -217,6 +218,7 @@ def test_f_soilmoisture_initialize(
     np.testing.assert_almost_equal(ds, ds_expected, decimal=3)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     (
         "slope",

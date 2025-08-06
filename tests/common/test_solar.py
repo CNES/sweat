@@ -66,6 +66,7 @@ def setup_dataset(
     )
 
 
+@pytest.mark.unit
 def test_to_latlon():
     """
     Test to_latlon function
@@ -78,6 +79,7 @@ def test_to_latlon():
     assert y_grid.shape == lat.shape
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("date", "lat", "lon", "expected"),
     [
@@ -107,6 +109,7 @@ def test_to_localtime(date, lat, lon, expected):
     assert res == expected
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("date", "expected"),
     [
@@ -122,6 +125,7 @@ def test_day_angle(date, expected):
     np.testing.assert_almost_equal(res, expected, decimal=2)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("date", "expected"),
     [
@@ -144,6 +148,7 @@ def test_fractional_year_angle(date, expected):
     np.testing.assert_almost_equal(res, expected, decimal=2)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("date", "expected"),
     [
@@ -162,6 +167,7 @@ def test_equation_of_time_milne(date, expected):
     np.testing.assert_almost_equal(tc, expected, decimal=2)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("date", "expected"),
     [
@@ -178,6 +184,7 @@ def test_equation_of_time_noaa(date, expected):
     np.testing.assert_almost_equal(tc, expected, decimal=2)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("date", "lon", "lat", "expected"),
     [
@@ -203,6 +210,7 @@ def test_hour_angle(date, lon, lat, expected):
     np.testing.assert_almost_equal(np.rad2deg(hour_angle), expected, decimal=2)
 
 
+@pytest.mark.unit
 def test_declination_angle():
     """
     Test declination angle function
@@ -217,6 +225,7 @@ def test_declination_angle():
     np.testing.assert_array_almost_equal(res, expected, decimal=0)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("date", "expected"),
     [
@@ -232,6 +241,7 @@ def test_sun_earth_distance(date, expected):
     np.testing.assert_approx_equal(res, expected, significant=4)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("date", "lat", "expected"),
     [
@@ -253,6 +263,7 @@ def test_sunrise_angle(date, lat, expected):
     np.testing.assert_array_almost_equal(res, expected, decimal=2)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("date", "x", "y", "crs", "expected"),
     [
@@ -281,6 +292,7 @@ def test_compute_sun_angles(date, x, y, crs, expected):
     np.testing.assert_approx_equal(saa, expected[1], significant=2)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("date", "sza", "saa", "slope", "aspect", "expected"),
     [
@@ -338,6 +350,7 @@ def test_compute_toa_solar_radiation_from_angles(
     np.testing.assert_allclose(toa, expected, atol=1.0, rtol=0.1)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("date", "x", "y", "crs", "slope", "aspect", "expected"),
     [
@@ -369,6 +382,7 @@ def test_compute_toa_solar_radiation(date, x, y, crs, slope, aspect, expected):
     np.testing.assert_approx_equal(toa, expected, significant=2)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("date", "x", "y", "crs", "slope", "aspect", "expected"),
     [
@@ -404,6 +418,7 @@ def test_compute_toa_solar_radiation_from_hour_angle(
     np.testing.assert_approx_equal(toa, expected, significant=2)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("date", "x", "y", "crs", "expected"),
     [
@@ -424,6 +439,7 @@ def test_toa_daily_irradiance(date, x, y, crs, expected):
     np.testing.assert_approx_equal(toa_daily, expected, significant=2)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("date", "x", "y", "crs", "slope", "aspect", "expected"),
     [
@@ -450,6 +466,7 @@ def test_compute_daily_toa_solar_radiation(
     np.testing.assert_approx_equal(toa, expected, significant=2)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("date", "x", "y", "crs", "slope", "aspect", "expected"),
     [
@@ -476,6 +493,7 @@ def test_compute_daily_toa_solar_radiation_from_hour_angle(
     np.testing.assert_approx_equal(toa, expected, significant=2)
 
 
+@pytest.mark.unit
 def test_compute_diffuse_fraction():
     """
     Test function for computing toa daily solar radiation for a given position
@@ -492,6 +510,7 @@ def test_compute_diffuse_fraction():
     np.testing.assert_almost_equal(fdiff.data, 0.24, decimal=2)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("date", "x", "y", "crs", "expected"),
     [

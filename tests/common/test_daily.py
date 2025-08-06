@@ -65,6 +65,7 @@ def setup_dataset(
     )
 
 
+@pytest.mark.functional
 @pytest.mark.parametrize(
     ("use_topo"),
     [
@@ -91,6 +92,7 @@ def test_toa_daily_estimate(use_topo):
     daily.toa_daily_estimate(data[["var"]], date=data.attrs["date"], dem=dem)
 
 
+@pytest.mark.functional
 def test_toa_daily_estimate_missing_dem_data(caplog):
     """
     Test toa daily estimate function (missing DEM data)
@@ -113,6 +115,7 @@ def test_toa_daily_estimate_missing_dem_data(caplog):
     )
 
 
+@pytest.mark.functional
 def test_toa_daily_estimate_mising_crs():
     """
     Test toa daily estimate function (missing CRS data)
@@ -134,6 +137,7 @@ def test_toa_daily_estimate_mising_crs():
         daily.toa_daily_estimate(data, date=data.attrs["date"])
 
 
+@pytest.mark.unit
 def test_extrapolate_unknown_method(caplog):
     """
     Test extrapolation function with an unknown method
@@ -153,6 +157,7 @@ def test_extrapolate_unknown_method(caplog):
     np.testing.assert_array_equal(res["var"], np.nan * np.ones((200, 100)))
 
 
+@pytest.mark.unit
 def test_extrapolate_unavailable_variables(caplog):
     """
     Test extrapolation function with unavailable variables
@@ -174,6 +179,7 @@ def test_extrapolate_unavailable_variables(caplog):
     )
 
 
+@pytest.mark.unit
 def test_extrapolate_toa_missing_date():
     """
     Test toa extrapolation function with missing date
@@ -195,6 +201,7 @@ def test_extrapolate_toa_missing_date():
         daily.extrapolate_at_daily_scale(data, method="toa")
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("variables", "method", "use_topo", "expected"),
     [
@@ -229,6 +236,7 @@ def test_extrapolate_at_daily_scale(variables, method, use_topo, expected):
     assert len(res.data_vars) == expected
 
 
+@pytest.mark.unit
 def test_extrapolate_at_daily_scale_without_dem(caplog):
     """
     Test extrapolation function at daily scale

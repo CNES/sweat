@@ -4,6 +4,7 @@ import os
 
 import affine
 import numpy as np
+import pytest
 from shapely.geometry import Polygon
 
 from evaspa.evaspa import zones
@@ -20,6 +21,8 @@ def get_test_data_path() -> str:
     )
 
 
+@pytest.mark.functional
+@pytest.mark.require_test_data
 def test_compute_water_mask() -> None:
     """
     Test compute_water_mask() method
@@ -33,6 +36,8 @@ def test_compute_water_mask() -> None:
     assert not water_mask.data[0, 0]
 
 
+@pytest.mark.functional
+@pytest.mark.require_test_data
 def test_compute_valid_mask() -> None:
     """
     Test compute_valid_mask() method
@@ -44,6 +49,8 @@ def test_compute_valid_mask() -> None:
     assert np.sum(valid.data) == 3348900
 
 
+@pytest.mark.functional
+@pytest.mark.require_test_data
 def test_define_valid_pixels() -> None:
     """
     Test define_valid_pixels() method
@@ -59,6 +66,7 @@ def test_define_valid_pixels() -> None:
     assert not np.isnan(dem["valid"].data).all()
 
 
+@pytest.mark.unit
 def test_polygonize_mask() -> None:
     """
     Test polygonize_mask() method
@@ -73,6 +81,7 @@ def test_polygonize_mask() -> None:
     )
 
 
+@pytest.mark.functional
 def test_define_valid_zones() -> None:
     """
     Test define_valid_zones() method

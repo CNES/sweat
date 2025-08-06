@@ -151,6 +151,7 @@ def setup_array(data: npt.NDArray) -> xr.DataArray:
     )
 
 
+@pytest.mark.unit
 def test_stefan_boltzmann_constant() -> None:
     """
     Stefan Boltzmann constant
@@ -158,6 +159,7 @@ def test_stefan_boltzmann_constant() -> None:
     np.testing.assert_approx_equal(flux.CST_SB, 5.670374419e-8, significant=7)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("lst", "emis", "albedo", "rsd", "rld", "rn_expected", "ln_expected"),
     [
@@ -195,6 +197,7 @@ def test_compute_rn(
     np.testing.assert_allclose(ln, ln_ref)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("rsd", "sza", "saa", "slope", "aspect", "expected"),
     [
@@ -210,6 +213,7 @@ def test_correct_direct_radiation(rsd, sza, saa, slope, aspect, expected):
     np.testing.assert_approx_equal(res, expected, significant=2)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("rsd", "slope", "aspect", "fdiff", "sza", "saa", "expected"),
     [
@@ -299,6 +303,7 @@ def test_correct_shortwave_radiation(
     np.testing.assert_allclose(res, expected, atol=5.0, rtol=0.1)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("rsd", "slope", "aspect", "fdiff", "sza", "saa", "msg"),
     [
@@ -343,6 +348,7 @@ def test_correct_shortwave_radiation_with_warnings(
     assert msg in caplog.text
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     (
         "lst",
@@ -424,6 +430,7 @@ def test_create_net_radiation(
     xr.testing.assert_allclose(ln, ln_ref)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("params", "expected"),
     [
@@ -443,6 +450,7 @@ def test_create_net_radiation_exc(params, expected) -> None:
         flux.create_net_radiation(data)
 
 
+@pytest.mark.functional
 @pytest.mark.parametrize(
     ("params", "expected"),
     [
@@ -460,6 +468,7 @@ def test_create_net_radiation_multiple(params, expected) -> None:
     assert len(ln.data_vars) == expected
 
 
+@pytest.mark.unit
 def test_compute_et_from_le():
     """
     Test method for computing ET from LE

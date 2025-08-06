@@ -7,6 +7,7 @@ import pytest
 from evaspa.stic import flux
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("rn", "lai", "local_time", "m", "expected"),
     [

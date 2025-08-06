@@ -93,6 +93,7 @@ def setup_data(
     )
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("config", "expected"),
     [
@@ -132,6 +133,7 @@ def test_sticprepareconfig(config, expected) -> None:
     assert res.model_dump() == expected
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -153,6 +155,7 @@ def test_sticprepareconfig_error(config) -> None:
         main.STICPrepareConfig.model_validate(config)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("config", "expected"),
     [
@@ -192,6 +195,7 @@ def test_sticmodelconfig(config, expected) -> None:
     assert res.model_dump() == expected
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "config",
     [
@@ -211,6 +215,7 @@ def test_sticmodelconfig_error(config) -> None:
         main.STICModelConfig.model_validate(config)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     (
         "ts",
@@ -268,6 +273,7 @@ def test_run_stic_model_pixel(
     np.testing.assert_equal(converged, converged_expected)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     (
         "ts",
@@ -329,6 +335,7 @@ def test_run_stic_model(
     np.testing.assert_equal(cv, converged_expected)
 
 
+@pytest.mark.unit
 def test_prepare():
     """
     Test function for STIC prepare function
@@ -378,6 +385,7 @@ def test_prepare():
     xr.testing.assert_equal(res[ETVar.FLAGS.value], flags_ref)
 
 
+@pytest.mark.unit
 def test_prepare_exc():
     """
     Test function for STIC prepare function (with exception)
@@ -403,6 +411,7 @@ def test_prepare_exc():
         main.prepare(data)
 
 
+@pytest.mark.functional
 def test_run():
     """
     Test function for STIC run function

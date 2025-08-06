@@ -13,67 +13,55 @@ from pyproj import CRS
 from evaspa.common import io
 
 
-def get_test_data_dir() -> str:
-    """
-    Get directory path for test data
-    """
-    if os.environ["EVASPA_TEST_DATA_PATH"] is None:
-        msg = "Variable EVASPA_TEST_DATA_PATH must be set"
-        raise ValueError(msg)
-    return os.environ["EVASPA_TEST_DATA_PATH"]
-
-
-@pytest.mark.requires_test_data
+@pytest.mark.unit
 def test_read_data_from_file() -> None:
     """
     Test read data from a file
     """
-    input_path = os.path.join(get_test_data_dir(), "Landsat_20230327_28PCA.tif")
+    input_path = os.path.join("tests", "data", "modis_test_full.tif")
     xarr = io.read_data_from_file(input_path)
-    assert xarr.sizes["x"] == 1832
-    assert xarr.sizes["y"] == 1832
+    assert xarr.sizes["x"] == 145
+    assert xarr.sizes["y"] == 145
     assert set(xarr.data_vars) == {
-        "qa",
-        "ndvi",
+        "ta",
+        "tdp",
         "rld",
         "emis",
-        "red",
-        "blue",
-        "cloud",
         "lai",
         "albedo",
-        "green",
         "lst",
-        "water",
         "rsd",
-        "nir",
+        "height",
+        "aspect",
+        "slope",
+        "fcover",
+        "ndvi",
     }
 
 
-@pytest.mark.requires_test_data
+@pytest.mark.unit
 def test_read_data() -> None:
     """
     Test read data
     """
-    input_path = os.path.join(get_test_data_dir(), "Landsat_20230327_28PCA")
+    input_path = os.path.join("tests", "data", "modis_dir")
     xarr = io.read_data(input_path)
-    assert xarr.sizes["x"] == 1832
-    assert xarr.sizes["y"] == 1832
+    assert xarr.sizes["x"] == 145
+    assert xarr.sizes["y"] == 145
     assert set(xarr.data_vars) == {
-        "qa",
-        "ndvi",
+        "ta",
+        "tdp",
         "rld",
         "emis",
-        "red",
-        "blue",
-        "cloud",
         "lai",
         "albedo",
-        "green",
         "lst",
-        "water",
         "rsd",
-        "nir",
+        "height",
+        "aspect",
+        "slope",
+        "fcover",
+        "ndvi",
     }
 
 
@@ -108,6 +96,7 @@ def setup_data(georef: bool = False) -> xr.Dataset:
     return data
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("georef", "separated", "expected"),
     [
@@ -129,6 +118,7 @@ def test_write_data(georef, separated, expected, tmp_path) -> None:
     assert len(files) == expected
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "entry",
     [
@@ -146,6 +136,7 @@ def test_inputconfig(entry) -> None:
     io.InputConfig.model_validate(entry)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("entry", "exception"),
     [
@@ -167,6 +158,7 @@ def test_inputconfig_exc(entry, exception) -> None:
         io.InputConfig.model_validate(entry)
 
 
+@pytest.mark.unit
 def test_outputconfig(tmp_path) -> None:
     """
     Test OutputConfig

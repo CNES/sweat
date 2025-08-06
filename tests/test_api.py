@@ -16,6 +16,7 @@ def get_data_path() -> str:
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 
 
+@pytest.mark.functional
 def test_generate_tiles() -> None:
     """
     Test methods for regroup tiles
@@ -35,6 +36,7 @@ def test_generate_tiles() -> None:
         )
 
 
+@pytest.mark.functional
 def test_regroup() -> None:
     """
     Test methods for regroup tiles
@@ -49,6 +51,7 @@ def test_regroup() -> None:
     assert len(group) == 5
 
 
+@pytest.mark.end_to_end
 @pytest.mark.parametrize(
     ("entry", "params", "debug"),
     [
@@ -198,6 +201,7 @@ def test_run_evaspa(entry, params, debug) -> None:
     assert res
 
 
+@pytest.mark.end_to_end
 @pytest.mark.parametrize(
     ("entry", "params", "debug"),
     [
