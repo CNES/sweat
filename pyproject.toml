@@ -24,7 +24,7 @@ classifiers = [
 ]
 dependencies = [
   "geopandas",
-  "numpy",
+  "numpy<2.3",
   "pandas",
   "scipy",
   "xarray",
@@ -35,6 +35,7 @@ dependencies = [
   "pydantic>=2.8",
   "timezonefinder",
   "pwlf",
+  "numba",
 ]
 
 [project.optional-dependencies]
@@ -162,6 +163,7 @@ module = [
     "mkdocs_gen_files.*",
     "nbformat",
     "nbconvert.*",
+    "numba",
 ]
 ignore_missing_imports = true
 

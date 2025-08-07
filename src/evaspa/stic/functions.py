@@ -1,16 +1,19 @@
 # Copyright: (c) 2025 LIST / CESBIO / Centre National d'Etudes Spatiales
 """
 Module containing functions to compute several functions
-fro STIC model:
-- Compute psychrometrics variables
+for STIC model
 """
 
 from __future__ import annotations
 
 import datetime as dt
+from math import exp
 
 import numpy as np
 import numpy.typing as npt
+from numba import float32 as f32  # to define f32
+from numba import njit
+from numba.types import Tuple
 from pyproj import CRS, Transformer
 from scipy.constants import c, h, k, pi
 
@@ -153,21 +156,36 @@ def convert_to_rh(
     return rh * 100
 
 
+@njit(
+    (f32)(f32),
+    nogil=True,
+    cache=True,
+)
 def _tetens(t: float) -> float:
     """
     Tetens equation
     """
     # Saturation vapor pressure at surface temperature TS (unit hPa)
-    return A_TETENS * np.exp((B_TETENS * t) / (t + C_TETENS))
+    return f32(A_TETENS) * exp((f32(B_TETENS) * t) / (t + f32(C_TETENS)))
 
 
+@njit(
+    (f32)(f32),
+    nogil=True,
+    cache=True,
+)
 def _tetens_derivative(t: float) -> float:
     """
     Derivative of Tetens equation
     """
-    return B_TETENS * C_TETENS * _tetens(t) / (t + C_TETENS) ** 2
+    return f32(B_TETENS) * f32(C_TETENS) * _tetens(t) / (t + f32(C_TETENS)) ** 2
 
 
+@njit(
+    Tuple((f32,) * 11)(*(f32,) * 4),
+    nogil=True,
+    cache=True,
+)
 def f_psychrometrics(
     ts: float, ta: float, td: float, rh: float
 ) -> tuple[
@@ -232,7 +250,7 @@ def f_psychrometrics(
     eastar = _tetens(ta)
     # Compute actual vapor pressure of air (unit hPa)
     # using the definition of relative humidity
-    ea = (rh / 100) * (eastar)
+    ea = (rh / f32(100)) * (eastar)
     # Vapor pressure deficit of air (hPa)
     da = eastar - ea
     # Compute the slope of saturation vapor pressure versus temperature
@@ -242,20 +260,28 @@ def f_psychrometrics(
     # slope of saturation vapor pressure versus temperature at Td (hPa)
     s1 = _tetens_derivative(td)
     # Avoid division by zero
-    s2 = (esstar - ea) / (ts - td) if abs(ts - td) > 1.0e-7 else s1
+    s2 = (esstar - ea) / (ts - td) if abs(ts - td) > f32(1.0e-7) else s1
     # slope of saturation vapor pressure versus temperature at Ts (hPa)
     s3 = _tetens_derivative(ts)
-    s4 = (eastar - ea) / (ta - td) if abs(ta - td) > 1.0e-7 else s1
+    s4 = (eastar - ea) / (ta - td) if abs(ta - td) > f32(1.0e-7) else s1
     # Specific humidity
-    qref = (MWRATIO * ea) / (STANDARD_PRESSURE - (1 - MWRATIO) * ea)
+    qref = (f32(MWRATIO) * ea) / (
+        f32(STANDARD_PRESSURE) - (f32(1) - f32(MWRATIO)) * ea
+    )
     # Water vapor mixing ratio
-    r = qref / (1 - qref)
+    r = qref / (f32(1) - qref)
     # Density of dry air
-    rho_dry = 100 * STANDARD_PRESSURE / (R_DRY * (ta + CST_KELVIN))
+    rho_dry = (
+        f32(100)
+        * f32(STANDARD_PRESSURE)
+        / (f32(R_DRY) * (ta + f32(CST_KELVIN)))
+    )
     # Density of air
-    rho = rho_dry * ((1 + r) / (1 + r / MWRATIO))  # density of air
+    rho = rho_dry * (
+        (f32(1) + r) / (f32(1) + r / f32(MWRATIO))
+    )  # density of air
     # Specific heat of air
-    cp = qref * CP_WET + (1 - qref) * CP_DRY
+    cp = qref * f32(CP_WET) + (f32(1) - qref) * f32(CP_DRY)
 
     return (
         esstar,
@@ -272,6 +298,11 @@ def f_psychrometrics(
     )
 
 
+@njit(
+    Tuple((f32,) * 4)(*(f32,) * 9),
+    nogil=True,
+    cache=True,
+)
 def f_stateeq(
     rho: float,
     cp: float,
@@ -323,37 +354,37 @@ def f_stateeq(
         Evaporative fraction
     """
     # Aerodynamic conductance
-    g_aero = (2 * phi * alpha * slope * PSYCHROMETRIC_CST) / (
-        2 * cp * slope * e0 * rho
-        - 2 * cp * slope * ea * rho
-        - 2 * cp * ea * PSYCHROMETRIC_CST * rho
-        + cp * e0 * PSYCHROMETRIC_CST * rho
-        + cp * e0star * PSYCHROMETRIC_CST * rho
-        - cp * m * e0 * PSYCHROMETRIC_CST * rho
-        + cp * m * e0star * PSYCHROMETRIC_CST * rho
+    g_aero = (f32(2) * phi * alpha * slope * f32(PSYCHROMETRIC_CST)) / (
+        f32(2) * cp * slope * e0 * rho
+        - f32(2) * cp * slope * ea * rho
+        - f32(2) * cp * ea * f32(PSYCHROMETRIC_CST) * rho
+        + cp * e0 * f32(PSYCHROMETRIC_CST) * rho
+        + cp * e0star * f32(PSYCHROMETRIC_CST) * rho
+        - cp * m * e0 * f32(PSYCHROMETRIC_CST) * rho
+        + cp * m * e0star * f32(PSYCHROMETRIC_CST) * rho
     )
 
     # Surface conductance
     denominator = (
-        cp * e0star**2 * PSYCHROMETRIC_CST * rho
-        - cp * e0**2 * PSYCHROMETRIC_CST * rho
-        - 2 * cp * slope * e0**2 * rho
-        + 2 * cp * slope * ea * e0 * rho
-        - 2 * cp * slope * ea * e0star * rho
-        + 2 * cp * slope * e0 * e0star * rho
-        + 2 * cp * ea * e0 * PSYCHROMETRIC_CST * rho
-        - 2 * cp * ea * e0star * PSYCHROMETRIC_CST * rho
-        + cp * m * e0**2 * PSYCHROMETRIC_CST * rho
-        + cp * m * e0star**2 * PSYCHROMETRIC_CST * rho
-        - 2 * cp * m * e0 * e0star * PSYCHROMETRIC_CST * rho
+        cp * e0star**2 * f32(PSYCHROMETRIC_CST) * rho
+        - cp * e0**2 * f32(PSYCHROMETRIC_CST) * rho
+        - f32(2) * cp * slope * e0**2 * rho
+        + f32(2) * cp * slope * ea * e0 * rho
+        - f32(2) * cp * slope * ea * e0star * rho
+        + f32(2) * cp * slope * e0 * e0star * rho
+        + f32(2) * cp * ea * e0 * f32(PSYCHROMETRIC_CST) * rho
+        - f32(2) * cp * ea * e0star * f32(PSYCHROMETRIC_CST) * rho
+        + cp * m * e0**2 * f32(PSYCHROMETRIC_CST) * rho
+        + cp * m * e0star**2 * f32(PSYCHROMETRIC_CST) * rho
+        - f32(2) * cp * m * e0 * e0star * f32(PSYCHROMETRIC_CST) * rho
     )
-    denominator = np.clip(denominator, 0.00001, None)  # when e0star == e0
+    denominator = max(denominator, f32(0.00001))  # when e0star == e0
     g_surf = (
         -(
-            2
+            f32(2)
             * (
-                phi * alpha * slope * ea * PSYCHROMETRIC_CST
-                - phi * alpha * slope * e0 * PSYCHROMETRIC_CST
+                phi * alpha * slope * ea * f32(PSYCHROMETRIC_CST)
+                - phi * alpha * slope * e0 * f32(PSYCHROMETRIC_CST)
             )
         )
         / denominator
@@ -361,34 +392,34 @@ def f_stateeq(
 
     # T0 - TA
     delta_t = (
-        2 * slope * e0
-        - 2 * slope * ea
-        - 2 * ea * PSYCHROMETRIC_CST
-        + e0 * PSYCHROMETRIC_CST
-        + e0star * PSYCHROMETRIC_CST
-        - m * e0 * PSYCHROMETRIC_CST
-        + m * e0star * PSYCHROMETRIC_CST
-        + 2 * alpha * slope * ea
-        - 2 * alpha * slope * e0
-    ) / (2 * alpha * slope * PSYCHROMETRIC_CST)
+        f32(2) * slope * e0
+        - f32(2) * slope * ea
+        - f32(2) * ea * f32(PSYCHROMETRIC_CST)
+        + e0 * f32(PSYCHROMETRIC_CST)
+        + e0star * f32(PSYCHROMETRIC_CST)
+        - m * e0 * f32(PSYCHROMETRIC_CST)
+        + m * e0star * f32(PSYCHROMETRIC_CST)
+        + f32(2) * alpha * slope * ea
+        - f32(2) * alpha * slope * e0
+    ) / (f32(2) * alpha * slope * f32(PSYCHROMETRIC_CST))
 
     # Evaporative fraction
-    ef = -(2 * alpha * slope * ea - 2 * alpha * slope * e0) / (
-        2 * slope * e0
-        - 2 * slope * ea
-        - 2 * ea * PSYCHROMETRIC_CST
-        + e0 * PSYCHROMETRIC_CST
-        + e0star * PSYCHROMETRIC_CST
-        - m * e0 * PSYCHROMETRIC_CST
-        + m * e0star * PSYCHROMETRIC_CST
+    ef = -(f32(2) * alpha * slope * ea - f32(2) * alpha * slope * e0) / (
+        f32(2) * slope * e0
+        - f32(2) * slope * ea
+        - f32(2) * ea * f32(PSYCHROMETRIC_CST)
+        + e0 * f32(PSYCHROMETRIC_CST)
+        + e0star * f32(PSYCHROMETRIC_CST)
+        - m * e0 * f32(PSYCHROMETRIC_CST)
+        + m * e0star * f32(PSYCHROMETRIC_CST)
     )
 
     # Adjust the abnormal conductances
-    g_aero = np.clip(g_aero, 0.0001, 0.2)
-    g_surf = np.clip(g_surf, 0.0001, 0.06)
+    g_aero = min(max(g_aero, f32(0.0001)), f32(0.2))
+    g_surf = min(max(g_surf, f32(0.0001)), f32(0.06))
 
     # Maximum surface-air temperature difference rarely overpasses 20 degC
-    delta_t = np.clip(delta_t, -10, 20)
-    ef = np.clip(ef, 0.0001, 1.0)
+    delta_t = min(max(delta_t, f32(-10)), f32(20))
+    ef = min(max(ef, f32(0.0001)), f32(1.0))
 
     return (g_aero, g_surf, delta_t, ef)

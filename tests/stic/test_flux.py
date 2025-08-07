@@ -11,8 +11,8 @@ from evaspa.stic import flux
 @pytest.mark.parametrize(
     ("rn", "lai", "local_time", "m", "expected"),
     [
-        pytest.param(200, 2, 36000, 0.6, 2.342408987892905),
-        pytest.param(-50, 2, 36000, 0.6, 0.5856022469732263),
+        pytest.param(200, 2, 36000, 0.6, 2.342409),
+        pytest.param(-50, 2, 36000, 0.6, 0.585602),
     ],
 )
 def test_f_g_actualsurface(rn, lai, local_time, m, expected) -> None:

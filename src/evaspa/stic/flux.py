@@ -1,18 +1,30 @@
 import numpy as np
+from numba import float32 as f32  # to define f32
+from numba import njit
 
 # Constants
 KRN = 0.6
+CG_MIN = 0.05  # for wet surface
+CG_MAX = 0.35  # for dry surface, in water controlled systems
+TG_MIN = 74000  # for wet surface
+TG_MAX = 100000  # for dry surface
 
 
+@njit(
+    (f32)(
+        f32,
+        f32,
+        f32,
+        f32,
+    ),
+    nogil=True,
+    cache=True,
+)
 def f_g_actualsurface(
     rn: float,
     lai: float,
     local_time: float,
     m: float,
-    cg_min: float = 0.05,  # for wet surface
-    cg_max: float = 0.35,  # for dry surface, in water-controlled ecosystems
-    tg_min: float = 74000,  # for wet surface
-    tg_max: float = 100000,  # for dry surface
 ) -> float:
     """
     Description
@@ -29,15 +41,6 @@ def f_g_actualsurface(
         Local time in seconds
     m : float
         Surface moisture
-    cg_min: float
-        Parameter for wet surface (default = 0.05)
-    cg_max: float
-        Parameter for dry surface,
-        in water-controlled ecosystems (default = 0.35)
-    tg_min: float
-        Parameter for wet surface (default = 74000)
-    tg_max:float
-        Parameter for dry surface (default = 100000)
 
     Return
     ------
@@ -46,15 +49,15 @@ def f_g_actualsurface(
     """
     rn_soil = rn * np.exp(-KRN * lai)  # Correction on 12/11/2021
 
-    sol_noon = 12 * 60 * 60
+    sol_noon = f32(12) * f32(60) * f32(60)
     tg0 = sol_noon - local_time
 
     # Estimating GHF according to Santanello and Friedl (2003)
-    cg = (1 - m) * cg_max + m * cg_min
-    tg = (1 - m) * tg_max + m * tg_min
+    cg = (f32(1) - m) * f32(CG_MAX) + m * f32(CG_MIN)
+    tg = (f32(1) - m) * f32(TG_MAX) + m * f32(TG_MIN)
 
-    g_flux = rn_soil * cg * np.cos(2 * np.pi * (tg0 + 10800) / tg)
-    if rn_soil < 0:
+    g_flux = rn_soil * cg * np.cos(f32(2) * np.pi * (tg0 + f32(10800)) / tg)
+    if rn_soil < f32(0):
         g_flux = -g_flux
 
     return g_flux

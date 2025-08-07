@@ -6,6 +6,14 @@ Module containing the API for STIC
 import numpy as np
 import numpy.typing as npt
 import xarray as xr
+from numba import (
+    boolean,
+    njit,
+    prange,
+)
+from numba import float32 as f32  # to define f32
+from numba import int64 as i64  # to define i64
+from numba.types import Array, Tuple
 from pydantic import BaseModel, ConfigDict, Field
 
 from evaspa.common.constant import MSK_INPUT_NODATA, PSYCHROMETRIC_CST, ETVar
@@ -50,6 +58,24 @@ class STICModelConfig(BaseModel):
     nb_steps: int = Field(default=15)
 
 
+@njit(
+    Tuple((f32, f32, boolean))(
+        f32,
+        f32,
+        f32,
+        f32,
+        f32,
+        f32,
+        f32,
+        f32,
+        f32,
+        f32,
+        i64,
+    ),
+    nogil=True,
+    parallel=True,
+    cache=True,
+)
 def run_stic_model_pixel(
     ts: float,
     ta: float,
@@ -60,8 +86,8 @@ def run_stic_model_pixel(
     rn: float,
     ln: float,
     local_time: float,
-    threshold: float = 0.01,
-    nb_steps: int = 15,
+    threshold: float,
+    nb_steps: int,
 ) -> tuple[float, float, bool]:
     """
     Description
@@ -89,9 +115,9 @@ def run_stic_model_pixel(
     local_time: float
         Local time in seconds
     threshold: float
-        Threshold value (default=0.01)
+        Threshold value
     nb_steps: int
-        Maximum of ietration number (default = 15)
+        Maximum of ietration number
 
 
     Returns
@@ -152,7 +178,7 @@ def run_stic_model_pixel(
     # Vapor pressure at t0
     e0 = es
     # Priestley taylor parameter
-    alpha = ALPHA
+    alpha = f32(ALPHA)
     # Save dewpoint temperature at source/sink height
     t0d_old = t0d
 
@@ -167,20 +193,22 @@ def run_stic_model_pixel(
 
     # Calculate ET and H based on initial results from state eqs.
     # McNaughton and Jarvis (1986)
-    omega = ((slope / PSYCHROMETRIC_CST) + 1) / (
-        (slope / PSYCHROMETRIC_CST) + 1 + g_aero / g_surf
+    omega = ((slope / f32(PSYCHROMETRIC_CST)) + f32(1)) / (
+        (slope / f32(PSYCHROMETRIC_CST)) + f32(1) + g_aero / g_surf
     )
-    le_flux_eq = (available_energy * (slope / PSYCHROMETRIC_CST)) / (
-        (slope / PSYCHROMETRIC_CST) + 1
+    le_flux_eq = (available_energy * (slope / f32(PSYCHROMETRIC_CST))) / (
+        (slope / f32(PSYCHROMETRIC_CST)) + f32(1)
     )
-    le_flux_imp = (cp * 0.0289644 / PSYCHROMETRIC_CST) * g_surf * 40 * da
+    le_flux_imp = (
+        (cp * f32(0.0289644) / f32(PSYCHROMETRIC_CST)) * g_surf * f32(40) * da
+    )
     le_flux = omega * le_flux_eq + (1 - omega) * le_flux_imp
 
     h_flux = (
-        PSYCHROMETRIC_CST * available_energy * (1 + g_aero / g_surf)
+        f32(PSYCHROMETRIC_CST) * available_energy * (1 + g_aero / g_surf)
         - rho * cp * g_aero * da
     ) / (
-        slope + PSYCHROMETRIC_CST * (1 + g_aero / g_surf)
+        slope + f32(PSYCHROMETRIC_CST) * (1 + g_aero / g_surf)
     )  # Deduced from the PM equation
 
     # 3. Iteration
@@ -188,39 +216,44 @@ def run_stic_model_pixel(
 
     # Initialize iteration
     le_flux_old = le_flux
-    le_error = 0.05
+    le_error = f32(0.05)
     steps = 0
     converged = False
 
     # Iteration step
     while le_error > threshold and steps < nb_steps:
         # Re-estimate saturated vapor pressure at source/sink height
-        e0star = ea + (PSYCHROMETRIC_CST * le_flux * (g_aero + g_surf)) / (
+        e0star = ea + (f32(PSYCHROMETRIC_CST) * le_flux * (g_aero + g_surf)) / (
             rho * cp * g_aero * g_surf
         )
-        e0star = e0star if e0star >= 0 else esstar
-        e0star = e0star if e0star < 250 else 250  # noqa PLR2004
+        e0star = e0star if e0star >= f32(0.0) else esstar
+        e0star = e0star if e0star < f32(250.0) else f32(250.0)
 
         # Re-estimate vapor pressure at source/sink height
         d0 = (
             (g_aero / g_surf)
             * (
-                PSYCHROMETRIC_CST
-                / (slope + PSYCHROMETRIC_CST * (1 + g_aero / g_surf))
+                f32(PSYCHROMETRIC_CST)
+                / (slope + f32(PSYCHROMETRIC_CST) * (f32(1) + g_aero / g_surf))
             )
             * (da + ((slope * available_energy) / (rho * cp * g_aero)))
         )
-        d0 = d0 if d0 >= 0 else ds
+        d0 = d0 if d0 >= f32(0.0) else ds
 
         e0 = e0star - d0
-        e0 = es if e0 < 0 else e0
-        e0 = es if e0 < ea else e0
-        e0 = es if e0 > e0star else e0
+        if e0 < f32(0.0):
+            e0 = es
+        if e0 < ea:
+            e0 = es
+        if e0 > e0star:
+            e0 = es
 
         # Re-estimate M (direct LST feedback into M computation)
-        t0d = td + (PSYCHROMETRIC_CST * le_flux) / (rho * cp * g_aero * s1)
-        t0d = td if t0d < td else t0d
-        t0d = t0d_old if t0d > ts else t0d
+        t0d = td + (f32(PSYCHROMETRIC_CST) * le_flux) / (rho * cp * g_aero * s1)
+        if t0d < td:
+            t0d = td
+        if t0d > ts:
+            t0d = t0d_old
 
         (m, _, _, m_soil, _) = f_soilmoisture_iterate(
             slope,
@@ -249,21 +282,22 @@ def run_stic_model_pixel(
             * slope0
             * (t0 - td)
             * (
-                2 * slope
-                + 2 * PSYCHROMETRIC_CST
-                + PSYCHROMETRIC_CST * (g_aero / g_surf) * (1 + m)
+                f32(2) * slope
+                + f32(2) * f32(PSYCHROMETRIC_CST)
+                + f32(PSYCHROMETRIC_CST) * (g_aero / g_surf) * (f32(1) + m)
             )
         ) / (
-            2
+            f32(2)
             * slope
             * (
-                PSYCHROMETRIC_CST * (t0 - ta) * (g_aero + g_surf)
+                f32(PSYCHROMETRIC_CST) * (t0 - ta) * (g_aero + g_surf)
                 + g_surf * slope0 * (t0 - td)
             )
         )
         # TODO: Explanation
-        alpha = 1.0 if alpha < 0.0 else alpha
-        alpha = 2.0 if alpha > 2.0 else alpha  # noqa PRL2004
+        if alpha < f32(0.0):
+            alpha = f32(1.0)
+        alpha = min(alpha, f32(2.0))
 
         # Re-estimate net available energy
         g_flux = f_g_actualsurface(rn, lai, local_time, m)
@@ -286,13 +320,13 @@ def run_stic_model_pixel(
 
         # Re-estimate latent heat flux
         le_flux = (
-            (rho * cp / PSYCHROMETRIC_CST)
+            (rho * cp / f32(PSYCHROMETRIC_CST))
             * ((g_aero * g_surf) / (g_aero + g_surf))
             * (slope * (t0 - ta) + da)
         )
 
-        if (le_flux < 0) & (le_flux < available_energy):
-            le_flux = rho * cp * g_aero * (e0 - ea) / PSYCHROMETRIC_CST
+        if (le_flux < f32(0.0)) & (le_flux < available_energy):
+            le_flux = rho * cp * g_aero * (e0 - ea) / f32(PSYCHROMETRIC_CST)
 
         slope0 = (
             (PSYCHROMETRIC_CST * le_flux) / (rho * cp * g_surf) + (e0 - ea)
@@ -308,19 +342,37 @@ def run_stic_model_pixel(
     # Final output from the STIC model
     # Compute H flux
     h_flux = (
-        PSYCHROMETRIC_CST * available_energy * (1 + g_aero / g_surf)
+        PSYCHROMETRIC_CST * available_energy * (f32(1) + g_aero / g_surf)
         - rho * cp * g_aero * da
     ) / (
-        slope + PSYCHROMETRIC_CST * (1 + g_aero / g_surf)
+        slope + f32(PSYCHROMETRIC_CST) * (f32(1) + g_aero / g_surf)
     )  # Deduced from the PM equation
     # Compute EF
     ef = le_flux / (le_flux + h_flux)
-    ef = np.clip(ef, 0, 1)
+    ef = min(max(ef, f32(0.0)), f32(1.0))
 
     return le_flux, ef, converged
 
 
-# @njit(types.Tuple([f32[:,:]] * 11)(f32[:,:], f32[:,:], f32[:,:], f32[:,:], f32[:,:], f32[:,:], f32[:,:], f32[:,:], f32[:,:], f32[:,:], f32, f32, f32, f32, f32, f32, f32, f32, i64, boolean), nogil = True, parallel = True, cache = True)
+@njit(
+    Tuple((Array(f32, 2, "C"), Array(f32, 2, "C"), Array(f32, 2, "C")))(
+        Array(f32, 2, "C"),
+        Array(f32, 2, "C"),
+        Array(f32, 2, "C"),
+        Array(f32, 2, "C"),
+        Array(f32, 2, "C"),
+        Array(f32, 2, "C"),
+        Array(f32, 2, "C"),
+        Array(f32, 2, "C"),
+        Array(f32, 2, "C"),
+        Array(i64, 2, "C"),
+        f32,
+        i64,
+    ),
+    nogil=True,
+    parallel=True,
+    cache=True,
+)
 def run_stic_model(
     lst: npt.NDArray,
     ta: npt.NDArray,
@@ -331,10 +383,10 @@ def run_stic_model(
     rn: npt.NDArray,
     ln: npt.NDArray,
     local_time: npt.NDArray,
-    valid: npt.NDArray | None = None,
-    threshold: float = 0.01,
-    nb_steps: int = 15,
-) -> tuple[npt.NDArray, npt.NDArray, npt.NDArray, npt.NDArray]:
+    valid: npt.NDArray,
+    threshold: float,
+    nb_steps: int,
+) -> tuple[npt.NDArray, npt.NDArray, npt.NDArray]:
     """
     Description
     -----------
@@ -362,26 +414,24 @@ def run_stic_model(
     local_time: float
         Local time in seconds
     threshold: float
-        Threshold value (default=0.01)
+        Threshold value
     nb_steps: int
-        Maximum of ietration number (default = 15)
+        Maximum of ietration number
 
     Returns
     -------
     res: tuple[float]
-        Output arrays (LE, ET, EF, flags)
+        Output arrays (LE, EF, flags)
     """
 
     # Output array creation
     shape = lst.shape
-    le_arr = np.nan * np.ones_like(lst, dtype=float)
-    ef_arr = np.nan * np.ones_like(lst, dtype=float)
-    converged_arr = np.zeros_like(lst, dtype=float)
-    if valid is None:
-        valid = np.ones_like(lst)
+    le_arr = np.empty_like(lst)
+    ef_arr = np.empty_like(lst)
+    converged_arr = np.empty_like(lst)
     # Pixel loop
-    for i in range(shape[0]):
-        for j in range(shape[1]):
+    for i in prange(shape[0]):
+        for j in prange(shape[1]):
             if valid[i, j] == 1:
                 le_arr[i, j], ef_arr[i, j], converged_arr[i, j] = (
                     run_stic_model_pixel(
@@ -398,8 +448,14 @@ def run_stic_model(
                         nb_steps,
                     )
                 )
-    et_arr = compute_et_from_le(le_arr)
-    return le_arr, et_arr, ef_arr, converged_arr
+            else:
+                le_arr[i, j], ef_arr[i, j], converged_arr[i, j] = (
+                    f32(np.nan),
+                    f32(np.nan),
+                    0,
+                )
+
+    return le_arr, ef_arr, converged_arr
 
 
 def prepare(
@@ -531,26 +587,27 @@ def run(
         Output arrays
     """
     # Get valid
-    valid = None
+    valid = np.ones_like(data[ETVar.LST.value].data, dtype=np.int64)
     if ETVar.VALID.value in data.data_vars:
-        valid = data[ETVar.VALID.value].data
+        valid = data[ETVar.VALID.value].data.astype(np.int64)
 
     # Run STIC main loop
-    le_arr, et_arr, ef_arr, converged_arr = run_stic_model(
-        data[ETVar.LST.value].data,
-        data[ETVar.TEMPERATURE.value].data,
-        data[ETVar.DEWPOINT_TEMPERATURE.value].data,
-        data[ETVar.RH.value].data,
-        data[ETVar.FCOVER.value].data,
-        data[ETVar.LAI.value].data,
-        data[ETVar.NET_RADIATION.value].data,
-        data[ETVar.LONGWAVE_NET_RADIATION.value].data,
-        data[ETVar.LOCAL_TIME.value].data,
+    le_arr, ef_arr, converged_arr = run_stic_model(
+        data[ETVar.LST.value].data.astype(np.float32),
+        data[ETVar.TEMPERATURE.value].data.astype(np.float32),
+        data[ETVar.DEWPOINT_TEMPERATURE.value].data.astype(np.float32),
+        data[ETVar.RH.value].data.astype(np.float32),
+        data[ETVar.FCOVER.value].data.astype(np.float32),
+        data[ETVar.LAI.value].data.astype(np.float32),
+        data[ETVar.NET_RADIATION.value].data.astype(np.float32),
+        data[ETVar.LONGWAVE_NET_RADIATION.value].data.astype(np.float32),
+        data[ETVar.LOCAL_TIME.value].data.astype(np.float32),
         valid=valid,
         threshold=threshold,
         nb_steps=nb_steps,
     )
-
+    converged_arr = converged_arr.astype(np.int64)
+    et_arr = compute_et_from_le(le_arr)
     # Process non-converged pixels
     le_arr[converged_arr == 0] = np.nan
     et_arr[converged_arr == 0] = np.nan

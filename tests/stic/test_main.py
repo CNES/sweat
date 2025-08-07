@@ -227,6 +227,8 @@ def test_sticmodelconfig_error(config) -> None:
         "rn",
         "ln",
         "local_time",
+        "threshold",
+        "nb_steps",
         "le_expected",
         "ef_expected",
         "converged_expected",
@@ -242,6 +244,8 @@ def test_sticmodelconfig_error(config) -> None:
             300,
             100,
             20000,
+            0.01,
+            15,
             212.221,
             0.697,
             True,
@@ -258,6 +262,8 @@ def test_run_stic_model_pixel(
     rn,
     ln,
     local_time,
+    threshold,
+    nb_steps,
     le_expected,
     ef_expected,
     converged_expected,
@@ -266,7 +272,7 @@ def test_run_stic_model_pixel(
     Test function for STIC model calulation function for a single pixel
     """
     le, ef, converged = main.run_stic_model_pixel(
-        ts, ta, td, rh, fc, lai, rn, ln, local_time
+        ts, ta, td, rh, fc, lai, rn, ln, local_time, threshold, nb_steps
     )
     np.testing.assert_almost_equal(le, le_expected, decimal=2)
     np.testing.assert_almost_equal(ef, ef_expected, decimal=2)
@@ -285,24 +291,28 @@ def test_run_stic_model_pixel(
         "rn",
         "ln",
         "local_time",
+        "valid",
+        "threshold",
+        "nb_steps",
         "le_expected",
-        "et_expected",
         "ef_expected",
         "converged_expected",
     ),
     [
         pytest.param(
-            np.array([[30, 30], [30, 30]]),
-            np.array([[25, 25], [25, 25]]),
-            np.array([[19, 19], [19, 19]]),
-            np.array([[69.36, 69.36], [69.36, 69.36]]),
-            np.array([[0.86, 0.86], [0.86, 0.86]]),
-            np.array([[4, 4], [4, 4]]),
-            np.array([[300, 300], [300, 300]]),
-            np.array([[100, 100], [100, 100]]),
-            np.array([[20000, 20000], [20000, 20000]]),
+            np.array([[30.0, 30.0], [30.0, 30.0]], dtype=np.float32),
+            np.array([[25, 25], [25, 25]], dtype=np.float32),
+            np.array([[19, 19], [19, 19]], dtype=np.float32),
+            np.array([[69.36, 69.36], [69.36, 69.36]], dtype=np.float32),
+            np.array([[0.86, 0.86], [0.86, 0.86]], dtype=np.float32),
+            np.array([[4, 4], [4, 4]], dtype=np.float32),
+            np.array([[300, 300], [300, 300]], dtype=np.float32),
+            np.array([[100, 100], [100, 100]], dtype=np.float32),
+            np.array([[20000, 20000], [20000, 20000]], dtype=np.float32),
+            np.array([[1, 1], [1, 1]], dtype=np.int64),
+            0.01,
+            15,
             np.array([[212.221, 212.221], [212.221, 212.221]]),
-            np.array([[8.66e-05, 8.66e-05], [8.66e-05, 8.66e-05]]),
             np.array([[0.697, 0.697], [0.697, 0.697]]),
             np.array([[True, True], [True, True]]),
         ),
@@ -318,19 +328,20 @@ def test_run_stic_model(
     rn,
     ln,
     local_time,
+    valid,
+    threshold,
+    nb_steps,
     le_expected,
-    et_expected,
     ef_expected,
     converged_expected,
 ) -> None:
     """
     Test function for STIC model calulation funtion
     """
-    le, et, ef, cv = main.run_stic_model(
-        ts, ta, td, rh, fc, lai, rn, ln, local_time
+    le, ef, cv = main.run_stic_model(
+        ts, ta, td, rh, fc, lai, rn, ln, local_time, valid, threshold, nb_steps
     )
     np.testing.assert_almost_equal(le, le_expected, decimal=2)
-    np.testing.assert_almost_equal(et, et_expected, decimal=2)
     np.testing.assert_almost_equal(ef, ef_expected, decimal=2)
     np.testing.assert_equal(cv, converged_expected)
 

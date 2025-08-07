@@ -1,6 +1,12 @@
 # Copyright: (c) 2025 LIST / CESBIO / Centre National d'Etudes Spatiales
+"""
+Module containing functions to compute soil moisture
+for STIC model
+"""
 
-import numpy as np
+from numba import float32 as f32  # to define f32
+from numba import njit
+from numba.types import Tuple
 
 # ruff: noqa: PLR2004
 
@@ -9,6 +15,11 @@ PSYCHROMETRIC_CST = 0.67
 PT_CST = 1.26
 
 
+@njit(
+    Tuple((f32,) * 8)(*(f32,) * 14),
+    nogil=True,
+    cache=True,
+)
 def f_soilmoisture_initialize(
     slope: float,
     ts: float,
@@ -89,11 +100,21 @@ def f_soilmoisture_initialize(
         vapor pressure deficit of the air at the surface (hPa)
     """
     # Surface dewpoint temperature (degC)
-    t0d = (esstar - ea - s3 * ts + s1 * td) / (s1 - s3)
+    # Handle division by zero
+    t0d = (
+        (esstar - ea - s3 * ts + s1 * td) / (s1 - s3)
+        if abs(s1 - s3) > f32(1.0e-7)
+        else ts
+    )
 
     # Surface moisture availability for surface wetness (0-1)
-    m_surf = (s1 / s2) * ((t0d - td) / (ts - td))
-    m_surf = np.clip(m_surf, 0.0001, 0.9999)
+    # Handle division by zero
+    m_surf = (
+        (s1 / s2) * ((t0d - td) / (ts - td))
+        if abs(ts - td) > f32(1.0e-7)
+        else f32(1)
+    )
+    m_surf = min(max(m_surf, f32(0.0001)), f32(0.9999))
 
     # Surface vapor pressure and deficit
     e_surf = ea + m_surf * (esstar - ea)
@@ -101,49 +122,64 @@ def f_soilmoisture_initialize(
 
     # Separating soil and canopy wetness to form a composite surface moisture
     m_canopy = fc * m_surf
-    m_soil = (1 - fc) * m_surf
+    m_soil = (f32(1) - fc) * m_surf
 
     # Dewpoint temperature index
     # tdew_index > 1 signifies super dry condition
-    tdew_index = (ts - t0d) / (ta - td)
+    # Handle division by zero
+    tdew_index = (
+        (ts - t0d) / (ta - td) if abs(ta - td) > f32(1.0e-7) else f32(0)
+    )
 
     # Potential evaporation (Priestley-Taylor eqn.)
-    ep_pt = (PT_CST * slope * rn) / (slope + PSYCHROMETRIC_CST)
+    ep_pt = (f32(PT_CST) * slope * rn) / (slope + f32(PSYCHROMETRIC_CST))
 
     # Temperature difference
     dts = ts - ta
 
     # Surface wetness comes from the soil, vegetation contribution is neglegible
-    if (fc <= 0.25) & (tdew_index < 1):
+    if (fc <= f32(0.25)) & (tdew_index < f32(1)):
         m_surf = m_soil
-        m_canopy = 0
-    if (fc <= 0.25) & (ta > 10) & (td < 0) & (ln < -125):
+        m_canopy = f32(0)
+    if (fc <= f32(0.25)) & (ta > f32(10)) & (td < f32(0)) & (ln < f32(-125)):
         m_surf = m_soil
         m_canopy = 0
 
     # Root zone moisture (Mrz)
-    m_rz = (PSYCHROMETRIC_CST * s1 * (t0d - td)) / (
+    m_rz = (f32(PSYCHROMETRIC_CST) * s1 * (t0d - td)) / (
         slope * s3 * (ts - td)
-        + PSYCHROMETRIC_CST * s4 * (ta - td)
+        + f32(PSYCHROMETRIC_CST) * s4 * (ta - td)
         - slope * s1 * (t0d - td)
     )
-    m_rz = np.clip(m_rz, 0.0001, 0.9999)
+    m_rz = min(max(m_rz, f32(0.0001)), f32(0.9999))
 
     # Combine M to account for Hysteresis and
     # initial estimation of surface vapor pressure
     m = m_surf
-    if (ep_pt > rn) & (dts > 0):
+    if (ep_pt > rn) & (dts > f32(0)):
         m = m_rz
-    if (ep_pt > rn) & (fc <= 0.25):
+    if (ep_pt > rn) & (fc <= f32(0.25)):
         m = m_rz
     if (ep_pt > rn) & (d_surf > da):
         m = m_rz
 
-    if (fc <= 0.25) & (dts > 0) & (ta > 10) & (td < 0) & (ln < -125):
+    if (
+        (fc <= f32(0.25))
+        & (dts > f32(0))
+        & (ta > f32(10))
+        & (td < f32(0))
+        & (ln < f32(-125))
+    ):
         m = m_rz
-    if (fc <= 0.25) & (dts > 0) & (ta > 10) & (td < 0) & (d_surf > da):
+    if (
+        (fc <= f32(0.25))
+        & (dts > f32(0))
+        & (ta > f32(10))
+        & (td < f32(0))
+        & (d_surf > da)
+    ):
         m = m_rz
-    if (ep_pt < rn) & (fc <= 0.25) & (d_surf > da):
+    if (ep_pt < rn) & (fc <= f32(0.25)) & (d_surf > da):
         m = m_rz
 
     es = ea + m * (esstar - ea)
@@ -154,6 +190,11 @@ def f_soilmoisture_initialize(
     return (m, m_canopy, m_soil, m_surf, m_rz, es, t0d, ds)
 
 
+@njit(
+    Tuple((f32,) * 5)(*(f32,) * 18),
+    nogil=True,
+    cache=True,
+)
 def f_soilmoisture_iterate(
     slope: float,
     s1: float,
@@ -240,53 +281,58 @@ def f_soilmoisture_iterate(
         Surface moisture availability for rot zone wetness (0-1)
     """
     # Surface moisture (Msurf)
-    k = (e0star - ea) / (esstar - ea)
-    m_surf = (s1 / (k * s2)) * ((t0d - td) / (ts - td))  # surface wetness
-    m_surf = np.clip(m_surf, 0.0001, 0.9999)
+    m_surf = f32(1)
+    if abs(ts - td) > f32(1.0 - 7):
+        k = (e0star - ea) / (esstar - ea)
+        m_surf = (s1 / (k * s2)) * ((t0d - td) / (ts - td))  # surface wetness
+    m_surf = min(max(m_surf, f32(0.0001)), f32(0.9999))
 
     # Separating soil and canopy wetness to form a composite surface moisture
     m_canopy = fc * m_surf
-    m_soil = (1 - fc) * m_surf
+    m_soil = (f32(1) - fc) * m_surf
 
-    tdew_index = (ts - t0d) / (ta - td)
-    ep_pt = (PT_CST * slope * rn) / (
-        slope + PSYCHROMETRIC_CST
+    # Handle division by zero
+    tdew_index = (
+        (ts - t0d) / (ta - td) if abs(ta - td) > f32(1.0e-7) else f32(0)
+    )
+    ep_pt = (f32(PT_CST) * slope * rn) / (
+        slope + f32(PSYCHROMETRIC_CST)
     )  # Potential evaporation (Priestley-Taylor eqn.)
 
     # Surface wetness comes from the soil, vegetation contribution is neglegible
-    if (fc <= 0.25) & (tdew_index < 1):
+    if (fc <= f32(0.25)) & (tdew_index < f32(1)):
         m_surf = m_soil
-        m_canopy = 0
-    if (fc <= 0.25) & (ta > 10) & (td < 0) & (ln < -125):
+        m_canopy = f32(0)
+    if (fc <= f32(0.25)) & (ta > f32(10)) & (td < f32(0)) & (ln < f32(-125)):
         m_surf = m_soil
-        m_canopy = 0
+        m_canopy = f32(0)
 
     # Root zone moisture (Mrz)
-    m_rz = (PSYCHROMETRIC_CST * s1 * (t0d - td)) / (
+    m_rz = (f32(PSYCHROMETRIC_CST) * s1 * (t0d - td)) / (
         slope * s3 * (ts - td)
-        + PSYCHROMETRIC_CST * s4 * (ta - td)
+        + f32(PSYCHROMETRIC_CST) * s4 * (ta - td)
         - slope * s1 * (t0d - td)
     )
-    m_rz = np.clip(m_rz, 0.0001, 0.9999)
+    m_rz = min(max(m_rz, f32(0.0001)), f32(0.9999))
 
     # Combine M to account for Hysteresis and
     # initial estimation of surface vapor pressure
     m = m_surf
     if (
         (ep_pt > rn)
-        & (delta_t > 0)
-        & (fc <= 0.25)
+        & (delta_t > f32(0))
+        & (fc <= f32(0.25))
         & (d0 > da)
-        & (tdew_index < 1)
+        & (tdew_index < f32(1))
     ):
         m = m_rz
     if (
-        (fc <= 0.25)
-        & (delta_t > 0)
+        (fc <= f32(0.25))
+        & (delta_t > f32(0))
         & (d0 > da)
-        & (ta > 10)
-        & (td < 0)
-        & (ln < -125)
+        & (ta > f32(10))
+        & (td < f32(0))
+        & (ln < f32(-125))
     ):
         m = m_rz
 
