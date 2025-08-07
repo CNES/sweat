@@ -121,9 +121,7 @@ def regroup_tiles(
     return group_df
 
 
-def run_evaspa(
-    entry: dict, params: dict, debug: dict | None = None
-) -> tuple[xr.Dataset, xr.Dataset] | None:
+def read_input_data(entry: dict) -> xr.Dataset:
     """
     Description
     -----------
@@ -133,6 +131,34 @@ def run_evaspa(
     ----------
     entry: dict
         Input configuration
+
+    Returns
+    -------
+    data: xr.Dataset
+        Dataset containing input variables
+    """
+    # Validate input config
+    msg = f"Input: {entry}"
+    logger.debug(msg)
+    input_config = InputConfig.model_validate(entry)
+    # Read input data
+    data = io.read_input(input_config.model_dump())
+    logger.debug("Read input data: OK")
+    return data
+
+
+def run_evaspa(
+    data: xr.Dataset, params: dict, debug: dict | None = None
+) -> tuple[xr.Dataset, xr.Dataset] | None:
+    """
+    Description
+    -----------
+    Run EVASPA
+
+    Parameters
+    ----------
+    data: xr.Dataset
+        Input data
     params: dict
         Parameter configuration
 
@@ -143,10 +169,6 @@ def run_evaspa(
     daily_xr: xr.Dataset
         Dataset containing daily values (EF, ET, LE)
     """
-    # Validate input config
-    msg = f"Input: {entry}"
-    logger.debug(msg)
-    input_config = InputConfig.model_validate(entry)
     # Validate parameters config
     msg = f"Params: {params}"
     logger.debug(msg)
@@ -160,9 +182,6 @@ def run_evaspa(
         debug_config = DebuggingConfig()
     configure_debugging(**debug_config.model_dump())
     logger.debug("Check configuration: OK")
-    # Read input data
-    data = io.read_input(input_config.model_dump())
-    logger.debug("Read input data: OK")
     # Filter data
     data["valid"] = filter.determine_valid_pixels(
         data, **params_config.filtering.model_dump()
@@ -204,7 +223,7 @@ def run_evaspa(
 
 
 def run_stic(
-    entry: dict, params: dict, debug: dict | None = None
+    data: xr.Dataset, params: dict, debug: dict | None = None
 ) -> tuple[xr.Dataset, xr.Dataset] | None:
     """
     Description
@@ -213,8 +232,8 @@ def run_stic(
 
     Parameters
     ----------
-    entry: dict
-        Input configuration
+    data: xr.Dataset
+        Input data
     params: dict
         Parameter configuration
 
@@ -225,10 +244,6 @@ def run_stic(
     daily_xr: xr.Dataset
         Dataset containing daily values (EF, ET, LE)
     """
-    # Validate input config
-    msg = f"Input: {entry}"
-    logger.debug(msg)
-    input_config = InputConfig.model_validate(entry)
     # Validate parameters config
     msg = f"Params: {params}"
     logger.debug(msg)
@@ -242,9 +257,6 @@ def run_stic(
         debug_config = DebuggingConfig()
     configure_debugging(**debug_config.model_dump())
     logger.debug("Check configuration: OK")
-    # Read input data
-    data = io.read_input(input_config.model_dump())
-    logger.debug("Read input data: OK")
     # Prepare data
     data = stic.prepare(data, **params_config.prepare.model_dump())
     logger.debug("Prepare input data: OK")

@@ -6,7 +6,13 @@ from pathlib import Path
 import click
 
 from evaspa.__about__ import __version__
-from evaspa.api import generate_tiles, regroup_tiles, run_evaspa, run_stic
+from evaspa.api import (
+    generate_tiles,
+    read_input_data,
+    regroup_tiles,
+    run_evaspa,
+    run_stic,
+)
 from evaspa.common.config import read_config, write_config
 from evaspa.common.io import write_dataset
 from evaspa.evaspa.config import EVASPAInputFile
@@ -106,9 +112,13 @@ def evaspa(verbose, input_file):
     # Verify config and manage default parameters
     config = EVASPAInputFile.model_validate(dict_config)
     output_dir = Path(config.output.path)
+    # Read input data
+    logger.debug("Read input data...")
+    input_data = read_input_data(config.input)
+    logger.info("Read input data: OK")
     # Run
     logger.debug("Run evaspa...")
-    res = run_evaspa(config.input, config.params, config.debug)
+    res = run_evaspa(input_data, config.params, config.debug)
     logger.info("Run evaspa: OK")
     # Save configuration
     logger.debug("Write results...")
@@ -151,9 +161,13 @@ def stic(verbose, input_file):
     # Verify config and manage default parameters
     config = STICInputFile.model_validate(dict_config)
     output_dir = Path(config.output.path)
+    # Read input data
+    logger.debug("Read input data...")
+    input_data = read_input_data(config.input)
+    logger.info("Read input data: OK")
     # Run
     logger.debug("Run stic...")
-    res = run_stic(config.input, config.params, config.debug)
+    res = run_stic(input_data, config.params, config.debug)
     logger.info("Run stic: OK")
     # Save configuration
     logger.debug("Write results...")

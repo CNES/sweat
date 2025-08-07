@@ -4,8 +4,10 @@ import os
 
 import geopandas as gpd
 import pytest
+import xarray as xr
 
 from evaspa import api
+from evaspa.common.io import read_input
 from evaspa.evaspa import tiling
 
 
@@ -14,6 +16,13 @@ def get_data_path() -> str:
     Get data path
     """
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+
+
+def read_input_data(config: dict) -> xr.Dataset:
+    """
+    Read input data
+    """
+    return read_input(config)
 
 
 @pytest.mark.functional
@@ -51,7 +60,41 @@ def test_regroup() -> None:
     assert len(group) == 5
 
 
-@pytest.mark.end_to_end
+@pytest.mark.functional
+@pytest.mark.parametrize(
+    "entry",
+    [
+        {
+            "path": "tests/data/modis_test.tif",
+            "date": "2018-05-16T10:00:00-00:00",
+        },
+        {
+            "path": "tests/data/modis_test_geo.tif",
+            "date": "2018-05-16T10:00:00-00:00",
+        },
+        {
+            "path": "tests/data/modis_test_dem.tif",
+            "date": "2018-05-16T10:00:00-00:00",
+        },
+        {
+            "path": "tests/data/modis_test_full.tif",
+            "date": "2018-05-16T10:00:00-00:00",
+        },
+        {
+            "path": "tests/data/modis_dir",
+            "date": "2018-05-16T10:00:00-00:00",
+        },
+    ],
+)
+def test_read_input_data(entry) -> None:
+    """
+    Test read input data
+    """
+    res = api.read_input_data(entry)
+    assert res
+
+
+@pytest.mark.functional
 @pytest.mark.parametrize(
     ("entry", "params", "debug"),
     [
@@ -197,11 +240,12 @@ def test_run_evaspa(entry, params, debug) -> None:
     """
     Test run EVASPA
     """
-    res = api.run_evaspa(entry, params, debug)
+    data = read_input_data(entry)
+    res = api.run_evaspa(data, params, debug)
     assert res
 
 
-@pytest.mark.end_to_end
+@pytest.mark.functional
 @pytest.mark.parametrize(
     ("entry", "params", "debug"),
     [
@@ -249,5 +293,6 @@ def test_run_stic(entry, params, debug) -> None:
     """
     Test run EVASPA
     """
-    res = api.run_stic(entry, params, debug)
+    data = read_input_data(entry)
+    res = api.run_stic(data, params, debug)
     assert res
