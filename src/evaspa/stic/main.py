@@ -16,7 +16,12 @@ from numba import int64 as i64  # to define i64
 from numba.types import Array, Tuple
 from pydantic import BaseModel, ConfigDict, Field
 
-from evaspa.common.constant import MSK_INPUT_NODATA, PSYCHROMETRIC_CST, ETVar
+from evaspa.common.constant import (
+    FLAGS_TYPE,
+    MSK_STIC_NOT_CONVERGED,
+    PSYCHROMETRIC_CST,
+    ETVar,
+)
 from evaspa.common.flux import compute_et_from_le, create_net_radiation
 from evaspa.logging import LoggerManager
 from evaspa.stic.flux import f_g_actualsurface
@@ -538,27 +543,6 @@ def prepare(
     new_data[ETVar.NET_RADIATION.value] = rn_xr
     new_data[ETVar.LONGWAVE_NET_RADIATION.value] = ln_xr
 
-    # Process nan data
-    new_data[ETVar.VALID.value] = (
-        (~new_data[ETVar.LST.value].isnull())
-        & (~new_data[ETVar.ALBEDO.value].isnull())
-        & (~new_data[ETVar.TEMPERATURE.value].isnull())
-        & (~new_data[ETVar.DEWPOINT_TEMPERATURE.value].isnull())
-        & (~new_data[ETVar.FCOVER.value].isnull())
-        & (~new_data[ETVar.LAI.value].isnull())
-        & (~new_data[ETVar.EMISSIVITY.value].isnull())
-        & (~new_data[ETVar.NET_RADIATION.value].isnull())
-        & (~new_data[ETVar.LONGWAVE_NET_RADIATION.value].isnull())
-    ).astype(int)
-    # TODO: Check type for flags uint8 or uint16
-    new_data[ETVar.FLAGS.value] = xr.full_like(
-        new_data[ETVar.VALID.value], 0, dtype=np.uint8
-    )
-    new_data[ETVar.FLAGS.value] = xr.where(
-        new_data[ETVar.VALID.value] == 0,
-        new_data[ETVar.FLAGS.value] | MSK_INPUT_NODATA,
-        new_data[ETVar.FLAGS.value],
-    )
     return new_data
 
 
@@ -586,10 +570,15 @@ def run(
     res: tuple[float]
         Output arrays
     """
-    # Get valid
-    valid = np.ones_like(data[ETVar.LST.value].data, dtype=np.int64)
+    # Get valid and flags
     if ETVar.VALID.value in data.data_vars:
-        valid = data[ETVar.VALID.value].data.astype(np.int64)
+        valid_arr = data[ETVar.VALID.value].data.astype(np.int64)
+    else:
+        valid_arr = np.ones_like(data[ETVar.LST.value].data, dtype=np.int64)
+    if ETVar.FLAGS.value in data.data_vars:
+        flags_arr = data[ETVar.FLAGS.value].data
+    else:
+        flags_arr = np.ones_like(data[ETVar.LST.value].data, dtype=FLAGS_TYPE)
 
     # Run STIC main loop
     le_arr, ef_arr, converged_arr = run_stic_model(
@@ -602,7 +591,7 @@ def run(
         data[ETVar.NET_RADIATION.value].data.astype(np.float32),
         data[ETVar.LONGWAVE_NET_RADIATION.value].data.astype(np.float32),
         data[ETVar.LOCAL_TIME.value].data.astype(np.float32),
-        valid=valid,
+        valid=valid_arr,
         threshold=threshold,
         nb_steps=nb_steps,
     )
@@ -612,12 +601,20 @@ def run(
     le_arr[converged_arr == 0] = np.nan
     et_arr[converged_arr == 0] = np.nan
     ef_arr[converged_arr == 0] = np.nan
+    flags_arr = np.where(
+        converged_arr == 0,
+        flags_arr | MSK_STIC_NOT_CONVERGED,
+        flags_arr,
+    )
+    valid_arr = valid_arr & converged_arr
     dims = data[ETVar.LST.value].dims
     return xr.Dataset(
         data_vars={
             ETVar.LE.value: (dims, le_arr),
             ETVar.ET.value: (dims, et_arr),
             ETVar.EF.value: (dims, ef_arr),
+            ETVar.VALID.value: (dims, valid_arr.astype(FLAGS_TYPE)),
+            ETVar.FLAGS.value: (dims, flags_arr.astype(FLAGS_TYPE)),
         },
         coords=data.coords,
         attrs=data.attrs.copy(),

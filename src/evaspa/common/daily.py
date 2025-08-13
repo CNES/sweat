@@ -9,6 +9,7 @@ import xarray as xr
 from pydantic import BaseModel, ConfigDict, Field
 
 from evaspa.common import solar
+from evaspa.common.constant import FLAGS_TYPE, MSK_PROCESSING_FAILED, ETVar
 from evaspa.logging import LoggerManager
 
 logger = LoggerManager.get_logger(__name__)
@@ -132,6 +133,9 @@ def extrapolate_at_daily_scale(
     daily: xr.DataArray
         Daily extrapolated data
     """
+    if len(data.data_vars) == 0:
+        msg = "EF dataset empty"
+        raise ValueError(msg)
     if use_topo and dem is None:
         logger.warning(
             "No DEM information to compute topographic corrections. Topographic corrections are disabled."
@@ -149,13 +153,30 @@ def extrapolate_at_daily_scale(
             logger.warning(msg)
     msg = f"Daily extrapolation performed on {keep}"
     logger.debug(msg)
+    # Get valid and flags
+    if ETVar.VALID.value in data.data_vars:
+        valid = data[ETVar.VALID.value]
+    else:
+        valid = xr.ones_like(
+            next(iter(data.data_vars.values())), dtype=FLAGS_TYPE
+        )
+    if ETVar.FLAGS.value in data.data_vars:
+        flags = data[ETVar.FLAGS.value]
+    else:
+        flags = xr.zeros_like(
+            next(iter(data.data_vars.values())), dtype=FLAGS_TYPE
+        )
     # Extrapolation
     if method.lower() == "toa":
         if data.attrs.get("date", None) is None:
             msg = "Impossible to extrapolate because the date is missing in metadata"
             raise ValueError(msg)
         daily = toa_daily_estimate(
-            data=data[keep], date=data.attrs["date"], dem=dem
+            data=data.drop_vars(
+                [ETVar.VALID.value, ETVar.FLAGS.value], errors="ignore"
+            )[keep],
+            date=data.attrs["date"],
+            dem=dem,
         )
     else:
         msg = f"Extrapolation method {method} unknown"
@@ -164,4 +185,15 @@ def extrapolate_at_daily_scale(
         daily.attrs = data.attrs.copy()
         for var in keep:
             daily[var].data = np.nan * np.ones_like(daily["var"].data)
+        valid = xr.zeros_like(
+            next(iter(data.data_vars.values())), dtype=FLAGS_TYPE
+        )
+        flags = xr.full_like(
+            next(iter(data.data_vars.values())),
+            MSK_PROCESSING_FAILED,
+            dtype=FLAGS_TYPE,
+        )
+
+    daily[ETVar.VALID.value] = valid
+    daily[ETVar.FLAGS.value] = flags
     return daily

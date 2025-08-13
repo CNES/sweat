@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import glob
+import json
 import os
 
 import numpy as np
@@ -22,6 +23,7 @@ from evaspa.evaspa.ef import (
     check_variability,
     compute,
     get_available_configuration,
+    get_variables_from_models,
     initialize,
     run,
     select,
@@ -653,6 +655,27 @@ def test_run(options) -> None:
 
 
 @pytest.mark.functional
+def test_run_exc() -> None:
+    """
+    Test run function
+    """
+    # Generate models
+    models = setup_models()
+    # Generate data
+    data = setup_data(
+        albedo=(0.0, 0.6),
+        valid=(0.0, 1.0),
+        dry=(330.0, -10.0),
+        wet=(300.0, 15.0),
+    )
+    with pytest.raises(
+        KeyError,
+        match=r"Variable fcover is missing to compute EF from EF models",
+    ):
+        run(models, data)
+
+
+@pytest.mark.functional
 def test_all() -> None:
     """
     Test complete
@@ -855,3 +878,27 @@ def test_get_available_configuration() -> None:
         if os.path.splitext(file)[1] == ".json"
     ]
     assert sorted(names) == sorted(configs)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("config_name", "expected"),
+    [
+        pytest.param("hsm_evaspa", ["lst", "albedo"]),
+        pytest.param("avignon_evaspa", ["lst", "albedo", "ndvi"]),
+    ],
+)
+def test_get_variables_from_models(config_name, expected):
+    """
+    Test function to get variables required by EF models
+    """
+    config_file = os.path.join(
+        os.path.dirname(evaspa.evaspa.ef.__file__),
+        "conf",
+        f"{config_name}.json",
+    )
+    with open(config_file) as f_config:
+        config = json.load(f_config)
+    models = [EFModel.create(m) for m in config["models"]]
+    res = get_variables_from_models(models)
+    assert sorted(res) == sorted(expected)

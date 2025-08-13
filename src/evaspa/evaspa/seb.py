@@ -9,6 +9,7 @@ import numpy.typing as npt
 import xarray as xr
 from pydantic import BaseModel, ConfigDict, Field
 
+from evaspa.common.constant import FLAGS_TYPE, ETVar
 from evaspa.common.flux import (
     compute_et_from_le,
     compute_rn,
@@ -408,6 +409,19 @@ def run(
     if len(ef.data_vars) == 0:
         msg = "EF dataset empty"
         raise ValueError(msg)
+    # Get valid and flags
+    if ETVar.VALID.value in ef.data_vars:
+        valid = data[ETVar.VALID.value]
+    else:
+        valid = xr.ones_like(
+            next(iter(ef.data_vars.values())), dtype=FLAGS_TYPE
+        )
+    if ETVar.FLAGS.value in data.data_vars:
+        flags = data[ETVar.FLAGS.value]
+    else:
+        flags = xr.zeros_like(
+            next(iter(ef.data_vars.values())), dtype=FLAGS_TYPE
+        )
     # Compute net radiation
     rn_xr = create_net_radiation(data, use_topo=use_topo)
 
@@ -420,9 +434,17 @@ def run(
         msg = "G/Rn ratio dataset empty"
         raise ValueError(msg)
     # Compute latent heat flux
-    le_xr = create_le(ef, rn_xr, ratio_xr)
+    le_xr = create_le(
+        ef.drop_vars([ETVar.VALID.value, ETVar.FLAGS.value], errors="ignore"),
+        rn_xr,
+        ratio_xr,
+    )
     merged_xr = merge_to_dataset(le_xr, method=merging, name="le")
     merged_xr["et"] = merged_xr["le"].copy(
         data=compute_et_from_le(merged_xr["le"])
     )
+    le_xr[ETVar.VALID.value] = valid
+    le_xr[ETVar.FLAGS.value] = flags
+    merged_xr[ETVar.VALID.value] = valid
+    merged_xr[ETVar.FLAGS.value] = flags
     return le_xr, merged_xr

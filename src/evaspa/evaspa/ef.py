@@ -22,6 +22,7 @@ from pydantic import (
 )
 from typing_extensions import Self
 
+from evaspa.common.constant import FLAGS_TYPE, ETVar
 from evaspa.debugging import register_debugging
 from evaspa.evaspa.edge import Edge, EdgeConfig, EdgeError
 from evaspa.evaspa.merging import MergeMethod, merge_to_dataset
@@ -174,7 +175,7 @@ class EFModel:
         if self.var not in data.data_vars:
             msg = f"{self.var} not in the dataset"
             raise EFModelError(msg)
-        if "lst" not in data.data_vars:
+        if ETVar.LST.value not in data.data_vars:
             msg = "lst not in the dataset"
             raise EFModelError(msg)
         if mask is not None:
@@ -184,8 +185,8 @@ class EFModel:
             data_masked = data.where(data[mask], drop=True)
         else:
             data_masked = data
-        self.wet_edge.fit(data_masked[self.var], data_masked["lst"])
-        self.dry_edge.fit(data_masked[self.var], data_masked["lst"])
+        self.wet_edge.fit(data_masked[self.var], data_masked[ETVar.LST.value])
+        self.dry_edge.fit(data_masked[self.var], data_masked[ETVar.LST.value])
 
     def tdry(self, var: npt.ArrayLike) -> npt.NDArray:
         """
@@ -248,7 +249,7 @@ class EFModel:
         if self.var not in data.data_vars:
             msg = f"{self.var} not in the dataset"
             raise EFModelError(msg)
-        if "lst" not in data.data_vars:
+        if ETVar.LST.value not in data.data_vars:
             msg = "lst not in the dataset"
             raise EFModelError(msg)
         if mask is not None:
@@ -259,13 +260,13 @@ class EFModel:
         else:
             data_masked = data
         ef = (
-            self.tdry(data_masked[self.var]) - np.array(data_masked["lst"])
+            self.tdry(data_masked[self.var])
+            - np.array(data_masked[ETVar.LST.value])
         ) / (
             self.tdry(data_masked[self.var]) - self.twet(data_masked[self.var])
         )
-        ef = np.where(ef > 1, 1, ef)
-        ef = np.where(ef < 0, 0, ef)
-        return data["lst"].copy(data=ef).assign_attrs(self.to_dict())
+        ef = np.clip(ef, 0, 1)
+        return data[ETVar.LST.value].copy(data=ef).assign_attrs(self.to_dict())
 
     def to_dict(self) -> dict:
         """
@@ -461,9 +462,29 @@ def initialize(config: dict) -> tuple[list[EFModel], dict[str, Any]]:
     return (models, efconfig.options.model_dump())
 
 
-def compute(
-    models: list[EFModel], data: xr.Dataset, mask: str | None = None
-) -> xr.Dataset:
+def get_variables_from_models(models: list[EFModel]) -> list[str]:
+    """
+    Description
+    -----------
+    Get variables required for EF models
+
+    Parameters
+    ----------
+    models : list[EFModel]
+        List of EF models
+
+    Returns
+    -------
+    variables: list[str]
+        List of variables required in EF models
+    """
+    variables = [ETVar.LST.value]
+    if len(models) > 0:
+        variables += [m.var for m in models]
+    return list(set(variables))
+
+
+def compute(models: list[EFModel], data: xr.Dataset) -> xr.Dataset:
     """
     Description
     -----------
@@ -481,11 +502,13 @@ def compute(
     ef: xr.Dataset
         Evaporative fraction
     """
-    # TODO: handle mask
+    mask = None
+    if ETVar.VALID.value in data.data_vars:
+        mask = ETVar.VALID.value
     ef = {}
     for m in models:
-        m.fit(data, mask)
-        ef[m.name] = m.compute(data, mask)
+        m.fit(data, mask=mask)
+        ef[m.name] = m.compute(data, mask=mask)
     return xr.Dataset(ef, coords=data.coords.copy(), attrs=data.attrs.copy())
 
 
@@ -513,7 +536,6 @@ def select(ef: xr.Dataset) -> xr.Dataset:
 def run(
     models: list[EFModel],
     data: xr.Dataset,
-    mask: str | None = None,
     selection: bool = False,
     merging: MergeMethod = MergeMethod.MEAN,
 ) -> tuple[xr.Dataset, xr.Dataset]:
@@ -542,8 +564,27 @@ def run(
     ef_merged : xr. Dataset
         Evaporative fraction merged
     """
-    # TODO: Handle mask
-    ef = compute(models, data, mask)
+    # Check if the variables required by the models are present in the data
+    variables = get_variables_from_models(models)
+    for v in variables:
+        if v not in data.data_vars:
+            msg = f"Variable {v} is missing to compute EF from EF models"
+            raise KeyError(msg)
+    ef = compute(models, data)
     if selection:
         ef = select(ef)
-    return ef, merge_to_dataset(ef, method=merging, name="ef")
+    # Get valid and flags
+    if ETVar.VALID.value in data.data_vars:
+        valid = data[ETVar.VALID.value]
+    else:
+        valid = xr.ones_like(data[ETVar.LST.value], dtype=FLAGS_TYPE)
+    if ETVar.FLAGS.value in data.data_vars:
+        flags = data[ETVar.FLAGS.value]
+    else:
+        flags = xr.zeros_like(data[ETVar.LST.value], dtype=FLAGS_TYPE)
+    merged = merge_to_dataset(ef, method=merging, name=ETVar.EF.value)
+    ef[ETVar.VALID.value] = valid
+    ef[ETVar.FLAGS.value] = flags
+    merged[ETVar.VALID.value] = valid
+    merged[ETVar.FLAGS.value] = flags
+    return ef, merged

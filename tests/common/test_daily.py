@@ -205,9 +205,9 @@ def test_extrapolate_toa_missing_date():
 @pytest.mark.parametrize(
     ("variables", "method", "use_topo", "expected"),
     [
-        pytest.param(["var1"], "toa", False, 1),
-        pytest.param(["var1", "var2", "var3"], "toa", True, 3),
-        pytest.param(None, "toa", True, 3),
+        pytest.param(["var1"], "toa", False, 3),
+        pytest.param(["var1", "var2", "var3"], "toa", True, 5),
+        pytest.param(None, "toa", True, 5),
     ],
 )
 def test_extrapolate_at_daily_scale(variables, method, use_topo, expected):

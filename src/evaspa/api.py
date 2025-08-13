@@ -10,7 +10,7 @@ import pandas as pd
 import xarray as xr
 
 from evaspa.common import daily, filter, io
-from evaspa.common.constant import MSK_INPUT_FILTERED, ETVar
+from evaspa.common.constant import ETVar
 from evaspa.common.io import InputConfig
 from evaspa.debugging import DebuggingConfig, configure_debugging
 from evaspa.evaspa import ef, seb, tiling
@@ -182,21 +182,29 @@ def run_evaspa(
         debug_config = DebuggingConfig()
     configure_debugging(**debug_config.model_dump())
     logger.debug("Check configuration: OK")
+    # Initialize EF models
+    models, options = ef.initialize(params_config.ef.model_dump())
+    variables = ef.get_variables_from_models(models=models)
     # Filter data
-    data["valid"] = filter.determine_valid_pixels(
-        data, **params_config.filtering.model_dump()
+    valid_mask, flags_mask = filter.find_valid_pixels(
+        data,
+        nan_config=variables,
+        valid_config=params_config.filtering.model_dump(),
     )
+    data[ETVar.VALID.value] = valid_mask
+    data[ETVar.FLAGS.value] = flags_mask
     logger.debug("Filter data: OK")
     # Check variablity
     if not ef.check_variability(
-        data["lst"], mask=data["valid"], **params_config.ef.check.model_dump()
+        lst=data[ETVar.LST.value],
+        mask=data[ETVar.VALID.value],
+        **params_config.ef.check.model_dump(),
     ):
         logger.error("Variability criteria not respected")
         return None
     logger.debug("Check variablity: OK")
     # Compute EF
-    models, options = ef.initialize(params_config.ef.model_dump())
-    ef_xr, inst_xr = ef.run(models, data, mask="valid", **options)
+    ef_xr, inst_xr = ef.run(models, data, **options)
     logger.debug("Compute EF: OK")
     # Compute LE
     _, merged_xr = seb.run(data, ef_xr, **params_config.seb.model_dump())
@@ -205,16 +213,18 @@ def run_evaspa(
     )
     logger.debug("Compute LE: OK")
     # Extrapolate at daily scale
-    # Extract DEM data
+    # Extract DEM datamask
     dem = None
     dem_data = [
-        d for d in data.data_vars if d in ["elevation", "slope", "aspect"]
+        d
+        for d in data.data_vars
+        if d in [ETVar.HEIGHT.value, ETVar.SLOPE.value, ETVar.ASPECT.value]
     ]
     if len(dem_data) > 0:
         dem = data[dem_data]
     daily_xr = daily.extrapolate_at_daily_scale(
         inst_xr,
-        variables=["le", "et"],
+        variables=[ETVar.LE.value, ETVar.ET.value],
         dem=dem,
         **params_config.daily.model_dump(),
     )
@@ -261,15 +271,23 @@ def run_stic(
     data = stic.prepare(data, **params_config.prepare.model_dump())
     logger.debug("Prepare input data: OK")
     # Filter data
-    valid_mask = filter.filter_valid_pixels(
-        data, params_config.filtering.model_dump()
+    valid_mask, flags_mask = filter.find_valid_pixels(
+        data,
+        nan_config=[
+            ETVar.LST.value,
+            ETVar.ALBEDO.value,
+            ETVar.TEMPERATURE.value,
+            ETVar.DEWPOINT_TEMPERATURE.value,
+            ETVar.FCOVER.value,
+            ETVar.LAI.value,
+            ETVar.EMISSIVITY.value,
+            ETVar.NET_RADIATION.value,
+            ETVar.LONGWAVE_NET_RADIATION.value,
+        ],
+        valid_config=params_config.filtering.model_dump(),
     )
-    data[ETVar.VALID.value] = data[ETVar.VALID.value] & valid_mask
-    data[ETVar.FLAGS.value] = xr.where(
-        valid_mask == 0,
-        data[ETVar.FLAGS.value] | MSK_INPUT_FILTERED,
-        data[ETVar.FLAGS.value],
-    )
+    data[ETVar.VALID.value] = valid_mask
+    data[ETVar.FLAGS.value] = flags_mask
     logger.debug("Filter input data: OK")
     # Compute instant ET/LE
     inst_xr = stic.run(data, **params_config.stic.model_dump())

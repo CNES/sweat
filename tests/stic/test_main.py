@@ -346,7 +346,7 @@ def test_run_stic_model(
     np.testing.assert_equal(cv, converged_expected)
 
 
-@pytest.mark.unit
+@pytest.mark.functional
 def test_prepare():
     """
     Test function for STIC prepare function
@@ -373,27 +373,8 @@ def test_prepare():
             "crs": 4326,
         },
     )
-    valid_ref = xr.DataArray(
-        data=np.array([[True, False], [False, True]]),
-        dims=["y", "x"],
-        coords={
-            "y": ("y", np.array([40.0, 40.1])),
-            "x": ("x", np.array([0, 0.1])),
-        },
-    )
-    flags_ref = xr.DataArray(
-        data=np.array([[0, 1], [1, 0]]),
-        dims=["y", "x"],
-        coords={
-            "y": ("y", np.array([40.0, 40.1])),
-            "x": ("x", np.array([0, 0.1])),
-        },
-    )
-
     res = main.prepare(data)
     assert res
-    xr.testing.assert_equal(res[ETVar.VALID.value], valid_ref)
-    xr.testing.assert_equal(res[ETVar.FLAGS.value], flags_ref)
 
 
 @pytest.mark.unit
