@@ -1,4 +1,4 @@
-# Overview
+# Usage
 
 ## Command-line interface
 
@@ -83,10 +83,10 @@ The table below lists the expected nomenclature for band names.
 | Fcover | `fcover` |
 | Albedo | `albedo` |
 
-Only consider one LST data is considered in the input data. The LAnd Surface temperature is expected to be in Kelvin.  
+Only consider one LST data is considered in the input data. The Land Surface temperature is expected to be in Kelvin.  
   
 It is possible to use several radiation data. 
-The only constraint is in the naming convention. For each radiation data, te code expects to have two bands, respectively named `rsdXXXX` for shortwave radiation and `rldXXXX` for longwave radiation.
+The only constraint is in the naming convention. For each radiation data, the code expects to have two bands, respectively named `rsdXXXX` for shortwave radiation and `rldXXXX` for longwave radiation.
 *For example*: if one want to take into account 3 kinds of radiation (MSG, ERA5, MERRA), one can have in the input data the following bands: `rsd_msg`/`rld_msg` for MSG data,
 `rsd_era5`/`rld_rea5` for ERA5 data and `rsd_merra`/`rld_merra` for MERRA data. The code will then compute 3 net radiations corresponding to the each radiation datasets.
 
@@ -106,7 +106,7 @@ Example:
 ```
 ### Params section
 
-The **params** section describe the parameters used for the processing. See [detailed parameters configuration](configuration.md)
+The **params** section describe the parameters used for the processing. See [detailed parameters configuration](evaspa/configuration.md)
 
 ### Debug section
 
@@ -136,22 +136,19 @@ output_dir/
 out/
 ├── config.json
 ├── debug
-│   ├── evaspa.ef_run_0.nc
-│   ├── evaspa.ef_run_1.nc
-│   ├── evaspa.filter_determine_valid_pixels.nc
-│   ├── evaspa.seb_create_net_radiation.nc
-│   ├── evaspa.seb_create_ratio.nc
-│   ├── evaspa.seb_run_0.nc
-│   └── evaspa.seb_run_1.nc
 ├── evaspa_daily
 │   ├── evaspa_daily_et.tif
-│   └── evaspa_daily_le.tif
-└── evaspa_inst
-    ├── evaspa_inst_ef.tif
-    ├── evaspa_inst_et.tif
-    ├── evaspa_inst_le.tif
-    ├── evaspa_inst_uncertainty_ef.tif
-    └── evaspa_inst_uncertainty_le.tif
+│   ├── evaspa_daily_flags.tif
+│   ├── evaspa_daily_le.tif
+│   └── evaspa_daily_valid.tif
+├── evaspa_inst
+│   ├── evaspa_inst_ef.tif
+│   ├── evaspa_inst_et.tif
+│   ├── evaspa_inst_flags.tif
+│   ├── evaspa_inst_le.tif
+│   ├── evaspa_inst_uncertainty_ef.tif
+│   ├── evaspa_inst_uncertainty_le.tif
+│   └── evaspa_inst_valid.tif
 ```
 
 * `config.json` corresponds to the exact configurtaion used to run EVASPA.

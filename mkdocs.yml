@@ -1,4 +1,4 @@
-site_name: EVASPA Documentation
+site_name: Evapotranspiration for TRISHNA Documentation
 
 theme:
   name: "material"
@@ -114,16 +114,22 @@ nav:
   - Home: 
     - Overview: index.md
     - Getting started: getting_started.md
-    - Algorithm overview: algorithm.md
-  - Usage: 
-    - Overview: usage.md
+  - EVASPA: 
+    - Algorithm: evaspa/algorithm.md
+    - Usage: evaspa/usage.md
     - Configuration:
-      - Processing steps: configuration.md
-      - EF model: ef_model.md
+      - Processing steps: evaspa/configuration.md
+      - EF model: evaspa/ef_model.md
+  - STIC:
+    - Algorithm: stic/algorithm.md
+    - Usage: stic/usage.md
+    - Configuration:
+      - Processing steps: stic/configuration.md
   - Dev: dev.md
   - Tutorials:
     - Overview: tutorials.md
     - EVASPA notebook: notebooks/run_evaspa.ipynb
+    - STIC notebook: notebooks/run_stic.ipynb
   - API: api/
   - todo.md
 

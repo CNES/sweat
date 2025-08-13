@@ -1,44 +1,54 @@
 # Detailed parameters configuration for processing steps
 
+
 ## Filtering step
 
-Describe how to identify valid pixels
+The configuration describes how to find valid pixels. It is a dictionary.
+The key corresponds to the variable to look at. 
+The value is either a single condition or a combined conditionThe key correspond to the data variables.
 
-| Name | Description | Type | Mandatory | Default value | Possible value |
-|------|-------------|------|-----------|---------------|----------------|
-| cloud | Name of variables that contains cloud mask in input data. If not provided, cloud mask is not applied | str | no | null | - |
-| water | Name of variables that contains water mask in input data. If not provided, water mask is not applied | str | no | null | - |
-| qa | Name of variables that contains quality mask in input data. If not provided, qa mask is not applied | str | no | null | - |
-| zones | Name of variables that contains valid zone mask in input data. If not provided, valid zone mask is not applied | str | no | null | - |
-| cover | Name of variables that contains land cover / land use mask in input data. If not provided, land cover / land use mask is not applied | str | no | null | - |
-| config | Parameters for the filter. The parameters correspond to the values used for masking | dict | no | - | - |
+### Simple condition
+
+A simple condition is composed of an operator and a value.
+The list of available operators are `"==", "!=", ">", ">=", "<", "<="`.
+
+```json
+{"op": "OPERATOR", "value": "VALUE"}
+```
+
+Example
+```json
+{"op": "==", "value": 0}
+```
+
+### Combined condition
+
+A combined condition offers the possibility to use **and** or **or** operator to combine a list of several simple conditions. 
+
+Example
+```json
+"and": [{"op": "!=", "value": 40}, {"op": "!=", "value": 50}]
+```
+
+
+### Example
 
 ```json
 {
     "filtering": {
-        "cloud": null,
-        "water": null,
-        "qa": null,
-        "zones": null,
-        "cover": null,
-        "config": {
-            "cloud": 0,
-            "water": 0,
-            "qa": 0,
-            "zones": 0,
-            "cover": [
-                10,
-                60,
-                80
-            ]
-        }
+        "lst": {"and": [{"op": ">", "value": 291}, {"op": "<", "value": 298}]},
+        "cloud": {"op": "!=", "value": 1},
+        "water": {"op": "!=", "value": 1},
+        "lulc": {
+            "and": [{"op": "!=", "value": 40}, {"op": "!=", "value": 50}],
+        },
     }
 }
 ```
 
 ## Evaporative fraction step
 
-Describe the parameters for EF processing step
+This configuration describes the parameters for EF processing step.
 
 | Name | Description | Type | Mandatory | Default value | Possible value |
 |------|-------------|------|-----------|---------------|----------------|
@@ -120,7 +130,7 @@ Describe the parameters for EF processing step
 
 ## Latent heat flux step
 
-Describe the parameters for EF processing step
+This configuration describes the parameters for SEB processing step.
 
 | Name | Description | Type | Mandatory | Default value | Possible value |
 |------|-------------|------|-----------|---------------|----------------|
@@ -142,7 +152,7 @@ Describe the parameters for EF processing step
 
 ## Daily extrapolation step
 
-Describe the parameters for EF processing step
+This configuration describes the parameters for daily extrapolation processing step
 
 | Name | Description | Type | Mandatory | Default value | Possible value |
 |------|-------------|------|-----------|---------------|----------------|

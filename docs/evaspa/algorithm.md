@@ -1,4 +1,4 @@
-# Overview
+# Algorithm
 
 EVASPA is an ensemble approach which uses a variety of contextual algorithms based on the evaporative fraction models. 
 The average and dispersion of the results of these models are then computed to get the final EF fraction, and an idea of its reliability.
