@@ -1,4 +1,8 @@
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
+"""
+Module containing functions for sun angles computation, top of
+atmosphere solar radiation
+"""
 
 from __future__ import annotations
 
@@ -35,8 +39,6 @@ def _to_lonlat(
 
 def _to_localtime(date: dt.datetime, lat: float, lon: float) -> dt.datetime:
     """
-    Description
-    -----------
     Convert UTC time to local time
 
     Parameters
@@ -67,8 +69,6 @@ def _to_localtime(date: dt.datetime, lat: float, lon: float) -> dt.datetime:
 
 def _is_leap_year(year) -> bool:
     """
-    Description
-    -----------
     Determine whether a year is a leap year.
 
     Parameters
@@ -92,8 +92,6 @@ def _to_date_of_year(date: dt.datetime) -> int:
 
 def _day_angle(date: dt.datetime, offset: int = 1) -> float:
     """
-    Description
-    -----------
     Compute the day angle for the Earth's orbit around the Sun.
 
     Parameters
@@ -115,8 +113,6 @@ def _day_angle(date: dt.datetime, offset: int = 1) -> float:
 
 def _fractional_year_angle(date: dt.datetime) -> float:
     """
-    Description
-    -----------
     Compute the fractional year angle for the Earth's orbit around the Sun.
 
     Parameters
@@ -136,9 +132,11 @@ def _fractional_year_angle(date: dt.datetime) -> float:
 
 def _equation_of_time_milne(date: dt.datetime) -> float:
     """
-    Description
+    Compute equation of time
+
+    Notes
     -----------
-    Equation of time from
+    The method used comes from
     R. M. Milne, Note on the Equation, of Time,
     The Mathematical Gazette, vol. 10, no. 155,
     pp. 372 - 375, 1921.
@@ -165,9 +163,11 @@ def _equation_of_time_milne(date: dt.datetime) -> float:
 
 def _equation_of_time_noaa(date: dt.datetime) -> float:
     """
-    Description
+    Compute equation of time
+
+    Notes
     -----------
-    Equation of time from NOAA
+    The method used comes from NOAA
     https://gml.noaa.gov/grad/solcalc/solareqns.PDF
 
     Parameters
@@ -197,9 +197,10 @@ def _hour_angle(
     time: dt.datetime, lon: npt.ArrayLike, lat: npt.ArrayLike
 ) -> npt.NDArray:
     """
-    Description
-    -----------
     Compute hour angle in local solar time.
+
+    Notes
+    -----
     Zero correspond to local solar noon.
 
     Parameters
@@ -251,9 +252,10 @@ def convert_to_local_time(
     crs: CRS | None = None,
 ) -> npt.NDArray:
     """
-    Description
-    -----------
-    Converting time from UTM to local solar time (in seconds)
+    Convert time from UTM to local solar time (in seconds)
+
+    Notes
+    -----
     See https://www.pveducation.org/pvcdrom/properties-of-sunlight/solar-time
 
     Parameters
@@ -267,8 +269,8 @@ def convert_to_local_time(
     crs : pyproj.CRS
         Coordinate Reference System
 
-    Return
-    ------
+    Returns
+    -------
     local_time: np.array
         Local solar time
     """
@@ -313,6 +315,8 @@ def _sun_zenith_angle(
     Compute the sun zenith angle with an analytical
     expression based on spherical troginometry.
 
+    Notes
+    -----
     .. See `PVCDROM: Elevation Angle
        <https://www.pveducation.org/pvcdrom/properties-of-sunlight/
        elevation-angle>`_
@@ -347,6 +351,8 @@ def _sun_azimuth_angle(
     Compute the sun azimuth angle with an analytical
     expression based on spherical troginometry.
 
+    Notes
+    -----
     .. See `PVCDROM: Azimuth Angle
        <https://www.pveducation.org/pvcdrom/properties-of-sunlight/
        azimuth-angle>`_
@@ -400,9 +406,10 @@ def _declination_angle(date: dt.datetime) -> float:
 
 def _sun_earth_distance(date: dt.datetime) -> float:
     """
-    Description
-    -----------
     Compute the Sun-Earth distance factor at the given day.
+
+    Notes
+    -----
     The Sun-Earth distance factor is given by
     Spencer, J. W. (1971). Fourier series representation
     of the position of the sun. Search, 2(5), 172-172.
@@ -412,8 +419,8 @@ def _sun_earth_distance(date: dt.datetime) -> float:
     date: dt.datetime
         Date
 
-    Return
-    ------
+    Returns
+    -------
     factor: float
         Sun-Earth distance factor
     """
@@ -429,8 +436,6 @@ def _sun_earth_distance(date: dt.datetime) -> float:
 
 def _sunrise_angle(date: dt.datetime, lat: npt.ArrayLike) -> npt.NDArray:
     """
-    Description
-    -----------
     Estimate sunrise angle (in radians)
 
     Parameters
@@ -471,6 +476,8 @@ def compute_sun_angles(
     Compute the sun zenith angle with an analytical
     expression based on spherical troginometry.
 
+    Notes
+    -----
     .. See `PVCDROM: Elevation Angle
        <https://www.pveducation.org/pvcdrom/properties-of-sunlight/
        elevation-angle>`_
@@ -517,10 +524,11 @@ def compute_toa_solar_radiation_from_sun_angles(
     aspect: npt.ArrayLike | None = None,
 ) -> npt.NDArray:
     """
-    Description
-    -----------
     Compute the instant solar radiation (no cloud, no atmosphere)
     for a given position to strictly horizontal land surfaces.
+
+    Notes
+    -----
     The formula is given by
     E_TOA = E0 x v(day) x cos(theta)
     with
@@ -549,8 +557,8 @@ def compute_toa_solar_radiation_from_sun_angles(
     aspect: np.array_like
         Aspect
 
-    Return
-    ------
+    Returns
+    -------
     toa_irradiance: np.array
         TOA instant irradiance (W.m-2)
     """
@@ -579,10 +587,11 @@ def compute_toa_solar_radiation_from_hour_angle(
     aspect: npt.ArrayLike | None = None,
 ) -> npt.NDArray:
     """
-    Description
-    -----------
     Compute the instant solar radiation (no cloud, no atmosphere)
     for a given position to strictly horizontal land surfaces.
+
+    Notes
+    -----
     The formula is given by
     E_TOA = E0 x v(day) x cos(theta)
     with
@@ -631,8 +640,8 @@ def compute_toa_solar_radiation_from_hour_angle(
     aspect: np.array_like
         Aspect
 
-    Return
-    ------
+    Returns
+    -------
     toa_irradiance: np.array
         TOA instant irradiance (W.m-2)
     """
@@ -690,10 +699,11 @@ def compute_toa_solar_radiation(
     aspect: npt.ArrayLike | None = None,
 ) -> npt.NDArray:
     """
-    Description
-    -----------
     Compute the instant solar radiation (no cloud, no atmosphere)
     for a given position to strictly horizontal land surfaces.
+
+    Notes
+    -----
     The formula is given by
     E_TOA = E0 x v(day) x cos(theta)
     with
@@ -724,8 +734,8 @@ def compute_toa_solar_radiation(
     aspect: np.array_like
         Aspect
 
-    Return
-    ------
+    Returns
+    -------
     toa_irradiance: np.array
         TOA instant irradiance (W.m-2)
     """
@@ -743,10 +753,11 @@ def _toa_daily_irradiance(
     crs: CRS | None = None,
 ) -> npt.NDArray:
     """
-    Description
-    -----------
     Compute the daily solar radiation (no atmosphere, no cloud)
     for a given position to strictly horizontal land surfaces.
+
+    Notes
+    -----
     The formula is given by
     Richard G. Allen, Ricardo Trezza, Masahiro Tasumi,
     Analytical integrated functions for daily solar radiation on slopes,
@@ -764,8 +775,8 @@ def _toa_daily_irradiance(
     crs : pyproj.CRS
         Coordinate Reference System
 
-    Return
-    ------
+    Returns
+    -------
     toa_irradiance: float
         TOA daily irradiance (J.m-2.day-1)
     """
@@ -812,11 +823,13 @@ def compute_daily_toa_solar_radiation_from_hour_angle(
     aspect: npt.ArrayLike | None = None,
 ) -> npt.NDArray:
     """
-    Description
-    -----------
     Compute the instant solar radiation (no cloud, no atmosphere)
     for a given position for inclined surfaces having specified slope
-    and aspect. For a specific time, the formula is given by
+    and aspect.
+
+    Notes
+    -----
+    For a specific time, the formula is given by
     E_TOA = E0 x v(day) x cos(theta)
     with
         - E0 is the solar constant corresponding to the
@@ -865,8 +878,8 @@ def compute_daily_toa_solar_radiation_from_hour_angle(
     aspect: np.array_like
         Aspect
 
-    Return
-    ------
+    Returns
+    -------
     toa_irradiance: float
         TOA daily irradiance (J.m-2.day-1)
     """
@@ -935,11 +948,13 @@ def compute_daily_toa_solar_radiation(
     aspect: npt.ArrayLike | None = None,
 ) -> npt.NDArray:
     """
-    Description
-    -----------
     Compute the instant solar radiation (no cloud, no atmosphere)
     for a given position for inclined surfaces having specified slope
-    and aspect. For a specific time, the formula is given by
+    and aspect.
+
+    Notes
+    -----
+    For a specific time, the formula is given by
     E_TOA = E0 x v(day) x cos(theta)
     with
         - E0 is the solar constant corresponding to the
@@ -986,8 +1001,8 @@ def compute_daily_toa_solar_radiation(
     aspect: np.array_like
         Aspect
 
-    Return
-    ------
+    Returns
+    -------
     toa_irradiance: float
         TOA daily irradiance (J.m-2.day-1)
     """
@@ -1039,9 +1054,11 @@ def compute_daily_toa_solar_radiation(
 
 def _to_fdiff(rsd: float, r0: float, sza: float) -> float:
     """
-    Description
-    -----------
-    Compute fraction of diffuse radiation. the computation is based on
+    Compute fraction of diffuse radiation.
+
+    Notes
+    -----
+    The computation is based on
     C.J.T. Spitters, H.A.J.M. Toussaint, J. Goudriaan, Separating
     the diffuse and direct component of global radiation and
     its implications for modeling canopy photosynthesis Part I.
@@ -1057,8 +1074,8 @@ def _to_fdiff(rsd: float, r0: float, sza: float) -> float:
     sza: float
         Sun Zenith Angle (in degrees)
 
-    Return
-    ------
+    Returns
+    -------
     fdiff: np.array
         Fraction of diffuse radiation
     """
@@ -1082,10 +1099,12 @@ def compute_diffuse_fraction(
     crs: CRS | None = None,
 ) -> xr.DataArray:
     """
-    Description
-    -----------
     This method computes the fraction of diffuse radiation
-    from the global radiation. We use the relationship between
+    from the global radiation.
+
+    Notes
+    -----
+    We use the relationship between
     the fraction of diffuse radiation (Rdiff) compared to
     global radiation data (Rsd) and the fraction of global
     radiation data (Rsd) compared to  theoretical radiation (R0),
@@ -1110,8 +1129,8 @@ def compute_diffuse_fraction(
     crs: CRS
         Coordinate Reference System
 
-    Return
-    ------
+    Returns
+    -------
     fdiff: np.array
         Fraction of diffuse radiation
     """

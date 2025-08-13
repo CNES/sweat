@@ -1,4 +1,7 @@
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
+"""
+Module containing functions for merging datasets
+"""
 
 import warnings
 from enum import Enum
@@ -24,8 +27,6 @@ def merge(
     data: xr.Dataset, method: MergeMethod = MergeMethod.MEAN
 ) -> tuple[xr.DataArray, xr.DataArray]:
     """
-    Description
-    -----------
     Merge data and compute uncertainty
 
     Parameters
@@ -74,8 +75,6 @@ def merge_to_dataset(
     name: str = "merged",
 ) -> xr.Dataset:
     """
-    Description
-    -----------
     Merge data and create a dataset
 
     Parameters

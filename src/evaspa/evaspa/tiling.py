@@ -36,6 +36,7 @@ def groupby_multipolygon(
     Returns
     -------
     aggregated: GeoDataFrame
+        Grouped multipolygons
     """
     data = df.drop(columns=["overlap_geometry"])
     aggfunc = {
@@ -78,12 +79,13 @@ def intersection(
     ----------
     gdf1: GeoDataFrame
     gdf2: GeoDataFrame
-    by: str, default="id"
-        Column name used to identify elements in gdf1
+    by: str
+        Column name used to identify elements in gdf1 (default = "id")
 
     Returns
     -------
     inter: GeoDataFrame
+        Intersection dataframe
     """
     inter = gpd.GeoDataFrame(
         gpd.overlay(
@@ -308,6 +310,7 @@ def generate_adjacents(
     Returns
     -------
     adjs: DataFrame
+        Adjacents
     """
     if "id" not in tiles.columns:
         msg = "Column id is missing"
@@ -395,10 +398,12 @@ def initialize_regroup(
     by: str, default="id"
         Name of the column containing the tile ID
 
-    Return
-    ------
+    Returns
+    -------
     tile_df: DataFrame
+        Tile list
     group_df: DataFrame
+        Group list
     """
     tile_df = pd.DataFrame(columns=["group", "next"], index=tiles[by])
     tile_df["group"] = tile_df.index
@@ -435,9 +440,10 @@ def _get_adjacents(
     by: str
         Name of column containg adjacent tiles
 
-    Return
-    ------
+    Returns
+    -------
     adj_list: List[str]
+        Adjacent list
     """
     adj_list: list[str] = []
     for tile in tile_ids:
@@ -456,8 +462,8 @@ def _join_group(
     """
     Join tile to a group if the number of valid pixel is below a threshold
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     tiles: DataFrame
         List of tiles with its ID, its group and the possible next group
     adjs: DataFrame
@@ -518,8 +524,8 @@ def regroup(
     """
     Regroup tiles
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     tiles: DataFrame
         List of tiles with its ID, its group and the possible next group
     adjs: DataFrame
@@ -531,8 +537,8 @@ def regroup(
     land: Optinal(GeoDataFrame)
         Land polygons
 
-    Return
-    ------
+    Returns
+    -------
     tile_df: DataFrame
     group_df: DataFrame
     """
@@ -571,8 +577,8 @@ def write_regroup(
     """
     Write groups of tiles in a shapefile
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     df: DataFrame
         List of groups
     filename: str

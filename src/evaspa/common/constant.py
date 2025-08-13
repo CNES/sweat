@@ -1,3 +1,8 @@
+# Copyright: (c) 2025 CESBIO / Centre National d'Etudes Spatiales
+"""
+Module for constant management
+"""
+
 from enum import Enum
 
 import numpy as np

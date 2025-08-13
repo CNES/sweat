@@ -1,4 +1,7 @@
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
+"""
+Module for Evaporative Fraction model management
+"""
 
 from __future__ import annotations
 
@@ -65,8 +68,6 @@ class EFCheckConfig(BaseModel):
 
 def update_efconfig(v: Any) -> list[EFModel]:
     """
-    Description
-    -----------
     Update EF models with a configuration file
     stored in conf directory
 
@@ -98,8 +99,6 @@ def update_efconfig(v: Any) -> list[EFModel]:
 
 def get_available_configuration() -> list[str]:
     """
-    Description
-    -----------
     Return the names of available configuration
     for preconfigured EF models
 
@@ -159,8 +158,6 @@ class EFModel:
 
     def fit(self, data: xr.Dataset, mask: str | None = None) -> None:
         """
-        Description
-        -----------
         Method to estimate dry and wet edges.
         data is a xarray.Dataset which must conatin "lst"
         and "var" as data varaibles.
@@ -190,8 +187,6 @@ class EFModel:
 
     def tdry(self, var: npt.ArrayLike) -> npt.NDArray:
         """
-        Description
-        -----------
         Compute dry temperature
 
         Parameters
@@ -208,8 +203,6 @@ class EFModel:
 
     def twet(self, var: npt.ArrayLike) -> npt.NDArray:
         """
-        Description
-        -----------
         Compute wet temperature
 
         Parameters
@@ -228,8 +221,6 @@ class EFModel:
         self, data: xr.Dataset, mask: str | None = None
     ) -> xr.DataArray:
         """
-        Description
-        -----------
         Method to compute evaporative fraction
 
         Parameters
@@ -308,8 +299,6 @@ class EFModel:
     @classmethod
     def check(cls, config: dict) -> EFModelConfig:
         """
-        Description
-        -----------
         Check an EF model configuration
 
         Parameters
@@ -332,9 +321,10 @@ class EFModel:
     @classmethod
     def create(cls, config: dict) -> EFModel:
         """
-        Description
-        -----------
         Create an EF model from a configuration.
+
+        Notes
+        -----
         Evaporative fraction EF represents the ratio of latent heat flux
         to available energy is computed from the position of
         the surface temperature value respectively
@@ -391,9 +381,10 @@ def check_variability(
     threshold: float = 2.0,
 ) -> bool:
     """
-    Description
-    -----------
     Check variability of Land Surface Temperature
+
+    Notes
+    -----
     To be applicable, EVASPA requires a certain
     variability in the input data (surface temperature,
     albedo, fraction cover) in order to be able to
@@ -438,8 +429,6 @@ def check_variability(
 
 def initialize(config: dict) -> tuple[list[EFModel], dict[str, Any]]:
     """
-    Description
-    -----------
     Initialize a list of EF models and processing options from a
     configuration
 
@@ -464,8 +453,6 @@ def initialize(config: dict) -> tuple[list[EFModel], dict[str, Any]]:
 
 def get_variables_from_models(models: list[EFModel]) -> list[str]:
     """
-    Description
-    -----------
     Get variables required for EF models
 
     Parameters
@@ -486,8 +473,6 @@ def get_variables_from_models(models: list[EFModel]) -> list[str]:
 
 def compute(models: list[EFModel], data: xr.Dataset) -> xr.Dataset:
     """
-    Description
-    -----------
     Compute evaporative fraction of a list of EF models
 
     Parameters
@@ -514,8 +499,6 @@ def compute(models: list[EFModel], data: xr.Dataset) -> xr.Dataset:
 
 def select(ef: xr.Dataset) -> xr.Dataset:
     """
-    Description
-    -----------
     Select evaporative fraction from a list
     TODO: Implement selection
 
@@ -540,8 +523,6 @@ def run(
     merging: MergeMethod = MergeMethod.MEAN,
 ) -> tuple[xr.Dataset, xr.Dataset]:
     """
-    Description
-    -----------
     Compute evaporative fraction using models.
 
     Parameters

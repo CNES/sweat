@@ -1,4 +1,7 @@
 # Copyright: (c) 2025 CESBIO / Centre National d'Etudes Spatiales
+"""
+Module for flux computations
+"""
 
 from __future__ import annotations
 
@@ -29,10 +32,11 @@ def correct_direct_radiation(
     aspect: npt.ArrayLike,
 ) -> npt.NDArray:
     """
-    Description
-    -----------
     Correct instant direct downward shortwave radiation
     for arbitrary terrains and sun positions.
+
+    Notes
+    -----
     The instant direct downward shortwave radiation has been computed
     by taking cos(SZA) as the cosine of the solar incidence angle
     relative to the normal to the land surface.
@@ -59,8 +63,8 @@ def correct_direct_radiation(
     aspect: np.array_like
         Aspect
 
-    Return
-    ------
+    Returns
+    -------
     rsd_corr: np.array
         Direct downward shortwave radiation corrected with topography
     """
@@ -87,10 +91,11 @@ def correct_shortwave_radiation(
     crs: CRS | None = None,
 ) -> xr.DataArray:
     """
-    Description
-    -----------
     This method corrects instant direct downward shortwave radiation
     for arbitrary terrains and sun positions.
+
+    Notes
+    -----
     The instant direct downward shortwave radiation has been computed
     by taking cos(SZA) as the cosine of the solar incidence angle
     relative to the normal to the land surface.
@@ -120,8 +125,8 @@ def correct_shortwave_radiation(
     crs: CRS
         Coordinate Reference System
 
-    Return
-    ------
+    Returns
+    -------
     rsd_corr: xr.DataArray
         Corrected shortwave radiation
     """
@@ -169,8 +174,6 @@ def compute_rn(
     rld: npt.ArrayLike,
 ) -> tuple[npt.NDArray, npt.NDArray]:
     """
-    Description
-    -----------
     Compute net radiation Rn
 
     Parameters
@@ -200,10 +203,11 @@ def create_net_radiation(
     data: xr.Dataset, use_topo: bool = False
 ) -> tuple[xr.Dataset, xr.Dataset]:
     """
-    Description
-    -----------
     Compute net radiation dataset and longwave net radiation
     dataset.
+
+    Notes
+    -----
     The net radiation is computed from land surface temperature,
     land surface emissivity, albedo and downward longwave and
     shortwave radiations.
@@ -307,11 +311,20 @@ def compute_et_from_le(
     le: npt.ArrayLike, temperature: float | None = None
 ) -> npt.NDArray:
     """
-    Description
-    -----------
     Compute ET in mm from LE in W (J.m-2).
     ET = LE / L with L is the latent heat vaoprization of water.
-    #TODO
+
+    Parameters
+    ----------
+    le : np.array_like
+        Latent heat flux
+    temperature : float
+        Temperature
+
+    Returns
+    -------
+    et: np.array
+        Evapotranspiration
     """
     if temperature is None:
         latent_heat = LATENT_HEAT_VAPORIZATION

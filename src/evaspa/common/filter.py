@@ -1,4 +1,7 @@
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
+"""
+Module for filtering functions
+"""
 
 from __future__ import annotations
 
@@ -48,7 +51,7 @@ class CompositeCondition(BaseModel):
 ConditionType = SimpleCondition | CompositeCondition
 
 # Allow forward references in CompositeCondition
-# CompositeCondition.model_rebuild()
+CompositeCondition.model_rebuild()
 
 
 # Final config mapping variable names to conditions
@@ -58,8 +61,6 @@ class FilteringConfig(RootModel):
 
 def eval_condition(da: xr.DataArray, cond: dict) -> xr.DataArray:
     """
-    Description
-    -----------
     Evaluate a condition for a dataarray
 
     Parameters
@@ -80,8 +81,6 @@ def eval_condition(da: xr.DataArray, cond: dict) -> xr.DataArray:
 
 def apply_condition(da: xr.DataArray, cond: dict) -> xr.DataArray:
     """
-    Description
-    -----------
     Apply a condition on a dataarray
 
     Parameters
@@ -121,8 +120,6 @@ def apply_condition(da: xr.DataArray, cond: dict) -> xr.DataArray:
 
 def detect_valid_pixels(data: xr.Dataset, config: dict) -> xr.DataArray:
     """
-    Description
-    -----------
     Detect valid pixels on a dataset based on
     codnitions in data variables. The conditions are
     described in a configuration dictionary.
@@ -163,8 +160,6 @@ def detect_nan_pixels(
     data: xr.Dataset, variables: list[str] | str = "all"
 ) -> xr.DataArray:
     """
-    Description
-    -----------
     Detect nan values on a dataset considering
     a list of variables in the dataset.
 
@@ -214,8 +209,6 @@ def find_valid_pixels(
     valid_config: dict | None = None,
 ) -> tuple[xr.DataArray, xr.DataArray]:
     """
-    Description
-    -----------
     Find valid pixels.
 
     Parameters

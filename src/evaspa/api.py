@@ -46,10 +46,12 @@ def generate_tiles(
     orbit_percentage:optinal(float) default=25
         Minimum orbit coverage
 
-    Return
-    ------
+    Returns
+    -------
     tiles: GeoDataFrame
+        List of tiles
     adjs: DataFrame
+        List of adjacents
     """
     columns = ["id", "epsg", "geometry"]
     tiles = trishna.get_trishna_tiles()
@@ -103,9 +105,10 @@ def regroup_tiles(
     threshold:optinal(float), default=300000
         Threshold on minimum number of valid pixels
 
-    Return
-    ------
+    Returns
+    -------
     group_df: DataFrame
+        Group of tiles
     """
     land = trishna.get_land_mask()
     tile_df, group_df = tiling.initialize_regroup(tiles, land)
@@ -123,9 +126,7 @@ def regroup_tiles(
 
 def read_input_data(entry: dict) -> xr.Dataset:
     """
-    Description
-    -----------
-    Run EVASPA
+    Read input data
 
     Parameters
     ----------
@@ -151,8 +152,6 @@ def run_evaspa(
     data: xr.Dataset, params: dict, debug: dict | None = None
 ) -> tuple[xr.Dataset, xr.Dataset] | None:
     """
-    Description
-    -----------
     Run EVASPA
 
     Parameters
@@ -236,8 +235,6 @@ def run_stic(
     data: xr.Dataset, params: dict, debug: dict | None = None
 ) -> tuple[xr.Dataset, xr.Dataset] | None:
     """
-    Description
-    -----------
     Run STIC
 
     Parameters

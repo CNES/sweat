@@ -1,6 +1,4 @@
-#
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales / Université Paul Sabatier (UT3)
-#
 """
 Logging module
 """

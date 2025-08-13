@@ -1,4 +1,7 @@
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
+"""
+Module containing utility functions
+"""
 
 import numpy as np
 import numpy.typing as npt
@@ -8,8 +11,10 @@ def compute_ndvi(
     nir: npt.ArrayLike, red: npt.ArrayLike, delta: float = 0.05
 ) -> npt.NDArray:
     """
-    Description
-    -----------
+    Compute Normalized Difference Vegetation Index NDVI
+
+    Notes
+    -----
     Normalized Difference Vegetation Index NDVI is computed
     with the following formula:
         NDVI = (NIR - (RED + delta)) / (NIR + RED + delta)
@@ -27,8 +32,8 @@ def compute_ndvi(
     red: np.array_like
         RED reflectance
 
-    Return
-    ------
+    Returns
+    -------
     ndvi: np.array
         NDVI
     """
@@ -39,8 +44,10 @@ def compute_ndvi(
 
 def compute_broadband_emissivity():
     """
-    Description
-    -----------
+    Compute broadband emissivity
+
+    Notes
+    -----
     Broadband emissivity is computed from spectral emissivity
     that are obtained from the TES algorithm used to compute
     surface temperature (see RD7).

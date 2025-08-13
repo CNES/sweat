@@ -13,8 +13,6 @@ from pathlib import Path
 
 def read_config(path: str) -> dict:
     """
-    Description
-    -----------
     Read configuration and return a dict
 
     Parameters
@@ -22,8 +20,8 @@ def read_config(path: str) -> dict:
     path: str
         Path to configuration file
 
-    Return
-    ------
+    Returns
+    -------
     config: dict
         Dictionary containing the configuration parameters
     """
@@ -49,8 +47,6 @@ def json_serial(obj):
 
 def write_config(config: dict, path: str, fmt: str = "json") -> None:
     """
-    Description
-    -----------
     Write configuration and return a dict
 
     Parameters

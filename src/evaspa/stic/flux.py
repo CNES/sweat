@@ -1,3 +1,8 @@
+# Copyright: (c) 2025 CESBIO / Centre National d'Etudes Spatiales
+"""
+Module for STIC flux computation
+"""
+
 import numpy as np
 from numba import float32 as f32  # to define f32
 from numba import njit
@@ -27,8 +32,6 @@ def f_g_actualsurface(
     m: float,
 ) -> float:
     """
-    Description
-    -----------
     Compute G flux
 
     Parameters
@@ -42,8 +45,8 @@ def f_g_actualsurface(
     m : float
         Surface moisture
 
-    Return
-    ------
+    Returns
+    -------
     g_flux: float
         G flux
     """

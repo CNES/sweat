@@ -8,8 +8,6 @@ from numba import float32 as f32  # to define f32
 from numba import njit
 from numba.types import Tuple
 
-# ruff: noqa: PLR2004
-
 # Psychrometric constant (hpa/K)
 PSYCHROMETRIC_CST = 0.67
 PT_CST = 1.26
@@ -37,8 +35,10 @@ def f_soilmoisture_initialize(
     s4: float,
 ) -> tuple[float, float, float, float, float, float, float, float]:
     """
-    Description
-    -----------
+    Initiate soil moisture
+
+    Notes
+    -----
     This function estimates the soil moisture availability
     (M or wetness, 0-1) based on thermal and meteorological
     information.
@@ -80,8 +80,8 @@ def f_soilmoisture_initialize(
     s4: float
         Slope of saturation vapor pressure versus temperature (hPa/degC)
 
-    Return
-    ------
+    Returns
+    -------
     m: float
         Surface moisture avalilability (0 - 1)
     m_canopy: float
@@ -216,8 +216,10 @@ def f_soilmoisture_iterate(
     esstar: float,
 ) -> tuple[float, float, float, float, float]:
     """
-    Description
-    -----------
+    Compute soil moisture during iteration loop
+
+    Notes
+    -----
     This functions estimates the soil moisture availability (M) (or
     wetness) (value 0 to 1) based on thermal IR and meteorological
     information. However, this M will be treated as initial M, which will be
@@ -267,8 +269,8 @@ def f_soilmoisture_iterate(
     esstar: float
         Saturation vapor pressure at surface temperature
 
-    Return
-    ------
+    Returns
+    -------
     m: float
         Surface moisture avalilability (0 - 1)
     m_surf: float

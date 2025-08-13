@@ -1,4 +1,8 @@
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
+"""
+Module containing functions for Surface Energy Balance (net radiation,
+latent heat flux)
+"""
 
 from __future__ import annotations
 
@@ -51,9 +55,10 @@ def create_net_radiation(
     data: xr.Dataset, use_topo: bool = False
 ) -> xr.Dataset:
     """
-    Description
-    -----------
     Compute net radiation dataset.
+
+    Notes
+    -----
     The net radiation is computed from land surface temperature,
     land surface emissivity, albedo and downward longwave and
     shortwave radiations.
@@ -144,11 +149,11 @@ def _ratio_from_kustas(
     ndvi: npt.ArrayLike, c1: float = 0.4, c2: float = 0.33
 ) -> npt.NDArray:
     """
-    Description
-    -----------
     Compute G/Rn ratio from Kustas et al. 1993
     G/Rn = c1 - c2 x NDVI
 
+    Notes
+    -----
     Kustas W.P., Daughtry C.S.T. and Oevelen P.J.V., 1993.
     Analytical Treatment of the Relationships between
     Soil Heat Flux/Net Radiation Ratio and Vegetation Indices.
@@ -177,11 +182,11 @@ def _ratio_from_su(
     c2: float = 0.05,
 ) -> npt.NDArray:
     """
-    Description
-    -----------
     Compute G/Rn ratio from Su 2002
     G/Rn = c2 + (1 - fcover) x (c1 - c2)
 
+    Notes
+    -----
     Su Z., 2002. The surface energy balance system
     (SEBS) for estimation of turbulent fluxes.
     Hydrol. Earth Syst. Sci., 6, 85-99.
@@ -207,11 +212,11 @@ def _ratio_from_choudhury(
     lai: npt.ArrayLike, c1: float = 0.3, c2: float = 0.5
 ) -> npt.NDArray:
     """
-    Description
-    -----------
     Compute G/Rn ratio from Choudhury et al. 1987
     G/Rn = c1 x exp(-c2 x lai)
 
+    Notes
+    -----
     Choudhury, B.J., Idso, S.B., & Reginato, R.J. (1987).
     Analysis of an empirical model for soil heat flux under
     a growing wheat crop for estimating evaporation
@@ -241,8 +246,6 @@ def create_ratio(
     models: list[RatioModel] = DEFAULT_MODELS,
 ) -> xr.Dataset:
     """
-    Description
-    -----------
     Compute G/Rn ratio dataset using several models.
 
     Parameters
@@ -303,8 +306,6 @@ def _compute_le(
     ef: npt.ArrayLike, rn: npt.ArrayLike, ratio: npt.ArrayLike
 ) -> npt.NDArray:
     """
-    Description
-    -----------
     Compute latent heat flux based on the following formula
     LE = EF x (Rn - G) = EF x Rn (1 - ratio)
 
@@ -327,10 +328,11 @@ def _compute_le(
 
 def create_le(ef: xr.Dataset, rn: xr.Dataset, ratio: xr.Dataset) -> xr.Dataset:
     """
-    Description
-    -----------
     Create latent heat flux dataset for all EF models,
     all Rn models and all G/Rn ratio models.
+
+    Notes
+    -----
     For each combination of models, LE is computed with
     the following formula
     LE = EF x (Rn - G) = EF x Rn x (1-ratio)
@@ -378,9 +380,10 @@ def run(
     merging: MergeMethod = MergeMethod.MEAN,
 ) -> tuple[xr.Dataset, xr.Dataset]:
     """
-    Description
-    -----------
     Compute latent heat flux dataset for all EF models.
+
+    Notes
+    -----
     First all Rn models and all G/Rn ratio models are computed.
     Then, for each combination of models, LE is computed with
     the following formula

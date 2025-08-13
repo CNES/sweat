@@ -1,4 +1,7 @@
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
+"""
+Module containing debugging functions
+"""
 
 from __future__ import annotations
 

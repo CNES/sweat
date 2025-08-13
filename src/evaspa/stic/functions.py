@@ -46,8 +46,6 @@ C_TETENS = 237.3
 
 def convert_to_celsius(lst: npt.ArrayLike) -> npt.NDArray:
     """
-    Description
-    -----------
     Converting from Kelvin to Celsus degree
 
     Parameters
@@ -55,8 +53,8 @@ def convert_to_celsius(lst: npt.ArrayLike) -> npt.NDArray:
     lst: np.array_like
         Temperature in kelvin
 
-    Return
-    ------
+    Returns
+    -------
     lst: np.array
         Temperature in Celsius
     """
@@ -70,8 +68,6 @@ def convert_to_local_time(
     crs: CRS | None = None,
 ) -> npt.NDArray:
     """
-    Description
-    -----------
     Converting time from UTM to local solar time (in seconds)
 
     Parameters
@@ -85,8 +81,8 @@ def convert_to_local_time(
     crs : pyproj.CRS
         Coordinate Reference System
 
-    Return
-    ------
+    Returns
+    -------
     local_time: np.array
         Local solar time
     """
@@ -118,11 +114,11 @@ def convert_to_rh(
     t2m: npt.ArrayLike, d2m: npt.ArrayLike, b: float = 17.625, c: float = 243.04
 ) -> npt.NDArray:
     """
-    Description
-    -----------
     Converting 2m air temperature and dewpoint temprature
     to relative humidity in percentage.
 
+    Notes
+    -----
     The coefficients are provided by
     Alduchov, O. A., and R. E. Eskridge, 1996:
     Improved Magnus Form Approximation of Saturation Vapor Pressure.
@@ -139,8 +135,8 @@ def convert_to_rh(
     C : float
         Parameter
 
-    Return
-    ------
+    Returns
+    -------
     rh: np.array
         Relative humidity in percentage
     """
@@ -192,8 +188,6 @@ def f_psychrometrics(
     float, float, float, float, float, float, float, float, float, float, float
 ]:
     """
-    Description
-    -----------
     Compute psychrometrics:
     - esstar: saturation vapor pressure at surface temperature, TS (unit hPa)
     - eastar: saturated vapor pressure at air temperature (hPa)
@@ -203,6 +197,9 @@ def f_psychrometrics(
     -s1,s2,s3,s4 : splopes of saturation vapor pressure versus temperature
     - rho: air density (kg.m-3)
     - cp: specific heat of air at constant pressure (J.kg-1.K-1)
+
+    Notes
+    -----
     See:
     - https://en.wikipedia.org/wiki/Tetens_equation
 
@@ -217,8 +214,8 @@ def f_psychrometrics(
     rh: float
         Relative humidity (percentage)
 
-    Return
-    ------
+    Returns
+    -------
     esstar: float
         Saturation vapor pressure at surface temperature (hPa)
     eastar: float
@@ -315,8 +312,6 @@ def f_stateeq(
     m: float,
 ) -> tuple[float, float, float, float]:
     """
-    Description
-    -----------
     Compute state equation#s
 
     Parameters
@@ -342,8 +337,8 @@ def f_stateeq(
     m: float
         Surface moisture (0-1)
 
-    Return
-    ------
+    Returns
+    -------
     g_aero: float
         Aerodynamic conductance
     g_surf: float

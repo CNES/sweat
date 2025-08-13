@@ -1,4 +1,7 @@
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
+"""
+Module for daily extrapolation
+"""
 
 from __future__ import annotations
 
@@ -33,8 +36,10 @@ def toa_daily_estimate(
     data: xr.Dataset, date: dt.datetime, dem: xr.Dataset | None = None
 ) -> xr.Dataset:
     """
-    Description
-    -----------
+    Estimate daily extrapolation using toa solar radiation as ratio.
+
+    Notes
+    -----
     The instantaneous value is transformed
     into a daily value by considering a scaling factor.
     This facor is equal to the ratio between daily downwelling
@@ -105,8 +110,10 @@ def extrapolate_at_daily_scale(
     use_topo: bool = False,
 ) -> xr.Dataset:
     """
-    Description
-    -----------
+    Extraplate data variables at daily scale.
+
+    Notes
+    -----
     The instantaneous value of ET obtained previously is transformed
     in a daily value by considering a scaling factor and the ratio between
     instant downwelling shortwave radiation and daily downwelling

@@ -64,8 +64,6 @@ class OutputConfig(BaseModel):
 
 def _open_rasterio(filename: str) -> xr.Dataset:
     """
-    Description
-    -----------
     Read data from a file
 
     Parameters
@@ -115,8 +113,6 @@ def _open_rasterio(filename: str) -> xr.Dataset:
 
 def read_data_from_file(filename: str) -> xr.Dataset:
     """
-    Description
-    -----------
     Read data from a file
 
     Parameters
@@ -138,8 +134,6 @@ def read_data_from_file(filename: str) -> xr.Dataset:
 
 def read_data(dirname: str) -> xr.Dataset:
     """
-    Description
-    -----------
     Read data in a directory
 
     Parameters
@@ -168,8 +162,6 @@ def read_data(dirname: str) -> xr.Dataset:
 
 def read_input(config: dict) -> xr.Dataset:
     """
-    Description
-    -----------
     Read input data
 
     Parameters
@@ -199,8 +191,6 @@ def write_dataset(
     separate=False,
 ) -> None:
     """
-    Description
-    -----------
     Write dataset in one file or in separated files
 
     Parameters

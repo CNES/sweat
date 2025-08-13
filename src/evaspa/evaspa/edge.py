@@ -1,4 +1,7 @@
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
+"""
+Module containing edges classes
+"""
 
 from __future__ import annotations
 
@@ -79,8 +82,6 @@ class Edge(BaseModel, ABC):
     @abstractmethod
     def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
         """
-        Description
-        -----------
         Method to compute the edge parameters
 
         Parameters
@@ -94,8 +95,6 @@ class Edge(BaseModel, ABC):
     @abstractmethod
     def get(self, var: npt.ArrayLike) -> npt.NDArray:
         """
-        Description
-        -----------
         Compute edge value at var value.
 
         Parameters
@@ -117,8 +116,6 @@ class Edge(BaseModel, ABC):
 
     def _prepare(self, var: npt.NDArray, lst: npt.NDArray) -> pd.DataFrame:
         """
-        Description
-        -----------
         Prepare data
 
         Parameters
@@ -146,8 +143,6 @@ class Edge(BaseModel, ABC):
     @classmethod
     def create(cls, name: str, config: dict) -> Edge:
         """
-        Description
-        -----------
         Function to create an edge based on the
         name of the edge (edge class) and a configuration
 
@@ -210,8 +205,6 @@ class RegressionEdge(Edge, ABC):
         p: tuple[float, float],
     ) -> tuple[float, float]:
         """
-        Description
-        -----------
         Check the consistency of the percentile interval
 
         Parameters
@@ -239,8 +232,6 @@ class RegressionEdge(Edge, ABC):
     @classmethod
     def check_nb_points(cls, nb: int) -> int:
         """
-        Description
-        -----------
         Check the number of points to keep
 
         Parameters
@@ -262,9 +253,7 @@ class RegressionEdge(Edge, ABC):
     @classmethod
     def check_interval_nb(cls, nb: int, info: ValidationInfo) -> int:
         """
-        Description
-        -----------
-        If interval type is "density", check the consistency of the interval number
+        Check the consistency of the interval number, if interval type is "density".
 
         Parameters
         ----------
@@ -292,9 +281,7 @@ class RegressionEdge(Edge, ABC):
     @classmethod
     def check_interval_size(cls, size: float, info: ValidationInfo) -> float:
         """
-        Description
-        -----------
-        If interval type is "size", check the consistency of the interval size
+        Check the consistency of the interval size, if interval type is "size".
 
         Parameters
         ----------
@@ -322,8 +309,6 @@ class RegressionEdge(Edge, ABC):
     @classmethod
     def check_use_breakpoint(cls, use_bp: bool, info: ValidationInfo) -> bool:
         """
-        Description
-        -----------
         If breakpoint is provided, use_breakpoint is set to True
 
         Parameters
@@ -346,8 +331,6 @@ class RegressionEdge(Edge, ABC):
         self, var: npt.ArrayLike, lst: npt.ArrayLike
     ) -> tuple[npt.NDArray, npt.NDArray]:
         """
-        Description
-        -----------
         For each interval, compute the point coordinates used for the regression:
           - the abscissa value is obtained by taking the median.
           - the ordinate value is obtained by applying the
@@ -415,8 +398,6 @@ class RegressionEdge(Edge, ABC):
 
     def _get_intervals(self, values: pd.Series) -> pd.Series:
         """
-        Description
-        -----------
         Divide the domain in intervals
 
         Parameters
@@ -449,8 +430,10 @@ class RegressionEdge(Edge, ABC):
         self, var: npt.ArrayLike, lst: npt.ArrayLike
     ) -> tuple[float, float]:
         """
-        Description
-        -----------
+        Search breakpoints
+
+        Notes
+        -----
         This method is intended for use with albedo.
         The temperature increases when albedo increases for low albedo values
         (not necessarily linearly), and the temperature decreases when albedo
@@ -465,7 +448,7 @@ class RegressionEdge(Edge, ABC):
             Variable used versus temperature (ex: Albedo)
 
         Returns
-        ----------
+        -------
         break: tuple[float,float]
             Coordinates of breakpoint point
         """
@@ -494,8 +477,6 @@ class RegressionEdge(Edge, ABC):
         lst: npt.NDArray,
     ) -> tuple[float, float]:
         """
-        Description
-        -----------
         Return extrema of selected points
 
         Parameters
@@ -506,7 +487,7 @@ class RegressionEdge(Edge, ABC):
             Variable used versus temperature (ex: Albedo)
 
         Returns
-        ----------
+        -------
         break: tuple[float,float]
             Coordinates of extremum point
         """
@@ -524,8 +505,6 @@ class RegressionEdge(Edge, ABC):
     @abstractmethod
     def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
         """
-        Description
-        -----------
         Method to compute the edge parameters
 
         Parameters
@@ -539,8 +518,6 @@ class RegressionEdge(Edge, ABC):
     @abstractmethod
     def get(self, var: npt.ArrayLike) -> npt.NDArray:
         """
-        Description
-        -----------
         Compute edge value at var value.
 
         Parameters
@@ -643,8 +620,6 @@ class LinearEdge(RegressionEdge):
 
     def get(self, var: npt.ArrayLike) -> npt.NDArray:
         """
-        Description
-        -----------
         Compute edge value
 
         Parameters
@@ -661,8 +636,6 @@ class LinearEdge(RegressionEdge):
 
     def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
         """
-        Description
-        -----------
         For each interval, compute the point coordinates used for the regression:
           - the abscissa value is obtained by taking the median.
           - the ordinate value is obtained by applying the
@@ -726,8 +699,6 @@ class ThresholdLinearEdge(RegressionEdge):
 
     def get(self, var: npt.ArrayLike) -> npt.NDArray:
         """
-        Description
-        -----------
         Compute edge value
 
         Parameters
@@ -744,8 +715,6 @@ class ThresholdLinearEdge(RegressionEdge):
 
     def fit_numpy(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
         """
-        Description
-        -----------
         For each interval, compute the point coordinates used for the regression:
           - the abscissa value is obtained by taking the median.
           - the ordinate value is obtained by applying the
@@ -777,8 +746,6 @@ class ThresholdLinearEdge(RegressionEdge):
 
     def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
         """
-        Description
-        -----------
         For each interval, compute the point coordinates used for the regression:
           - the abscissa value is obtained by taking the median.
           - the ordinate value is obtained by applying the
@@ -861,8 +828,6 @@ class DoubleLinearEdge(RegressionEdge):
 
     def get(self, var: npt.ArrayLike) -> npt.NDArray:
         """
-        Description
-        -----------
         Compute edge value
 
         Parameters
@@ -887,8 +852,6 @@ class DoubleLinearEdge(RegressionEdge):
 
     def fit_numpy(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
         """
-        Description
-        -----------
         For each interval, compute the point coordinates used for the regression:
           - the abscissa value is obtained by taking the median.
           - the ordinate value is obtained by applying the
@@ -925,8 +888,6 @@ class DoubleLinearEdge(RegressionEdge):
 
     def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
         """
-        Description
-        -----------
         For each interval, compute the point coordinates used for the regression:
           - the abscissa value is obtained by taking the median.
           - the ordinate value is obtained by applying the
@@ -1019,8 +980,6 @@ class FlatLinearEdge(RegressionEdge):
 
     def get(self, var: npt.ArrayLike) -> npt.NDArray:
         """
-        Description
-        -----------
         Compute edge value
 
         Parameters
@@ -1045,8 +1004,6 @@ class FlatLinearEdge(RegressionEdge):
 
     def fit_numpy(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
         """
-        Description
-        -----------
         For each interval, compute the point coordinates used for the regression:
           - the abscissa value is obtained by taking the median.
           - the ordinate value is obtained by applying the
@@ -1086,8 +1043,6 @@ class FlatLinearEdge(RegressionEdge):
 
     def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
         """
-        Description
-        -----------
         For each interval, compute the point coordinates used for the regression:
           - the abscissa value is obtained by taking the median.
           - the ordinate value is obtained by applying the
@@ -1182,8 +1137,6 @@ class ParabolicEdge(RegressionEdge):
 
     def get(self, var: npt.ArrayLike) -> npt.NDArray:
         """
-        Description
-        -----------
         Compute edge value
 
         Parameters
@@ -1204,8 +1157,6 @@ class ParabolicEdge(RegressionEdge):
 
     def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
         """
-        Description
-        -----------
         For each interval, compute the point coordinates used for the regression:
           - the abscissa value is obtained by taking the median.
           - the ordinate value is obtained by applying the
@@ -1255,8 +1206,6 @@ class FlatRegressionEdge(RegressionEdge):
 
     def get(self, var: npt.ArrayLike) -> npt.NDArray:
         """
-        Description
-        -----------
         Compute edge value
 
         Parameters
@@ -1273,8 +1222,6 @@ class FlatRegressionEdge(RegressionEdge):
 
     def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
         """
-        Description
-        -----------
         For each interval, compute the point coordinates used for the regression:
           - the abscissa value is obtained by taking the median.
           - the ordinate value is obtained by applying the
@@ -1329,8 +1276,6 @@ class FlatEdge(Edge):
 
     def get(self, var: npt.ArrayLike) -> npt.NDArray:
         """
-        Description
-        -----------
         Compute edge value at var value.
 
         Parameters
@@ -1347,8 +1292,6 @@ class FlatEdge(Edge):
 
     def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:  # noqa: ARG002
         """
-        Description
-        -----------
         Edge is defined by the max or the min of LST
 
         Parameters
@@ -1419,8 +1362,6 @@ class FlatPercentileEdge(Edge):
     @classmethod
     def check_percentile(cls, p: tuple[float, float]) -> tuple[float, float]:
         """
-        Description
-        -----------
         Check the consistency of the percentile interval
 
         Parameters
@@ -1448,8 +1389,6 @@ class FlatPercentileEdge(Edge):
     @classmethod
     def check_nb_points(cls, nb: int) -> int:
         """
-        Description
-        -----------
         Check the number of points to keep
 
         Parameters
@@ -1469,8 +1408,6 @@ class FlatPercentileEdge(Edge):
 
     def get(self, var: npt.ArrayLike) -> npt.NDArray:
         """
-        Description
-        -----------
         Compute edge value at var value.
 
         Parameters
@@ -1487,8 +1424,6 @@ class FlatPercentileEdge(Edge):
 
     def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
         """
-        Description
-        -----------
         Edge is defined by the max or the min of LST
 
         Parameters

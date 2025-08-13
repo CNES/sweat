@@ -1,6 +1,6 @@
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 """
-Module for configuration management
+Module for EVASPA configuration management
 """
 
 from __future__ import annotations
@@ -80,8 +80,6 @@ class EVASPAParamsConfig(BaseModel):
 
 def check_config_evaspa(config: dict) -> dict:
     """
-    Description
-    -----------
     Check configuration for EVASPA
 
     Parameters

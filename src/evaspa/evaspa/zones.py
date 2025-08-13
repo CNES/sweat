@@ -208,6 +208,10 @@ def define_valid_pixels(
     simplify: bool = True,
 ) -> tuple[float, xr.Dataset]:
     """
+    Define valid pixels
+
+    Notes
+    -----
     For a dem, compute water mask and
     valid pixels by applying the
     following steps:
@@ -290,6 +294,10 @@ def define_valid_zones(
     poly_simplify: int = 0,
 ) -> tuple[float, int, MultiPolygon]:
     """
+    Define valid zones
+
+    Notes
+    -----
     For a list of tile IDs, read DEM,
     compute water mask and
     valid pixels by applying the

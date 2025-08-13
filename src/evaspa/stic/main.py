@@ -95,8 +95,6 @@ def run_stic_model_pixel(
     nb_steps: int,
 ) -> tuple[float, float, bool]:
     """
-    Description
-    -----------
     STIC model calulation function for a single pixel
 
     Parameters
@@ -393,8 +391,6 @@ def run_stic_model(
     nb_steps: int,
 ) -> tuple[npt.NDArray, npt.NDArray, npt.NDArray]:
     """
-    Description
-    -----------
     STIC model calulation function.
     Takes in numpy arrays and constants to calculate spatial outputs.
 
@@ -469,8 +465,6 @@ def prepare(
     selected_radiation: str | None = None,
 ) -> xr.Dataset:
     """
-    Description
-    -----------
     Prepare data for STIC:
     - Compute LST in celsius
     - Compute relative humidity
@@ -552,8 +546,6 @@ def run(
     nb_steps: int = 15,
 ) -> xr.Dataset:
     """
-    Description
-    -----------
     Run STIC
 
     Parameters

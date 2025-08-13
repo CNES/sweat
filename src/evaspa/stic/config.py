@@ -29,6 +29,10 @@ logger = LoggerManager.get_logger(__name__)
 
 
 class STICFilteringConfig(FilteringConfig):
+    """
+    Configuration for STIC filtering
+    """
+
     @field_validator("root", mode="before")
     @classmethod
     def update_config(cls, v):
@@ -92,8 +96,6 @@ class STICInputFile(BaseModel):
 
 def check_config_stic(config: dict) -> dict:
     """
-    Description
-    -----------
     Check configuration
 
     Parameters
