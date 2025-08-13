@@ -6,19 +6,11 @@ import pytest
 import xarray as xr
 from pydantic import ValidationError
 
-from evaspa.common.filter import (
-    FilterConfig,
-    FilteringConfig,
-    FilterParams,
-    apply_condition,
-    determine_valid_pixels,
-    eval_condition,
-    filter_valid_pixels,
-    mask,
-)
+from evaspa.common import filter
+from evaspa.common.constant import FLAGS_TYPE
 
 
-def convert(arr: npt.NDArray) -> xr.DataArray:
+def convert_dataarray(arr: npt.NDArray) -> xr.DataArray:
     return xr.DataArray(
         arr,
         coords={"y": np.arange(arr.shape[0]), "x": np.arange(arr.shape[1])},
@@ -26,167 +18,17 @@ def convert(arr: npt.NDArray) -> xr.DataArray:
     )
 
 
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    ("data", "values", "invert", "expected"),
-    [
-        pytest.param(
-            [10, 0, 10, 5, 20], 0, False, [False, True, False, False, False]
-        ),
-        pytest.param(
-            [10, 0, 10, 5, 20], [0, 10], False, [True, True, True, False, False]
-        ),
-        pytest.param(
-            [10, 0, 10, 5, 20], [0, 10], True, [False, False, False, True, True]
-        ),
-    ],
-)
-def test_mask(data, values, invert, expected):
-    """
-    Test mask function
-    """
-    res = mask(data, values=values, invert=invert)
-    np.testing.assert_equal(res, expected)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    ("params", "expected"),
-    [
-        pytest.param(
-            {
-                "cloud": "cloud",
-                "water": None,
-                "qa": None,
-                "zones": None,
-                "cover": None,
-            },
-            [0, 1, 1, 1, 0],
-        ),
-        pytest.param(
-            {
-                "cloud": "cloud",
-                "water": "water",
-                "qa": None,
-                "zones": None,
-                "cover": None,
-            },
-            [0, 1, 0, 1, 0],
-        ),
-        pytest.param(
-            {
-                "cloud": "cloud",
-                "water": "water",
-                "qa": "qa",
-                "zones": "zones",
-                "cover": "cover",
-            },
-            [0, 0, 0, 1, 0],
-        ),
-        pytest.param(
-            {
-                "cloud": None,
-                "water": None,
-                "qa": None,
-                "zones": "zones",
-                "cover": "cover",
-            },
-            [1, 0, 1, 1, 1],
-        ),
-    ],
-)
-def test_determine_valid_pixels(params, expected) -> None:
-    """
-    Test filter method
-    """
-    # Generate data
-    data = xr.Dataset(
-        data_vars={
-            "lst": (["x"], np.random.random(size=(5))),
-            "cloud": (["x"], [1, 0, 0, 0, 1]),
-            "water": (["x"], [0, 0, 1, 0, 1]),
-            "qa": (["x"], [1, 0, 0, 0, 0]),
-            "zones": (["x"], [0, 1, 0, 0, 0]),
-            "cover": (["x"], [10, 20, 10, 10, 10]),
-        },
+def convert_dataset(variables: dict) -> xr.Dataset:
+    # Get the first item
+    shape = next(iter(variables.items()))[1].shape
+    return xr.Dataset(
+        data_vars={k: (["y", "x"], v) for k, v in variables.items()},
         coords={
-            "x": ("x", np.linspace(0, 5, num=5)),
+            "y": ("y", np.arange(shape[0])),
+            "x": ("x", np.arange(shape[1])),
         },
-        attrs={"description": "Test data."},
+        attrs={"description": "Test data"},
     )
-    valid = determine_valid_pixels(data, **params)
-    np.testing.assert_equal(valid.data, expected)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    ("config", "expected"),
-    [
-        pytest.param(
-            {"cloud": 1},
-            [1, 0, 0, 0, 1],
-        ),
-        pytest.param(
-            {"cloud": 0, "cover": [20, 60]},
-            [0, 1, 1, 1, 0],
-        ),
-    ],
-)
-def test_determine_valid_pixels_config(config, expected) -> None:
-    """
-    Test filter method (config option)
-    """
-    # Generate data
-    data = xr.Dataset(
-        data_vars={
-            "lst": (["x"], np.random.random(size=(5))),
-            "cloud": (["x"], [1, 0, 0, 0, 1]),
-            "water": (["x"], [0, 0, 1, 0, 1]),
-            "qa": (["x"], [1, 0, 0, 0, 0]),
-            "zones": (["x"], [0, 1, 0, 0, 0]),
-            "cover": (["x"], [60, 20, 20, 20, 60]),
-        },
-        coords={
-            "x": ("x", np.linspace(0, 5, num=5)),
-        },
-        attrs={"description": "Test data."},
-    )
-    valid = determine_valid_pixels(
-        data, cloud="cloud", cover="cover", config=config
-    )
-    np.testing.assert_equal(valid.data, expected)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    "config",
-    [
-        {},
-        {"cloud": 1},
-        {"cloud": 1, "zones": 1},
-    ],
-)
-def test_filterparams(config) -> None:
-    """
-    Test FilterParams
-    """
-    assert FilterParams.model_validate(config)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    "config",
-    [
-        {},
-        {"cloud": "cloud_mask"},
-        {"cloud": "cloud_mask", "config": {"cloud": 1}},
-    ],
-)
-def test_filterconfig(config) -> None:
-    """
-    Test FilterConfig
-    """
-    assert FilterConfig.model_validate(config)
 
 
 @pytest.mark.unit
@@ -213,7 +55,7 @@ def test_filteringconfig(config) -> None:
     """
     Test FilteringConfig
     """
-    assert FilteringConfig.model_validate(config)
+    assert filter.FilteringConfig.model_validate(config)
 
 
 @pytest.mark.unit
@@ -234,7 +76,7 @@ def test_filteringconfig_error(config) -> None:
     Test FilteringConfig with error
     """
     with pytest.raises(ValidationError):
-        FilteringConfig(config)
+        filter.FilteringConfig(config)
 
 
 @pytest.mark.unit
@@ -277,9 +119,9 @@ def test_eval_condition(entry, cond, expected) -> None:
     """
     Test eval_condition function
     """
-    data = convert(entry)
-    res = eval_condition(data, cond)
-    ref = convert(expected)
+    data = convert_dataarray(entry)
+    res = filter.eval_condition(data, cond)
+    ref = convert_dataarray(expected)
     xr.testing.assert_equal(res, ref)
 
 
@@ -308,9 +150,9 @@ def test_apply_condition(entry, cond, expected) -> None:
     """
     Test eval_condition function
     """
-    data = convert(entry)
-    res = apply_condition(data, cond)
-    ref = convert(expected)
+    data = convert_dataarray(entry)
+    res = filter.apply_condition(data, cond)
+    ref = convert_dataarray(expected)
     xr.testing.assert_equal(res, ref)
 
 
@@ -353,57 +195,47 @@ def test_apply_condition(entry, cond, expected) -> None:
         ),
     ],
 )
-def test_filter_valid_pixels(config, expected) -> None:
+def test_detect_valid_pixels(config, expected) -> None:
     """
-    Test function for filtering valid pixels
+    Test function for detecting valid pixels
     """
-    data = xr.Dataset(
-        data_vars={
-            "lst": (["y", "x"], np.array([[295, 300], [290, 295]])),
-            "cloud": (["y", "x"], np.array([[0, 1], [0, 0]])),
-            "lulc": (["y", "x"], np.array([[10, 10], [30, 20]])),
-        },
-        coords={
-            "y": ("y", np.array([0, 1])),
-            "x": ("x", np.array([0, 1])),
-        },
-        attrs={"description": "Test data"},
+    data = convert_dataset(
+        {
+            "lst": np.array([[295, 300], [290, 295]]),
+            "cloud": np.array([[0, 1], [0, 0]]),
+            "lulc": np.array([[10, 10], [30, 20]]),
+        }
     )
-    res = filter_valid_pixels(data, config)
-    ref = convert(expected)
+    res = filter.detect_valid_pixels(data, config)
+    ref = convert_dataarray(expected)
     xr.testing.assert_equal(res, ref)
 
 
 @pytest.mark.unit
-def test_filter_valid_pixels_with_warnings(caplog) -> None:
+def test_detect_valid_pixels_with_warnings(caplog) -> None:
     """
-    Test function for filtering valid pixels with warnings
+    Test function for detecting valid pixels with warnings
     """
     config = {
         "cloud": {"op": "!=", "value": 1},
     }
-    data = xr.Dataset(
-        data_vars={
-            "lst": (["y", "x"], np.array([[295, 300], [290, 295]])),
-        },
-        coords={
-            "y": ("y", np.array([0, 1])),
-            "x": ("x", np.array([0, 1])),
-        },
-        attrs={"description": "Test data"},
+    data = convert_dataset(
+        {
+            "lst": np.array([[295, 300], [290, 295]]),
+        }
     )
     expected = np.array([[True, True], [True, True]])
-    res = filter_valid_pixels(data, config)
-    ref = convert(expected)
+    res = filter.detect_valid_pixels(data, config)
+    ref = convert_dataarray(expected)
     xr.testing.assert_equal(res, ref)
     msg = "Variable cloud not found"
     assert msg in caplog.text
 
 
 @pytest.mark.unit
-def test_filter_valid_pixels_exc() -> None:
+def test_detect_valid_pixels_exc() -> None:
     """
-    Test function for filtering valid pixels (with exception)
+    Test function for detecting valid pixels (with exception)
     """
     # Create empty dataset
     empty_ds = xr.Dataset()
@@ -413,4 +245,221 @@ def test_filter_valid_pixels_exc() -> None:
     with pytest.raises(
         ValueError, match="Dataset is empty, filtering not possible"
     ):
-        filter_valid_pixels(empty_ds, config)
+        filter.detect_valid_pixels(empty_ds, config)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("variables", "expected"),
+    [
+        pytest.param(
+            "all",
+            np.array([[False, True], [True, False]]),
+        ),
+        pytest.param(
+            [],
+            np.array([[False, False], [False, False]]),
+        ),
+        pytest.param(
+            ["lst"],
+            np.array([[False, True], [False, False]]),
+        ),
+        pytest.param(
+            ["lst", "albedo"],
+            np.array([[False, True], [True, False]]),
+        ),
+    ],
+)
+def test_detect_nan_pixels(variables, expected):
+    """
+    Test function for detect nan pixels
+    """
+    data = convert_dataset(
+        {
+            "lst": np.array([[293, np.nan], [293, 293]]),
+            "albedo": np.array([[0.5, 0.5], [np.nan, 0.5]]),
+        }
+    )
+    res = filter.detect_nan_pixels(data, variables=variables)
+    ref = convert_dataarray(expected)
+    xr.testing.assert_equal(res, ref)
+
+
+@pytest.mark.unit
+def test_detect_nan_pixels_with_warnings(caplog) -> None:
+    """
+    Test function for detecting valid pixels with warnings
+    """
+    variables = ["lst", "fcover"]
+    data = convert_dataset(
+        {
+            "lst": np.array([[295, 300], [290, 295]]),
+        }
+    )
+    expected = np.array([[False, False], [False, False]])
+    res = filter.detect_nan_pixels(data, variables)
+    ref = convert_dataarray(expected)
+    xr.testing.assert_equal(res, ref)
+    msg = "Variable fcover not found"
+    assert msg in caplog.text
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("data", "variables", "expected"),
+    [
+        pytest.param(
+            xr.Dataset(
+                data_vars={
+                    "lst": (["y", "x"], np.array([[295, 300], [290, 295]])),
+                },
+                coords={
+                    "y": ("y", np.array([0, 1])),
+                    "x": ("x", np.array([0, 1])),
+                },
+                attrs={"description": "Test data"},
+            ),
+            "foo",
+            "Only 'all' can be provided",
+        ),
+        pytest.param(
+            xr.Dataset(),
+            "all",
+            "Dataset is empty, not possible to detect nan pixels",
+        ),
+    ],
+)
+def test_detect_nan_pixels_exc(data, variables, expected) -> None:
+    """
+    Test function for detecting valid pixels (with exception)
+    """
+    # Create empty dataset
+    with pytest.raises(ValueError, match=expected):
+        filter.detect_nan_pixels(data, variables)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("data", "nan_config", "valid_config", "valid_expected", "flags_expected"),
+    [
+        pytest.param(
+            {
+                "lst": np.array(
+                    [[295, 300, 300], [298, 300, 297], [290, 295, 295]]
+                ),
+                "albedo": np.array(
+                    [
+                        [0.3, 0.32, 0.2],
+                        [0.4, 0.3, 0.3],
+                        [0.25, 0.4, 0.3],
+                    ]
+                ),
+            },
+            None,
+            None,
+            np.array([[1, 1, 1], [1, 1, 1], [1, 1, 1]], dtype=FLAGS_TYPE),
+            np.array([[0, 0, 0], [0, 0, 0], [0, 0, 0]], dtype=FLAGS_TYPE),
+        ),
+        pytest.param(
+            {
+                "lst": np.array(
+                    [[295, 300, np.nan], [298, 300, np.nan], [290, 295, 295]]
+                ),
+                "albedo": np.array(
+                    [
+                        [0.3, 0.32, 0.2],
+                        [0.4, 0.3, 0.3],
+                        [0.25, 0.4, 0.3],
+                    ]
+                ),
+            },
+            ["lst"],
+            None,
+            np.array([[1, 1, 0], [1, 1, 0], [1, 1, 1]], dtype=FLAGS_TYPE),
+            np.array([[0, 0, 1], [0, 0, 1], [0, 0, 0]], dtype=FLAGS_TYPE),
+        ),
+        pytest.param(
+            {
+                "lst": np.array(
+                    [[295, 300, np.nan], [298, 300, np.nan], [290, 295, 295]]
+                ),
+                "albedo": np.array(
+                    [
+                        [0.3, 0.32, 0.2],
+                        [0.4, 0.3, 0.3],
+                        [0.25, 0.4, 0.3],
+                    ]
+                ),
+            },
+            None,
+            {
+                "albedo": {
+                    "op": "<",
+                    "value": 0.4,
+                }
+            },
+            np.array([[1, 1, 1], [0, 1, 1], [1, 0, 1]], dtype=FLAGS_TYPE),
+            np.array([[0, 0, 0], [2, 0, 0], [0, 2, 0]], dtype=FLAGS_TYPE),
+        ),
+        pytest.param(
+            {
+                "lst": np.array(
+                    [[295, 300, np.nan], [np.nan, 300, np.nan], [290, 295, 295]]
+                ),
+                "albedo": np.array(
+                    [
+                        [0.3, 0.32, 0.2],
+                        [0.4, 0.3, 0.3],
+                        [0.25, 0.4, 0.3],
+                    ]
+                ),
+            },
+            ["lst"],
+            {
+                "albedo": {
+                    "op": "<",
+                    "value": 0.4,
+                }
+            },
+            np.array([[1, 1, 0], [0, 1, 0], [1, 0, 1]], dtype=FLAGS_TYPE),
+            np.array([[0, 0, 1], [3, 0, 1], [0, 2, 0]], dtype=FLAGS_TYPE),
+        ),
+        pytest.param(
+            {
+                "lst": np.array(
+                    [[295, 300, np.nan], [298, 300, np.nan], [290, 295, 295]]
+                ),
+                "albedo": np.array(
+                    [
+                        [0.4, 0.32, 0.2],
+                        [0.4, 0.3, 0.3],
+                        [0.25, 0.4, 0.3],
+                    ]
+                ),
+                "valid": np.array([[0, 1, 1], [1, 1, 1], [1, 1, 1]]),
+                "flags": np.array([[4, 0, 0], [0, 0, 8], [0, 0, 0]]),
+            },
+            ["lst"],
+            {
+                "albedo": {
+                    "op": "<",
+                    "value": 0.4,
+                }
+            },
+            np.array([[0, 1, 0], [0, 1, 0], [1, 0, 1]], dtype=FLAGS_TYPE),
+            np.array([[6, 0, 1], [2, 0, 9], [0, 2, 0]], dtype=FLAGS_TYPE),
+        ),
+    ],
+)
+def test_find_valid_pixels(
+    data, nan_config, valid_config, valid_expected, flags_expected
+):
+    """
+    Test function for detect nan pixels
+    """
+    data = convert_dataset(data)
+    valid, flags = filter.find_valid_pixels(data, nan_config, valid_config)
+    valid_ref = convert_dataarray(valid_expected)
+    flags_ref = convert_dataarray(flags_expected)
+    xr.testing.assert_equal(valid, valid_ref)
+    xr.testing.assert_equal(flags, flags_ref)

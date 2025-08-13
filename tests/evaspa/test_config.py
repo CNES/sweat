@@ -15,12 +15,12 @@ from evaspa.__about__ import __version__
         {"ef": {"models": "default_evaspa"}},
         {"ef": {"check": {"threshold": 10}, "models": "default_evaspa"}},
         {
-            "filtering": {"cloud": "cloud_mask"},
+            "filtering": {"cloud": {"op": "!=", "value": 1}},
             "ef": {"models": "default_evaspa"},
         },
         {"ef": {"models": "default_evaspa"}, "seb": {"use_topo": True}},
         {
-            "filtering": {"water": "mask"},
+            "filtering": {"water": {"op": "!=", "value": 1}},
             "ef": {"models": "default_evaspa"},
             "seb": {"use_topo": True},
         },

@@ -1,5 +1,7 @@
 from enum import Enum
 
+import numpy as np
+
 # Constant
 PSYCHROMETRIC_CST = 0.67
 
@@ -11,6 +13,7 @@ class ETVar(Enum):
     """
 
     ALBEDO = "albedo"
+    ASPECT = "aspect"
     DEWPOINT_TEMPERATURE = "tdp"
     EMISSIVITY = "emis"
     ET = "et"
@@ -18,6 +21,7 @@ class ETVar(Enum):
     FCOVER = "fcover"
     FDIFF = "fdiff"
     FLAGS = "flags"
+    HEIGHT = "height"
     LAI = "lai"
     LE = "le"
     LOCAL_TIME = "local_time"
@@ -28,12 +32,18 @@ class ETVar(Enum):
     RH = "rh"
     RLD = "rld"
     RSD = "rsd"
+    SLOPE = "slope"
     TEMPERATURE = "ta"
     VALID = "valid"
 
 
+FLAGS_TYPE = np.uint8
 # Constant Flags
 # if bit 0 activated : The pixel is invalid : input data contains nodata
 MSK_INPUT_NODATA = 1 << 0
 # if bit 1 activated : The pixel is invalid : input data are filtered
 MSK_INPUT_FILTERED = 1 << 1
+# if bit 1 activated : The pixel is invalid : Processing failed
+MSK_PROCESSING_FAILED = 1 << 2
+# if bit 1 activated : The pixel is invalid : STIC not converged
+MSK_STIC_NOT_CONVERGED = 1 << 3

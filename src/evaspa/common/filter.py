@@ -6,11 +6,15 @@ import operator
 from functools import reduce
 from typing import Literal
 
-import numpy as np
-import numpy.typing as npt
 import xarray as xr
 from pydantic import BaseModel, ConfigDict, Field, RootModel
 
+from evaspa.common.constant import (
+    FLAGS_TYPE,
+    MSK_INPUT_FILTERED,
+    MSK_INPUT_NODATA,
+    ETVar,
+)
 from evaspa.debugging import register_debugging
 from evaspa.logging import LoggerManager
 
@@ -50,140 +54,6 @@ ConditionType = SimpleCondition | CompositeCondition
 # Final config mapping variable names to conditions
 class FilteringConfig(RootModel):
     root: dict[str, ConditionType]
-
-
-class FilterParams(BaseModel):
-    """
-    Parameters for the filter.
-    The parameters correspond to the values used
-    for masking
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    cloud: int = Field(default=0)
-    water: int = Field(default=0)
-    qa: int = Field(default=0b0000000000000000)
-    zones: int = Field(default=0)
-    cover: list[int] = Field(default=[10, 60, 80])  # TODO: TBC
-
-
-class FilterConfig(BaseModel):
-    """
-    Configuration for filtering pixels
-    The configuration contains names of the variables
-    for each mask and parameters for the filter
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    cloud: str | None = Field(default=None)
-    water: str | None = Field(default=None)
-    qa: str | None = Field(default=None)
-    zones: str | None = Field(default=None)
-    cover: str | None = Field(default=None)
-    config: FilterParams = Field(default=FilterParams())
-
-
-@register_debugging
-def determine_valid_pixels(
-    data: xr.Dataset,
-    cloud: npt.ArrayLike | str | None = None,
-    water: npt.ArrayLike | str | None = None,
-    qa: npt.ArrayLike | str | None = None,
-    zones: npt.ArrayLike | str | None = None,
-    cover: npt.ArrayLike | str | None = None,
-    config: dict | None = None,
-) -> xr.DataArray:
-    """
-    Description
-    -----------
-    Filter data
-
-    Parameters
-    ----------
-    data : xr.Dataset
-        Data
-
-    Returns
-    -------
-    filtered: xr.Dataset
-        Filtered data
-    """
-    # Mask configuration
-    default_config = FilterParams().model_dump()
-    if config is None:
-        config = default_config
-    updated_config = default_config | config
-    # Mask creation
-    valid = np.ones_like(data["lst"].data)
-    # Identify no cloudy pixels
-    if cloud is not None:
-        if isinstance(cloud, str):
-            cloud = data[cloud]
-        valid = np.logical_and(
-            valid, mask(cloud, values=updated_config["cloud"])
-        )
-    # Identify no water pixels
-    if water is not None:
-        if isinstance(water, str):
-            water = data[water]
-        valid = np.logical_and(
-            valid, mask(water, values=updated_config["water"])
-        )
-    # Identify pixels computed correctly form previous step
-    if qa is not None:
-        if isinstance(qa, str):
-            qa = data[qa]
-        valid = np.logical_and(valid, mask(qa, values=updated_config["qa"]))
-    # Identify pixels in the valid zone
-    if zones is not None:
-        if isinstance(zones, str):
-            zones = data[zones]
-        valid = np.logical_and(
-            valid, mask(zones, values=updated_config["zones"])
-        )
-    # Select pixels with land use / land cover
-    if cover is not None:
-        if isinstance(cover, str):
-            cover = data[cover]
-        valid = np.logical_and(
-            valid, mask(cover, values=updated_config["cover"])
-        )
-    return xr.DataArray(
-        data=valid,
-        dims=data.dims,
-        coords=data.coords.copy(),
-    )
-
-
-def mask(
-    data: npt.ArrayLike,
-    values: npt.ArrayLike,
-    invert=False,
-) -> npt.NDArray:
-    """
-    Description
-    -----------
-    Mask data
-
-    Parameters
-    ----------
-    data : np.array_like
-        Data
-    values : np.array_like
-        Values used for masking
-    invert : bool
-        If True, an element is the returned array is equal to True
-        if the element in data array is equal to one of the values.
-        Default is True.
-
-    Returns
-    -------
-    mask: np.array
-        Masked data
-    """
-    return np.isin(np.array(data), np.array(values), invert=invert)
 
 
 def eval_condition(da: xr.DataArray, cond: dict) -> xr.DataArray:
@@ -249,12 +119,11 @@ def apply_condition(da: xr.DataArray, cond: dict) -> xr.DataArray:
     return result
 
 
-@register_debugging
-def filter_valid_pixels(data: xr.Dataset, config: dict) -> xr.DataArray:
+def detect_valid_pixels(data: xr.Dataset, config: dict) -> xr.DataArray:
     """
     Description
     -----------
-    Determine valid pixels on a datasert based on
+    Detect valid pixels on a dataset based on
     codnitions in data variables. The conditions are
     described in a configuration dictionary.
 
@@ -275,7 +144,7 @@ def filter_valid_pixels(data: xr.Dataset, config: dict) -> xr.DataArray:
     if len(data.data_vars) == 0:
         msg = "Dataset is empty, filtering not possible"
         raise ValueError(msg)
-    # iInitialize valid mask
+    # Initialize valid mask
     valid_mask = xr.full_like(next(iter(data.data_vars.values())), 1, dtype=int)
 
     # Loop over all the conditions
@@ -288,3 +157,117 @@ def filter_valid_pixels(data: xr.Dataset, config: dict) -> xr.DataArray:
         valid_mask = valid_mask & mask
 
     return valid_mask
+
+
+def detect_nan_pixels(
+    data: xr.Dataset, variables: list[str] | str = "all"
+) -> xr.DataArray:
+    """
+    Description
+    -----------
+    Detect nan values on a dataset considering
+    a list of variables in the dataset.
+
+    Parameters
+    ----------
+    data : xr.Dataset
+        Data
+    variables : list[str] or str
+        List of data variables to filter nan values
+        If "all" is provided, all data variables will be
+        considered
+
+    Returns
+    -------
+    nan_mask: xr.DataArray
+        Nan pixels
+    """
+    # Check if dataset is not empty
+    if len(data.data_vars) == 0:
+        msg = "Dataset is empty, not possible to detect nan pixels"
+        raise ValueError(msg)
+    # Check variables arguments
+    if isinstance(variables, str):
+        if variables != "all":
+            msg = "Only 'all' can be provided"
+            raise ValueError(msg)
+        variables = list(data.data_vars)
+    # Initialize nan mask
+    nan_mask = xr.full_like(next(iter(data.data_vars.values())), 0, dtype=int)
+
+    # Loop over all variables
+    for var_name in variables:
+        if var_name not in data:
+            msg = f"Variable {var_name} not found"
+            logger.warning(msg)
+            continue
+        mask = data[var_name].isnull()
+        nan_mask = nan_mask | mask
+
+    return nan_mask
+
+
+@register_debugging
+def find_valid_pixels(
+    data: xr.Dataset,
+    nan_config: list[str] | str | None = None,
+    valid_config: dict | None = None,
+) -> tuple[xr.DataArray, xr.DataArray]:
+    """
+    Description
+    -----------
+    Find valid pixels.
+
+    Parameters
+    ----------
+    data : xr.Dataset
+        Data
+    nan_config : list[str] or str
+        List of variables to consider to exclude nan
+        if "all", all variables are taken into account
+        If not provided, pixel detection at nan does not take place
+    valid_config : dict
+
+
+    Returns
+    -------
+    valid: xr.DataArray
+        Valid pixels mask
+    flags: xr.DataArray
+        Flags mask
+    """
+    # Check if dataset is not empty
+    if len(data.data_vars) == 0:
+        msg = "Dataset is empty, not possible to detect nan pixels"
+        raise ValueError(msg)
+    # Get valid mask or initialize it
+    if ETVar.VALID.value in data.data_vars:
+        valid = data[ETVar.VALID.value]
+    else:
+        valid = xr.full_like(
+            next(iter(data.data_vars.values())), 1, dtype=FLAGS_TYPE
+        )
+    # Get flags mask or initialize it
+    if ETVar.FLAGS.value in data.data_vars:
+        flags = data[ETVar.FLAGS.value]
+    else:
+        flags = xr.full_like(
+            next(iter(data.data_vars.values())), 0, dtype=FLAGS_TYPE
+        )
+    if nan_config is not None:
+        nan_mask = detect_nan_pixels(data, nan_config)
+        valid = valid & ~nan_mask
+        flags = xr.where(
+            nan_mask == 1,
+            flags | MSK_INPUT_NODATA,
+            flags,
+        )
+    if valid_config is not None:
+        valid_mask = detect_valid_pixels(data, valid_config)
+        valid = valid & valid_mask
+        flags = xr.where(
+            valid_mask == 0,
+            flags | MSK_INPUT_FILTERED,
+            flags,
+        )
+    return valid, flags

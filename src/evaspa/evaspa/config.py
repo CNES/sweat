@@ -18,7 +18,7 @@ from pydantic import (
 
 from evaspa.__about__ import __version__
 from evaspa.common.daily import DailyConfig
-from evaspa.common.filter import FilterConfig
+from evaspa.common.filter import FilteringConfig
 from evaspa.common.io import InputConfig, OutputConfig
 from evaspa.debugging import DebuggingConfig
 from evaspa.evaspa.ef import EFConfig
@@ -72,7 +72,7 @@ class EVASPAParamsConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    filtering: FilterConfig = Field(default=FilterConfig())
+    filtering: FilteringConfig = Field(default=FilteringConfig({}))
     ef: EFConfig
     seb: SEBConfig = Field(default=SEBConfig())
     daily: DailyConfig = Field(default=DailyConfig())
