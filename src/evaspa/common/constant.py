@@ -50,5 +50,3 @@ MSK_INPUT_NODATA = 1 << 0
 MSK_INPUT_FILTERED = 1 << 1
 # if bit 1 activated : The pixel is invalid : Processing failed
 MSK_PROCESSING_FAILED = 1 << 2
-# if bit 1 activated : The pixel is invalid : STIC not converged
-MSK_STIC_NOT_CONVERGED = 1 << 3

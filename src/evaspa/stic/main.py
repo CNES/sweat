@@ -18,7 +18,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from evaspa.common.constant import (
     FLAGS_TYPE,
-    MSK_STIC_NOT_CONVERGED,
     PSYCHROMETRIC_CST,
     ETVar,
 )
@@ -41,6 +40,9 @@ logger = LoggerManager.get_logger(__name__)
 
 # Constants
 ALPHA = 1.26
+
+# if bit 1 activated : The pixel is invalid : STIC not converged
+MSK_STIC_NOT_CONVERGED = 1 << 3
 
 
 class STICPrepareConfig(BaseModel):
