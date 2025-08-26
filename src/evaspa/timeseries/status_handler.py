@@ -19,8 +19,8 @@ import numpy as np
 # Status type
 STATUS_TYPE = np.uint16
 # Blank status
-BLANK_STATUS = 0
-INIT_STATUS = 1
+BLANK_STATUS = STATUS_TYPE(0)
+INIT_STATUS = STATUS_TYPE(1)
 
 
 # Bit 0 to 2: Stata
@@ -34,7 +34,7 @@ class State(Enum):
 
 
 # Reset state
-MSK_STATE = 0b111
+MSK_STATE = STATUS_TYPE(0b111)
 
 
 # Bit 3: Processing mode
@@ -71,11 +71,11 @@ class AuxDataStatus(Enum):
 AUX_DATA_STATUS_POSITION = 6
 
 # Bit 7 to 10: Distance
-MSK_DISTANCE = 0b11110000000
+MSK_DISTANCE = STATUS_TYPE(0b11110000000)
 DISTANCE_POSITION = 7
 
 
-def _extract_bit(bit_array: int, position: int) -> int:
+def _extract_bit(bit_array: STATUS_TYPE, position: int) -> STATUS_TYPE:
     """
     Extract the bit at a specific position from the bit_array.
 
@@ -92,10 +92,10 @@ def _extract_bit(bit_array: int, position: int) -> int:
         The value of the third bit (0 or 1).
     """
     # Right shift by poistion and AND with 1
-    return (bit_array >> position) & 0b1
+    return STATUS_TYPE((bit_array >> position) & 0b1)
 
 
-def _set_bit(bit_array: int, position: int, value: int) -> int:
+def _set_bit(bit_array: STATUS_TYPE, position: int, value: int) -> STATUS_TYPE:
     """
     Set the bit at the specified position in the bit_array
     to the given value (0 or 1).
@@ -116,13 +116,11 @@ def _set_bit(bit_array: int, position: int, value: int) -> int:
     """
     if value:
         # Set the bit to 1
-        return bit_array | (
-            1 << position
-        )  # OR with 1 shifted to the specified position
+        # OR with 1 shifted to the specified position
+        return bit_array | STATUS_TYPE(1 << position)
     # Set the bit to 0
-    return bit_array & ~(
-        1 << position
-    )  # AND with NOT of 1 shifted to the specified position
+    # AND with NOT of 1 shifted to the specified position
+    return bit_array & np.bitwise_not(1 << position)
 
 
 def set_status(
@@ -132,40 +130,40 @@ def set_status(
     radiation: RadiationMode,
     aux_data: AuxDataStatus,
     distance: int,
-):
+) -> STATUS_TYPE:
     """
     Set status
     """
     status = BLANK_STATUS
     # Set state
-    status &= ~MSK_STATE  # Reset state
-    status |= state.value  # Set the new state
+    status &= np.bitwise_not(MSK_STATE)  # Reset state
+    status |= STATUS_TYPE(state.value)  # Set the new state
     # Set processing mode
     status = _set_bit(status, PROCESSING_MODE_POSITION, processing.value)
     status = _set_bit(status, UPDATED_POSITION, int(updated))
     status = _set_bit(status, RADIATION_MODE_POSITION, radiation.value)
     status = _set_bit(status, AUX_DATA_STATUS_POSITION, aux_data.value)
     # Set distance
-    status &= ~MSK_DISTANCE
-    status |= distance << DISTANCE_POSITION
+    status &= np.bitwise_not(MSK_DISTANCE)
+    status |= STATUS_TYPE(distance << DISTANCE_POSITION)
     return status
 
 
 def update_status(
-    status: int,
+    status: STATUS_TYPE,
     state: State | None = None,
     processing: ProcessingMode | None = None,
     updated: bool | None = None,
     radiation: RadiationMode | None = None,
     aux_data: AuxDataStatus | None = None,
     distance: int | None = None,
-):
+) -> STATUS_TYPE:
     """
     Update status
     """
     if state is not None:
-        status &= ~MSK_STATE  # Reset state
-        status |= state.value  # Set the new state
+        status &= np.bitwise_not(MSK_STATE)  # Reset state
+        status |= STATUS_TYPE(state.value)  # Set the new state
     # Set processing mode
     if processing is not None:
         status = _set_bit(status, PROCESSING_MODE_POSITION, processing.value)
@@ -176,65 +174,74 @@ def update_status(
     if aux_data is not None:
         status = _set_bit(status, AUX_DATA_STATUS_POSITION, aux_data.value)
     if distance is not None:
-        status &= ~MSK_DISTANCE
-        status |= distance << DISTANCE_POSITION
+        status &= np.bitwise_not(MSK_DISTANCE)
+        status |= STATUS_TYPE(distance << DISTANCE_POSITION)
     return status
 
 
-def get_state(bit_array: int) -> State:
+def get_state(bit_array: STATUS_TYPE) -> State:
     """
     Get State
     """
     return State(bit_array & MSK_STATE)  # Isolate the first two bits
 
 
-def get_processing_mode(bit_array: int) -> ProcessingMode:
+def get_processing_mode(bit_array: STATUS_TYPE) -> ProcessingMode:
     """
     Get processing mode
     """
     return ProcessingMode(_extract_bit(bit_array, PROCESSING_MODE_POSITION))
 
 
-def get_radiation_mode(bit_array: int) -> RadiationMode:
+def get_radiation_mode(bit_array: STATUS_TYPE) -> RadiationMode:
     """
     Get radiation mode
     """
     return RadiationMode(_extract_bit(bit_array, RADIATION_MODE_POSITION))
 
 
-def get_distance(bit_array: int) -> int:
-    return (bit_array & MSK_DISTANCE) >> DISTANCE_POSITION
+def get_distance(bit_array: STATUS_TYPE) -> int:
+    return ((bit_array & MSK_DISTANCE) >> DISTANCE_POSITION).astype(int)
 
 
-def is_updated(bit_array: int) -> bool:
+def is_updated(bit_array: STATUS_TYPE) -> bool:
     """
     Test is updated
     """
-    return bool((bit_array >> UPDATED_POSITION) & 0b1)
+    return ((STATUS_TYPE(bit_array) >> UPDATED_POSITION) & 0b1).astype(bool)
 
 
-def check_state(bit_array: int, state: State) -> bool:
+def check_state(bit_array: STATUS_TYPE, state: State) -> bool:
     """
     Check state
     """
-    return State(bit_array & MSK_STATE) == state
+    return bit_array & MSK_STATE == state.value
 
 
-def check_processing_mode(bit_array: int, mode: ProcessingMode) -> bool:
+def check_processing_mode(bit_array: STATUS_TYPE, mode: ProcessingMode) -> bool:
     """
     Check processing mode
     """
-    return (
-        ProcessingMode(_extract_bit(bit_array, PROCESSING_MODE_POSITION))
-        == mode
-    )
+    return _extract_bit(bit_array, PROCESSING_MODE_POSITION) == mode.value
 
 
-def check_radiation_mode(bit_array: int, radiation: RadiationMode) -> bool:
+def check_radiation_mode(
+    bit_array: STATUS_TYPE, radiation: RadiationMode
+) -> bool:
     """
     Check radiation status
     """
+    return _extract_bit(bit_array, RADIATION_MODE_POSITION) == radiation.value
+
+
+def print_status(bit_array: STATUS_TYPE) -> str:
+    """
+    Print status
+    """
     return (
-        RadiationMode(_extract_bit(bit_array, RADIATION_MODE_POSITION))
-        == radiation
+        f"Status : State={get_state(bit_array)}, "
+        f"Mode={get_processing_mode(bit_array)}, "
+        f"Updated={is_updated(bit_array)}, "
+        f"Radiation={get_radiation_mode(bit_array)}, "
+        f"Distance={get_distance(bit_array)}"
     )
