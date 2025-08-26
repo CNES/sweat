@@ -4,10 +4,32 @@ Module for linear interpolation/extrapolation
 """
 
 import xarray as xr
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from evaspa.timeseries import status_handler as sh
 from evaspa.timeseries.abstract_updater import Updater
 from evaspa.timeseries.constant import TimeSeriesVar as TSVar
+
+
+class LinearUpdaterParams(BaseModel):
+    """
+    Parameters to configure linear updater
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    strict_mode: bool = Field(default=True)
+    radiation_mode: sh.RadiationMode = Field(default=sh.RadiationMode.EXTERNAL)
+
+    @field_validator("radiation_mode", mode="before")
+    @classmethod
+    def check_method(cls, value):
+        if isinstance(value, str):
+            modes = {mode.name: mode.value for mode in sh.RadiationMode}
+            if value not in modes:
+                msg = f"Radiation mode {value} unknown"
+                raise ValueError(msg)
+            return sh.RadiationMode(modes[value])
+        return value
 
 
 class LinearUpdater(Updater):

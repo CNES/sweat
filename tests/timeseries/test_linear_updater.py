@@ -8,9 +8,10 @@ import numpy.typing as npt
 import pandas as pd
 import pytest
 import xarray as xr
+from pydantic import ValidationError
 
 from evaspa.timeseries.constant import TimeSeriesVar as TSVar
-from evaspa.timeseries.linear_updater import LinearUpdater
+from evaspa.timeseries.linear_updater import LinearUpdater, LinearUpdaterParams
 from evaspa.timeseries.status_handler import (
     STATUS_TYPE,
     ProcessingMode,
@@ -63,6 +64,37 @@ def setup_data(
             TSVar.TIME.value: dates,
         },
     )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "config",
+    [
+        {"strict_mode": True, "radiation_mode": "EXTERNAL"},
+        {"strict_mode": True, "radiation_mode": 1},
+    ],
+)
+def test_updaterconfig(config) -> None:
+    """
+    Test UpdaterConfig
+    """
+    assert LinearUpdaterParams.model_validate(config)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("config", "error"),
+    [
+        pytest.param({"foo": True, "radiation_mode": 1}, ValidationError),
+        pytest.param({"foo": True, "radiation_mode": "foo"}, ValidationError),
+    ],
+)
+def test_updaterconfig_error(config, error) -> None:
+    """
+    Test UpdaterConfig with error
+    """
+    with pytest.raises(error):
+        LinearUpdaterParams.model_validate(config)
 
 
 @pytest.mark.unit
