@@ -70,12 +70,19 @@ class LinearUpdater(Updater):
             .isel({TSVar.TIME.value: next_index})
             .item()
         )
+        time = data[TSVar.TIME.value].isel({TSVar.TIME.value: index}).item()
+        prev_time = (
+            data[TSVar.TIME.value].isel({TSVar.TIME.value: prev_index}).item()
+        )
+        next_time = (
+            data[TSVar.TIME.value].isel({TSVar.TIME.value: next_index}).item()
+        )
         # Compute ratio
         prev_ratio = prev_et / prev_radiation
         next_ratio = next_et / next_radiation
-        ratio = prev_ratio + (next_ratio - prev_ratio) * (
-            index - prev_index
-        ) / (next_index - prev_index)
+        ratio = prev_ratio + (next_ratio - prev_ratio) * (time - prev_time) / (
+            next_time - prev_time
+        )
         # Processing status
         mode = sh.ProcessingMode.NOMINAL
         if not sh.check_radiation_mode(
