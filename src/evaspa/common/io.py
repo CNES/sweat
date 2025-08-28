@@ -219,9 +219,12 @@ def write_dataset(
     col = next((dim_map[name] for name in col_names if name in coords), None)
     # Get bands
     bands = list(xrds.data_vars)
-    # Get georeference data
+    # Get projection
     crs = xrds.attrs.get("crs", None)
     transform = xrds.attrs.get("transform", None)
+    if hasattr(xrds, "rio"):
+        crs = xrds.rio.crs
+        transform = xrds.rio.transform()
     if transform is None:
         transform = rio.Affine(1, 0, 0, 0, 1, 0)
     with warnings.catch_warnings():

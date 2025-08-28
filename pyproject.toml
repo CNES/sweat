@@ -36,6 +36,7 @@ dependencies = [
   "timezonefinder",
   "pwlf",
   "numba",
+  "rioxarray",
 ]
 
 [project.optional-dependencies]
