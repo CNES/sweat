@@ -117,10 +117,10 @@ def _set_bit(bit_array: STATUS_TYPE, position: int, value: int) -> STATUS_TYPE:
     if value:
         # Set the bit to 1
         # OR with 1 shifted to the specified position
-        return bit_array | STATUS_TYPE(1 << position)
+        return np.bitwise_or(bit_array, STATUS_TYPE(1 << position))
     # Set the bit to 0
     # AND with NOT of 1 shifted to the specified position
-    return bit_array & np.bitwise_not(1 << position)
+    return np.bitwise_and(bit_array, np.bitwise_not(1 << position))
 
 
 def set_status(
