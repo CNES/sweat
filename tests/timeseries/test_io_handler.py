@@ -211,9 +211,11 @@ def test_write_timeseries(test_data_dir) -> None:
 @pytest.mark.parametrize(
     "keys",
     [
+        ["dates", "et_time_series", "radiation", "et_single_date"],
         ["et_time_series", "radiation", "et_single_date"],
         ["et_time_series", "radiation"],
         ["et_time_series"],
+        ["dates", "et_time_series"],
     ],
 )
 def test_timeseries_input_config(keys, test_data_dir) -> None:
@@ -221,7 +223,12 @@ def test_timeseries_input_config(keys, test_data_dir) -> None:
     Test TimeSeriesInputConfig
     """
     et_ts_files, radiation_files, et_files = get_list_files(str(test_data_dir))
+    today = dt.datetime.now(tz=dt.timezone.utc).date()
+    dates = pd.date_range(end=today, periods=7).to_list()
+    # Convert to strings in desired format, e.g., "YYYY-MM-DD"
+    date_strings = [date.strftime("%Y-%m-%d") for date in dates]
     full_config = {
+        "dates": date_strings,
         "et_time_series": et_ts_files,
         "radiation": radiation_files,
         "et_single_date": et_files,
@@ -353,9 +360,11 @@ def test_read_et_single_date(test_data_dir) -> None:
 @pytest.mark.parametrize(
     "keys",
     [
+        ["dates", "et_time_series", "radiation", "et_single_date"],
         ["et_time_series", "radiation", "et_single_date"],
         ["et_time_series", "radiation"],
         ["et_time_series"],
+        ["dates", "et_time_series"],
     ],
 )
 def test_read_input(keys, test_data_dir) -> None:
@@ -363,7 +372,12 @@ def test_read_input(keys, test_data_dir) -> None:
     Test TimeSeriesInputConfig
     """
     et_ts_files, radiation_files, et_files = get_list_files(str(test_data_dir))
+    today = dt.datetime.now(tz=dt.timezone.utc).date()
+    dates = pd.date_range(end=today, periods=7).to_list()
+    # Convert to strings in desired format, e.g., "YYYY-MM-DD"
+    date_strings = [date.strftime("%Y-%m-%d") for date in dates]
     full_config = {
+        "dates": date_strings,
         "et_time_series": et_ts_files,
         "radiation": radiation_files,
         "et_single_date": et_files,
