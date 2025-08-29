@@ -4,10 +4,8 @@ import os
 
 import geopandas as gpd
 import pytest
-import xarray as xr
 
 from evaspa import api
-from evaspa.common.io import read_input
 from evaspa.evaspa import tiling
 
 
@@ -16,13 +14,6 @@ def get_data_path() -> str:
     Get data path
     """
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
-
-
-def read_input_data(config: dict) -> xr.Dataset:
-    """
-    Read input data
-    """
-    return read_input(config)
 
 
 @pytest.mark.functional
@@ -240,7 +231,7 @@ def test_run_evaspa(entry, params, debug) -> None:
     """
     Test run EVASPA
     """
-    data = read_input_data(entry)
+    data = api.read_input_data(entry)
     res = api.run_evaspa(data, params, debug)
     assert res
 
@@ -293,6 +284,337 @@ def test_run_stic(entry, params, debug) -> None:
     """
     Test run EVASPA
     """
-    data = read_input_data(entry)
+    data = api.read_input_data(entry)
     res = api.run_stic(data, params, debug)
+    assert res
+
+
+@pytest.mark.functional
+@pytest.mark.parametrize(
+    ("entry", "params", "debug"),
+    [
+        pytest.param(
+            {
+                "dates": [
+                    "2025-08-23",
+                    "2025-08-24",
+                    "2025-08-25",
+                    "2025-08-26",
+                    "2025-08-27",
+                    "2025-08-28",
+                    "2025-08-29",
+                ],
+                "et_time_series": [
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_time_series_20250823.tif",
+                    ),
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_time_series_20250824.tif",
+                    ),
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_time_series_20250825.tif",
+                    ),
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_time_series_20250826.tif",
+                    ),
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_time_series_20250827.tif",
+                    ),
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_time_series_20250828.tif",
+                    ),
+                ],
+                "radiation": [
+                    os.path.join(
+                        "tests", "data", "timeseries", "radiation_20250823.tif"
+                    ),
+                    os.path.join(
+                        "tests", "data", "timeseries", "radiation_20250824.tif"
+                    ),
+                    os.path.join(
+                        "tests", "data", "timeseries", "radiation_20250825.tif"
+                    ),
+                    os.path.join(
+                        "tests", "data", "timeseries", "radiation_20250826.tif"
+                    ),
+                    os.path.join(
+                        "tests", "data", "timeseries", "radiation_20250827.tif"
+                    ),
+                    os.path.join(
+                        "tests", "data", "timeseries", "radiation_20250828.tif"
+                    ),
+                    os.path.join(
+                        "tests", "data", "timeseries", "radiation_20250829.tif"
+                    ),
+                ],
+                "et_single_date": [
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_single_date_20250824.tif",
+                    ),
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_single_date_20250826.tif",
+                    ),
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_single_date_20250828.tif",
+                    ),
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_single_date_20250829.tif",
+                    ),
+                ],
+            },
+            {},
+            None,
+        ),
+        pytest.param(
+            {
+                "dates": [
+                    "2025-08-23",
+                    "2025-08-24",
+                    "2025-08-25",
+                    "2025-08-26",
+                    "2025-08-27",
+                    "2025-08-28",
+                    "2025-08-29",
+                ],
+                "et_time_series": [
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_time_series_20250823.tif",
+                    ),
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_time_series_20250824.tif",
+                    ),
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_time_series_20250825.tif",
+                    ),
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_time_series_20250826.tif",
+                    ),
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_time_series_20250827.tif",
+                    ),
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_time_series_20250828.tif",
+                    ),
+                ],
+                "radiation": [
+                    os.path.join(
+                        "tests", "data", "timeseries", "radiation_20250823.tif"
+                    ),
+                    os.path.join(
+                        "tests", "data", "timeseries", "radiation_20250824.tif"
+                    ),
+                    os.path.join(
+                        "tests", "data", "timeseries", "radiation_20250825.tif"
+                    ),
+                    os.path.join(
+                        "tests", "data", "timeseries", "radiation_20250826.tif"
+                    ),
+                    os.path.join(
+                        "tests", "data", "timeseries", "radiation_20250827.tif"
+                    ),
+                    os.path.join(
+                        "tests", "data", "timeseries", "radiation_20250828.tif"
+                    ),
+                    os.path.join(
+                        "tests", "data", "timeseries", "radiation_20250829.tif"
+                    ),
+                ],
+                "et_single_date": [
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_single_date_20250824.tif",
+                    ),
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_single_date_20250826.tif",
+                    ),
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_single_date_20250828.tif",
+                    ),
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_single_date_20250829.tif",
+                    ),
+                ],
+            },
+            {
+                "stack": {"et_single_date_filtering": {}},
+                "update": {
+                    "method": "linear",
+                    "params": {"strict_mode": True, "radiation_mode": 0},
+                },
+            },
+            None,
+        ),
+        pytest.param(
+            {
+                "dates": [
+                    "2025-08-23",
+                    "2025-08-24",
+                    "2025-08-25",
+                    "2025-08-26",
+                    "2025-08-27",
+                    "2025-08-28",
+                    "2025-08-29",
+                ],
+                "et_time_series": [
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_time_series_20250823.tif",
+                    ),
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_time_series_20250824.tif",
+                    ),
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_time_series_20250825.tif",
+                    ),
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_time_series_20250826.tif",
+                    ),
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_time_series_20250827.tif",
+                    ),
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_time_series_20250828.tif",
+                    ),
+                ],
+                "radiation": [
+                    os.path.join(
+                        "tests", "data", "timeseries", "radiation_20250823.tif"
+                    ),
+                    os.path.join(
+                        "tests", "data", "timeseries", "radiation_20250824.tif"
+                    ),
+                    os.path.join(
+                        "tests", "data", "timeseries", "radiation_20250825.tif"
+                    ),
+                    os.path.join(
+                        "tests", "data", "timeseries", "radiation_20250826.tif"
+                    ),
+                    os.path.join(
+                        "tests", "data", "timeseries", "radiation_20250827.tif"
+                    ),
+                    os.path.join(
+                        "tests", "data", "timeseries", "radiation_20250828.tif"
+                    ),
+                    os.path.join(
+                        "tests", "data", "timeseries", "radiation_20250829.tif"
+                    ),
+                ],
+                "et_single_date": [
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_single_date_20250824.tif",
+                    ),
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_single_date_20250826.tif",
+                    ),
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_single_date_20250828.tif",
+                    ),
+                    os.path.join(
+                        "tests",
+                        "data",
+                        "timeseries",
+                        "et_single_date_20250829.tif",
+                    ),
+                ],
+            },
+            {},
+            {
+                "path": "out/debug",
+                "profile": True,
+                "verbose": False,
+            },
+        ),
+    ],
+)
+def test_run_timeseries(entry, params, debug) -> None:
+    """
+    Test run EVASPA
+    """
+    et_ts, radiation_ts, et_sd = api.read_ts_input_data(entry)
+    res = api.run_timeseries(et_ts, radiation_ts, et_sd, params, debug)
     assert res

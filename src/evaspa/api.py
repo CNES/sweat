@@ -19,6 +19,13 @@ from evaspa.logging import LoggerManager
 from evaspa.misc import trishna
 from evaspa.stic import main as stic
 from evaspa.stic.config import STICParamsConfig
+from evaspa.timeseries import stack_handler as sth
+from evaspa.timeseries import updater_handler as uh
+from evaspa.timeseries.config import (
+    TimeSeriesInputConfig,
+    TimeSeriesParamsConfig,
+)
+from evaspa.timeseries.io_handler import read_input as read_ts_input
 
 logger = LoggerManager.get_logger(__name__)
 
@@ -148,6 +155,36 @@ def read_input_data(entry: dict) -> xr.Dataset:
     return data
 
 
+def read_ts_input_data(
+    entry: dict,
+) -> tuple[xr.Dataset, xr.Dataset | None, xr.Dataset | None]:
+    """
+    Read time series input data
+
+    Parameters
+    ----------
+    entry: dict
+        Input configuration
+
+    Returns
+    -------
+    et_ts: xr.Dataset
+        Daily ET time series dataset
+    radiation_ts: xr.Dataset
+        Radiation time series dataset
+    et_sd: xr.Dataset
+        Daily ET single date dataset
+    """
+    # Validate input config
+    msg = f"Input: {entry}"
+    logger.debug(msg)
+    input_config = TimeSeriesInputConfig.model_validate(entry)
+    # Read input data
+    et_ts, radiation_ts, et_sd = read_ts_input(input_config.model_dump())
+    logger.debug("Read input data: OK")
+    return et_ts, radiation_ts, et_sd
+
+
 def run_evaspa(
     data: xr.Dataset, params: dict, debug: dict | None = None
 ) -> tuple[xr.Dataset, xr.Dataset] | None:
@@ -160,6 +197,8 @@ def run_evaspa(
         Input data
     params: dict
         Parameter configuration
+    debug: dict
+        Debug configuration
 
     Returns
     -------
@@ -243,6 +282,8 @@ def run_stic(
         Input data
     params: dict
         Parameter configuration
+    debug: dict
+        Debug configuration
 
     Returns
     -------
@@ -305,3 +346,58 @@ def run_stic(
     )
     logger.debug("Daily extrapolation: OK")
     return inst_xr, daily_xr
+
+
+def run_timeseries(
+    et_ts: xr.Dataset,
+    radiation_ts: xr.Dataset | None,
+    et_sd: xr.Dataset | None,
+    params: dict,
+    debug: dict | None = None,
+) -> xr.Dataset:
+    """
+    Run ET time series
+
+    Parameters
+    ----------
+    et_ts: xr.Dataset
+        Daily ET time series dataset
+    radiation_ts: xr.Dataset
+        Radiation time series dataset
+    et_sd: xr.Dataset
+        Daily ET single date dataset
+    params: dict
+        Parameter configuration
+    debug: dict
+        Debug configuration
+
+    Returns
+    -------
+    updated: xr.Dataset
+        Updated daily ET time series dataset
+    """
+    # Validate parameters config
+    msg = f"Params: {params}"
+    logger.debug(msg)
+    params_config = TimeSeriesParamsConfig.model_validate(params)
+    # Validate debug config
+    msg = f"Debug: {debug}"
+    logger.debug(msg)
+    if debug is not None:
+        debug_config = DebuggingConfig.model_validate(debug)
+    else:
+        debug_config = DebuggingConfig()
+    configure_debugging(**debug_config.model_dump())
+    logger.debug("Check configuration: OK")
+    # Prepare data: filter and stack
+    ts, feed = sth.run(
+        et_ts,
+        radiation_ts,
+        et_sd,
+        et_single_date_filtering=params_config.stack.et_single_date_filtering.model_dump(),
+    )
+    logger.debug("Prepare time series stack: OK")
+    # Update
+    updated_ts = uh.run(ts, feed, params_config.update.model_dump())
+    logger.debug("Upadte time series: OK")
+    return updated_ts
