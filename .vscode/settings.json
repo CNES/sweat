@@ -30,5 +30,8 @@
     "ruff.enable": true,
     "ruff.configuration": "${workspaceFolder}/ruff.toml",
     "python-envs.defaultEnvManager": "ms-python.python:system",
-    "python-envs.pythonProjects": []
+    "python-envs.pythonProjects": [],
+    "[json]": {
+      "editor.defaultFormatter": "vscode.json-language-features"
+    }
 }
