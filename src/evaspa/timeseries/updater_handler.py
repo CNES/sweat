@@ -80,7 +80,7 @@ def create(method=UpdateMethod, params=dict) -> Updater:
     raise ValueError(msg)
 
 
-def run(data: xr.Dataset, feed: xr.Dataset, config=dict):
+def run(data: xr.Dataset, feed: xr.Dataset | None, config=dict):
     """
     Run update
     """

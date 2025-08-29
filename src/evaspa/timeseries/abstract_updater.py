@@ -375,24 +375,29 @@ class Updater(ABC):
         updated_data[TSVar.FLAGS.value].values = status_ts
         return updated_data
 
-    def update(self, data: xr.Dataset, feed: xr.Dataset) -> xr.Dataset:
+    def update(self, data: xr.Dataset, feed: xr.Dataset | None) -> xr.Dataset:
         """
         Update
         """
-        coords = list(data.coords)
-        coords.remove(TSVar.TIME.value)
-        x1 = coords[0]
-        x2 = coords[1]
+        # Get cdimensions with order
+        original_dims = list(data.sizes.keys())
+        spatial_dims = [x for x in original_dims if x != TSVar.TIME.value]
+        x1 = spatial_dims[0]
+        x2 = spatial_dims[1]
 
         def apply_update_time_series(data_ts: xr.Dataset) -> xr.Dataset:
             x1_val = data_ts[x1].values.item()
             x2_val = data_ts[x2].values.item()
 
-            # Extract corresponding feed
-            feed_ts = feed.sel({x1: x1_val, x2: x2_val})
+            updated_ts = data_ts.copy()
+            if feed is not None:
+                # Extract corresponding feed
+                feed_ts = feed.sel({x1: x1_val, x2: x2_val})
 
-            # Update new acquisition
-            updated_ts = self.update_with_new_acquisitions(data_ts, feed_ts)
+                # Update new acquisition
+                updated_ts = self.update_with_new_acquisitions(
+                    updated_ts, feed_ts
+                )
             # Update time series
             return self.update_time_series(updated_ts)
 

@@ -580,62 +580,78 @@ def test_update():
     ts = xr.Dataset(
         {
             TSVar.ET.value: (
-                ["x", "y", "time"],
-                np.array(
-                    [
+                ["time", "y", "x"],
+                np.transpose(
+                    np.array(
                         [
-                            [1.2, 1.4, 1.6, 1.8, 1.8, 1.8, np.nan],
-                            [1.4, 1.4, 1.4, 1.4, 1.4, 1.4, np.nan],
+                            [
+                                [1.2, 1.4, 1.6, 1.8, 1.8, 1.8, np.nan],
+                                [1.4, 1.4, 1.4, 1.4, 1.4, 1.4, np.nan],
+                            ]
                         ]
-                    ]
+                    ),
+                    (2, 1, 0),
                 ),
             ),
             TSVar.RADIATION.value: (
-                ["x", "y", "time"],
-                np.array(
-                    [
+                ["time", "y", "x"],
+                np.transpose(
+                    np.array(
                         [
-                            [200, 200, 200, 200, 200, 200, 200],
-                            [200, 200, 200, 200, 200, 200, 200],
+                            [
+                                [200, 200, 200, 200, 200, 200, 200],
+                                [200, 200, 200, 200, 200, 200, 200],
+                            ]
                         ]
-                    ]
+                    ),
+                    (2, 1, 0),
                 ),
             ),
             TSVar.FLAGS.value: (
-                ["x", "y", "time"],
-                np.array(
-                    [
+                ["time", "y", "x"],
+                np.transpose(
+                    np.array(
                         [
-                            [0, 386, 386, 0, 131, 132, 1],
-                            [132, 0, 131, 259, 387, 515, 1],
-                        ]
-                    ],
-                    dtype=STATUS_TYPE,
+                            [
+                                [0, 386, 386, 0, 131, 132, 1],
+                                [132, 0, 131, 259, 387, 515, 1],
+                            ]
+                        ],
+                        dtype=STATUS_TYPE,
+                    ),
+                    (2, 1, 0),
                 ),
             ),
         },
         coords={
-            "time": np.array(
-                pd.date_range(end=today, periods=window_size).to_list()
-            ),
+            "time": dates,
             "x": np.arange(1),
             "y": np.arange(2),
         },
     )
-    ts = ts.transpose("time", "x", "y")
     acquisition_dates = [1, 3, 5, 6]
     feed_dates = dates[acquisition_dates]
     feed = xr.Dataset(
         {
             TSVar.ET.value: (
-                ["x", "y", "time"],
-                np.array(
-                    [[[np.nan, 1.8, np.nan, 2.4], [1.4, np.nan, 2.2, np.nan]]]
+                ["time", "y", "x"],
+                np.transpose(
+                    np.array(
+                        [
+                            [
+                                [np.nan, 1.8, np.nan, 2.4],
+                                [1.4, np.nan, 2.2, np.nan],
+                            ]
+                        ]
+                    ),
+                    (2, 1, 0),
                 ),
             ),
             TSVar.VALID.value: (
-                ["x", "y", "time"],
-                np.array([[[0, 1, 0, 1], [1, 0, 1, 0]]]),
+                ["time", "y", "x"],
+                np.transpose(
+                    np.array([[[0, 1, 0, 1], [1, 0, 1, 0]]]), (2, 1, 0)
+                ),
             ),
         },
         coords={
@@ -644,7 +660,6 @@ def test_update():
             "y": np.arange(2),
         },
     )
-    feed = feed.transpose("time", "x", "y")
     linear_updater = LinearUpdater(
         strict_mode=True, radiation_mode=RadiationMode.EXTERNAL
     )
@@ -652,38 +667,150 @@ def test_update():
     ref = xr.Dataset(
         {
             TSVar.ET.value: (
-                ["x", "y", "time"],
-                np.array(
-                    [
+                ["time", "y", "x"],
+                np.transpose(
+                    np.array(
                         [
-                            [1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4],
-                            [1.4, 1.4, 1.6, 1.8, 2.0, 2.2, 2.2],
+                            [
+                                [1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4],
+                                [1.4, 1.4, 1.6, 1.8, 2.0, 2.2, 2.2],
+                            ]
                         ]
-                    ]
+                    ),
+                    (2, 1, 0),
                 ),
             ),
             TSVar.FLAGS.value: (
-                ["x", "y", "time"],
-                np.array(
-                    [
+                ["time", "y", "x"],
+                np.transpose(
+                    np.array(
                         [
-                            [0, 386, 386, 0, 402, 402, 16],
-                            [132, 0, 530, 530, 530, 16, 147],
-                        ]
-                    ],
-                    dtype=STATUS_TYPE,
+                            [
+                                [0, 386, 386, 0, 402, 402, 16],
+                                [132, 0, 530, 530, 530, 16, 147],
+                            ]
+                        ],
+                        dtype=STATUS_TYPE,
+                    ),
+                    (2, 1, 0),
                 ),
             ),
         },
         coords={
-            "time": np.array(
-                pd.date_range(end=today, periods=window_size).to_list()
-            ),
+            "time": dates,
             "x": np.arange(1),
             "y": np.arange(2),
         },
     )
-    ref = ref.transpose("time", "x", "y")
+    xr.testing.assert_allclose(updated_ts[TSVar.ET.value], ref[TSVar.ET.value])
+    xr.testing.assert_equal(
+        updated_ts[TSVar.FLAGS.value], ref[TSVar.FLAGS.value]
+    )
+
+
+@pytest.mark.functional
+def test_update_no_feed():
+    """
+    Test update interpolated data function
+    """
+    # Setup data
+    window_size = 7
+    today = dt.datetime.now(tz=dt.timezone.utc).date()
+    dates = np.array(pd.date_range(end=today, periods=window_size).to_list())
+    ts = xr.Dataset(
+        {
+            TSVar.ET.value: (
+                ["time", "y", "x"],
+                np.transpose(
+                    np.array(
+                        [
+                            [
+                                [1.2, 1.4, 1.6, 1.8, 1.8, 1.8, np.nan],
+                                [1.4, 1.4, 1.4, 1.4, 1.4, 1.4, np.nan],
+                            ]
+                        ]
+                    ),
+                    (2, 1, 0),
+                ),
+            ),
+            TSVar.RADIATION.value: (
+                ["time", "y", "x"],
+                np.transpose(
+                    np.array(
+                        [
+                            [
+                                [200, 200, 200, 200, 200, 200, 200],
+                                [200, 200, 200, 200, 200, 200, 200],
+                            ]
+                        ]
+                    ),
+                    (2, 1, 0),
+                ),
+            ),
+            TSVar.FLAGS.value: (
+                ["time", "y", "x"],
+                np.transpose(
+                    np.array(
+                        [
+                            [
+                                [0, 386, 386, 0, 131, 259, 1],
+                                [132, 0, 131, 259, 387, 515, 1],
+                            ]
+                        ],
+                        dtype=STATUS_TYPE,
+                    ),
+                    (2, 1, 0),
+                ),
+            ),
+        },
+        coords={
+            "time": dates,
+            "x": np.arange(1),
+            "y": np.arange(2),
+        },
+    )
+    linear_updater = LinearUpdater(
+        strict_mode=True, radiation_mode=RadiationMode.EXTERNAL
+    )
+    updated_ts = linear_updater.update(ts, feed=None)
+    ref = xr.Dataset(
+        {
+            TSVar.ET.value: (
+                ["time", "y", "x"],
+                np.transpose(
+                    np.array(
+                        [
+                            [
+                                [1.2, 1.4, 1.6, 1.8, 1.8, 1.8, 1.8],
+                                [1.4, 1.4, 1.4, 1.4, 1.4, 1.4, 1.4],
+                            ]
+                        ]
+                    ),
+                    (2, 1, 0),
+                ),
+            ),
+            TSVar.FLAGS.value: (
+                ["time", "y", "x"],
+                np.transpose(
+                    np.array(
+                        [
+                            [
+                                [0, 386, 386, 0, 131, 259, 403],
+                                [132, 0, 131, 259, 387, 515, 659],
+                            ]
+                        ],
+                        dtype=STATUS_TYPE,
+                    ),
+                    (2, 1, 0),
+                ),
+            ),
+        },
+        coords={
+            "time": dates,
+            "x": np.arange(1),
+            "y": np.arange(2),
+        },
+    )
     xr.testing.assert_allclose(updated_ts[TSVar.ET.value], ref[TSVar.ET.value])
     xr.testing.assert_equal(
         updated_ts[TSVar.FLAGS.value], ref[TSVar.FLAGS.value]
