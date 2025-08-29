@@ -97,6 +97,7 @@ def toa_daily_estimate(
         aspect=aspect,
     )
     # Compute ratio
+    # TODO: Maybe values directly must be used to update
     for var in daily.data_vars:
         daily[var] = data[var] * toa_daily / toa_inst
     return daily

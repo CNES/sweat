@@ -9,9 +9,11 @@ from evaspa.__about__ import __version__
 from evaspa.api import (
     generate_tiles,
     read_input_data,
+    read_ts_input_data,
     regroup_tiles,
     run_evaspa,
     run_stic,
+    run_timeseries,
 )
 from evaspa.common.config import read_config, write_config
 from evaspa.common.io import write_dataset
@@ -19,6 +21,8 @@ from evaspa.evaspa.config import EVASPAInputFile
 from evaspa.evaspa.tiling import write_regroup
 from evaspa.logging import LoggerManager
 from evaspa.stic.config import STICInputFile
+from evaspa.timeseries.config import TimeSeriesInputFile
+from evaspa.timeseries.io_handler import write_timeseries
 
 logger = LoggerManager.get_logger(__name__)
 
@@ -135,7 +139,7 @@ def evaspa(verbose, input_file):
         write_dataset(
             res[1], filename=filename, directory=output_dir, separate=True
         )
-    logger.info("Writing results: OK")
+        logger.info("Writing results: OK")
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
@@ -184,4 +188,47 @@ def stic(verbose, input_file):
         write_dataset(
             res[1], filename=filename, directory=output_dir, separate=True
         )
-    logger.info("Writing results: OK")
+        logger.info("Writing results: OK")
+
+
+@click.command(context_settings={"help_option_names": ["-h", "--help"]})
+@click.option(
+    "--verbose/--no-verbose",
+    default=False,
+    help="Debug logging mode",
+)
+@click.argument(
+    "input_file", type=click.Path(exists=True, file_okay=True, readable=True)
+)
+@click.version_option(version=__version__, prog_name="timeseries")
+def timeseries(verbose, input_file):
+    # Configure logging
+    log_level = logging.INFO
+    if verbose:
+        log_level = logging.DEBUG
+    LoggerManager.set_level(log_level)
+    # Set configuration
+    msg = f"Configuration file: {input_file}"
+    logger.debug(msg)
+    dict_config = read_config(input_file)
+    # Verify config and manage default parameters
+    config = TimeSeriesInputFile.model_validate(dict_config)
+    output_dir = Path(config.output.path)
+    # Read input data
+    logger.debug("Read input data...")
+    et_ts, radiation_ts, et_sd = read_ts_input_data(config.input)
+    logger.info("Read input data: OK")
+    # Run
+    logger.debug("Run stic...")
+    res = run_timeseries(
+        et_ts, radiation_ts, et_sd, config.params, config.debug
+    )
+    logger.info("Run timeseries: OK")
+    # Save configuration
+    logger.debug("Write results...")
+    write_config(config.model_dump(), output_dir, fmt="json")
+    logger.info("Write configuration: OK")
+    # Write results
+    if res is not None:
+        write_timeseries(res, root_name="et_timeseries", directory=output_dir)
+        logger.info("Writing results: OK")

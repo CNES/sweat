@@ -72,6 +72,7 @@ Source = "https://gitlab.cnes.fr/cesbio/evaspa"
 evaspa = "evaspa.cli:evaspa"
 evaspa-tiling = "evaspa.cli:evaspa_tiling"
 stic = "evaspa.cli:stic"
+timeseries = "evaspa.cli:timeseries"
 
 [tool.hatch.metadata]
 allow-direct-references = true

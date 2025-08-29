@@ -1,0 +1,60 @@
+{
+    "input": {
+        "dates": [
+            "2025-08-23",
+            "2025-08-24",
+            "2025-08-25",
+            "2025-08-26",
+            "2025-08-27",
+            "2025-08-28",
+            "2025-08-29"
+        ],
+        "et_time_series": [
+            "tests/data/timeseries/et_time_series_20250823.tif",
+            "tests/data/timeseries/et_time_series_20250824.tif",
+            "tests/data/timeseries/et_time_series_20250825.tif",
+            "tests/data/timeseries/et_time_series_20250826.tif",
+            "tests/data/timeseries/et_time_series_20250827.tif",
+            "tests/data/timeseries/et_time_series_20250828.tif"
+        ],
+        "radiation": [
+            "tests/data/timeseries/radiation_20250823.tif",
+            "tests/data/timeseries/radiation_20250824.tif",
+            "tests/data/timeseries/radiation_20250825.tif",
+            "tests/data/timeseries/radiation_20250826.tif",
+            "tests/data/timeseries/radiation_20250827.tif",
+            "tests/data/timeseries/radiation_20250828.tif",
+            "tests/data/timeseries/radiation_20250829.tif"
+        ],
+        "et_single_date": [
+            "tests/data/timeseries/et_single_date_20250824.tif",
+            "tests/data/timeseries/et_single_date_20250826.tif",
+            "tests/data/timeseries/et_single_date_20250828.tif",
+            "tests/data/timeseries/et_single_date_20250829.tif"
+        ]
+    },
+    "output": {
+        "path": "out"
+    },
+    "params": {
+        "stack": {
+            "et_single_date_filtering": {
+                "flags": {
+                    "op": "==",
+                    "value": 0
+                }
+            }
+        },
+        "update": {
+            "method": "linear",
+            "params": {
+                "strict_mode": true,
+                "radiation_mode": "EXTERNAL"
+            }
+        }
+    },
+    "debug": {
+        "profile": true,
+        "verbose": true
+    }
+}
