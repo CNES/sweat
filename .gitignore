@@ -28,6 +28,7 @@ out/
 !tests/data/modis_test_dem.tif
 !tests/data/modis_test_full.tif
 !tests/data/modis_dir/*.tif
+!tests/data/timeseries/*.tif
 !tests/data/dem.tif
 
 # pixi environments
