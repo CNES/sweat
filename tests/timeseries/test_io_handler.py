@@ -53,8 +53,8 @@ def setup_test_data(test_data_dir):
     # Generate x/y coordinates from transform
     x_coords = [(transform * (i, 0))[0] for i in range(x_size)]  # x: lon
     y_coords = [(transform * (0, j))[1] for j in range(y_size)]  # y: lat
-    # Create et dataset
-    ts = xr.Dataset(
+    # Create a dataset
+    et_ts = xr.Dataset(
         {
             TSVar.ET.value: (
                 ["time", "y", "x"],
@@ -62,14 +62,42 @@ def setup_test_data(test_data_dir):
                     np.array(
                         [
                             [
-                                [1.2, 1.4, 1.6, 1.8, 1.8, 1.8, np.nan],
-                                [1.4, 1.4, 1.4, 1.4, 1.4, 1.4, np.nan],
+                                [1.2, 1.4, 1.6, 1.8, 1.8, 1.8],
+                                [1.4, 1.4, 1.4, 1.4, 1.4, 1.4],
                             ]
                         ]
                     ),
                     (2, 1, 0),
                 ),
             ),
+            TSVar.FLAGS.value: (
+                ["time", "y", "x"],
+                np.transpose(
+                    np.array(
+                        [
+                            [
+                                [0, 386, 386, 0, 131, 275],
+                                [132, 0, 131, 259, 387, 531],
+                            ]
+                        ],
+                        dtype=sh.STATUS_TYPE,
+                    ),
+                    (2, 1, 0),
+                ),
+            ),
+        },
+        coords={
+            "time": dates[:-1],
+            "x": x_coords,
+            "y": y_coords,
+        },
+    )
+    # Add CRS and transform metadata (compatible with rioxarray)
+    et_ts = et_ts.rio.write_crs(CRS(4236))
+    et_ts = et_ts.rio.write_transform(transform)
+    # Create a rdaiation dataset
+    radiation_ts = xr.Dataset(
+        {
             TSVar.RADIATION.value: (
                 ["time", "y", "x"],
                 np.transpose(
@@ -84,37 +112,19 @@ def setup_test_data(test_data_dir):
                     (2, 1, 0),
                 ),
             ),
-            TSVar.FLAGS.value: (
-                ["time", "y", "x"],
-                np.transpose(
-                    np.array(
-                        [
-                            [
-                                [0, 386, 386, 0, 131, 275, 1],
-                                [132, 0, 131, 259, 387, 531, 1],
-                            ]
-                        ],
-                        dtype=sh.STATUS_TYPE,
-                    ),
-                    (2, 1, 0),
-                ),
-            ),
         },
         coords={
-            "time": np.array(
-                pd.date_range(end=today, periods=window_size).to_list()
-            ),
+            "time": dates,
             "x": x_coords,
             "y": y_coords,
         },
     )
     # Add CRS and transform metadata (compatible with rioxarray)
-    ts = ts.rio.write_crs(CRS(4236))
-    ts = ts.rio.write_transform(transform)
-    # Select dates for acquisition
+    radiation_ts = radiation_ts.rio.write_crs(CRS(4236))
+    radiation_ts = radiation_ts.rio.write_transform(transform)
+    # Create a dataset for ET signe dates
     acquisition_dates = [1, 3, 5, 6]
     feed_dates = dates[acquisition_dates]
-    # Create dataset for new acquisitions
     feed = xr.Dataset(
         {
             TSVar.ET.value: (
@@ -150,12 +160,12 @@ def setup_test_data(test_data_dir):
     # Write data
     output_dir = str(test_data_dir)
     ioh.write_timeseries(
-        ts[[TSVar.ET.value, TSVar.FLAGS.value]],
+        et_ts,
         root_name="et_time_series",
         directory=output_dir,
     )
     ioh.write_timeseries(
-        ts[[TSVar.RADIATION.value]], root_name="radiation", directory=output_dir
+        radiation_ts, root_name="radiation", directory=output_dir
     )
     ioh.write_timeseries(feed, root_name="et_single_date", directory=output_dir)
 
@@ -249,7 +259,10 @@ def test_extract_date_from_filename(test_data_dir) -> None:
     et_ts_files, _, _ = get_list_files(str(test_data_dir))
     date = ioh.extract_date_from_filename(sorted(et_ts_files)[-1])
     today = pd.to_datetime(
-        dt.datetime.now(tz=dt.timezone.utc).strftime("%Y%m%d"), format="%Y%m%d"
+        (dt.datetime.now(tz=dt.timezone.utc) - dt.timedelta(days=1)).strftime(
+            "%Y%m%d"
+        ),
+        format="%Y%m%d",
     )
     assert date == today
 
@@ -260,7 +273,9 @@ def test_read_et_time_series(test_data_dir) -> None:
     Test function for reading et time series files
     """
     et_ts_files, _, _ = get_list_files(str(test_data_dir))
-    ts = ioh.read_et_time_series(et_ts_files)
+    today = dt.datetime.now(tz=dt.timezone.utc).date()
+    dates = pd.date_range(end=today, periods=7).to_list()
+    ts = ioh.read_et_time_series(et_ts_files, dates)
     assert ts
     assert ts.sizes[TSVar.TIME.value] == 7
     assert ts.sizes["x"] == 1
@@ -272,6 +287,27 @@ def test_read_et_time_series(test_data_dir) -> None:
     np.testing.assert_almost_equal(
         ts[TSVar.FLAGS.value].values[:, 1, 0],
         np.array([132, 0, 131, 259, 387, 515, 1], dtype=sh.STATUS_TYPE),
+    )
+
+
+@pytest.mark.unit
+def test_read_et_time_series_without_dates(test_data_dir) -> None:
+    """
+    Test function for reading et time series files (without dates)
+    """
+    et_ts_files, _, _ = get_list_files(str(test_data_dir))
+    ts = ioh.read_et_time_series(et_ts_files, dates=None)
+    assert ts
+    assert ts.sizes[TSVar.TIME.value] == 6
+    assert ts.sizes["x"] == 1
+    assert ts.sizes["y"] == 2
+    np.testing.assert_almost_equal(
+        ts[TSVar.ET.value].values[:, 0, 0],
+        np.array([1.2, 1.4, 1.6, 1.8, 1.8, 1.8]),
+    )
+    np.testing.assert_almost_equal(
+        ts[TSVar.FLAGS.value].values[:, 1, 0],
+        np.array([132, 0, 131, 259, 387, 515], dtype=sh.STATUS_TYPE),
     )
 
 
@@ -289,10 +325,6 @@ def test_read_radiation_time_series(test_data_dir) -> None:
     np.testing.assert_almost_equal(
         ts[TSVar.RADIATION.value].values[:, 0, 0],
         np.array([200, 200, 200, 200, 200, 200, 200]),
-    )
-    np.testing.assert_almost_equal(
-        ts[TSVar.FLAGS.value].values[:, 1, 0],
-        np.array([0, 0, 0, 0, 0, 0, 0], dtype=sh.STATUS_TYPE),
     )
 
 

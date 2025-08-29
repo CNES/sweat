@@ -7,6 +7,7 @@ Module for managing IO for time series
 
 import os
 import re
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -23,11 +24,20 @@ class TimeSeriesInputConfig(BaseModel):
     Configuration for parameters for time series computation
     """
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
     et_time_series: list[str]
+    dates: list[pd.Timestamp] | None = Field(default=None)
     radiation: list[str] = Field(default=[])
     et_single_date: list[str] = Field(default=[])
+
+    @field_validator("dates", mode="before")
+    @classmethod
+    def convert_and_sort_dates(cls, v: Any) -> list[pd.Timestamp]:
+        # Convert each value to pandas.Timestamp
+        timestamps = [pd.Timestamp(item) for item in v]
+        # Sort the list
+        return sorted(timestamps)
 
     @field_validator("et_time_series", "radiation", "et_single_date")
     @classmethod
@@ -85,7 +95,7 @@ def extract_date_from_filename(filename: str) -> pd.Timestamp:
     raise ValueError(msg)
 
 
-def read_time_series(filenames: list[str]):
+def read_time_series(filenames: list[str]) -> xr.Dataset:
     """
     Read time series
     """
@@ -114,7 +124,9 @@ def read_time_series(filenames: list[str]):
     return xr.concat(datasets, dim="time")
 
 
-def read_et_time_series(filenames: list[str]):
+def read_et_time_series(
+    filenames: list[str], dates: list[pd.Timestamp] | None
+) -> xr.Dataset:
     """
     Read time series
     """
@@ -132,10 +144,28 @@ def read_et_time_series(filenames: list[str]):
         },
         vectorize=True,
     )
+    # Fill missing dates
+    if dates is not None:
+        filled_et = ts[TSVar.ET.value].reindex(
+            {TSVar.TIME.value: dates}, fill_value=np.nan
+        )
+        filled_flags = (
+            ts[TSVar.FLAGS.value]
+            .reindex({TSVar.TIME.value: dates}, fill_value=sh.INIT_STATUS)
+            .astype(sh.STATUS_TYPE)
+        )
+        # Combine into new dataset
+        return xr.Dataset(
+            {
+                TSVar.ET.value: filled_et,
+                TSVar.FLAGS.value: filled_flags,
+            },
+            attrs=ts.attrs.copy(),
+        )
     return ts
 
 
-def read_radiation_time_series(filenames: list[str]):
+def read_radiation_time_series(filenames: list[str]) -> xr.Dataset:
     """
     Read radiation time series
     """
@@ -143,14 +173,10 @@ def read_radiation_time_series(filenames: list[str]):
     ts = read_time_series(filenames)
     # Convert type
     ts[TSVar.RADIATION.value] = ts[TSVar.RADIATION.value].astype("float32")
-    if TSVar.FLAGS.value not in ts.data_vars:
-        ts[TSVar.FLAGS.value] = xr.zeros_like(ts[TSVar.RADIATION.value])
-    else:
-        ts[TSVar.FLAGS.value] = ts[TSVar.FLAGS.value].astype(sh.STATUS_TYPE)
     return ts
 
 
-def read_et_single_date(filenames: list[str]):
+def read_et_single_date(filenames: list[str]) -> xr.Dataset:
     """
     Read ET products
     """
@@ -159,7 +185,9 @@ def read_et_single_date(filenames: list[str]):
     # Convert type
     ts[TSVar.ET.value] = ts[TSVar.ET.value].astype("float32")
     if TSVar.FLAGS.value not in ts.data_vars:
-        ts[TSVar.FLAGS.value] = xr.zeros_like(ts[TSVar.ET.value])
+        ts[TSVar.FLAGS.value] = xr.zeros_like(
+            ts[TSVar.ET.value], dtype=sh.STATUS_TYPE
+        )
     else:
         ts[TSVar.FLAGS.value] = ts[TSVar.FLAGS.value].astype(sh.STATUS_TYPE)
     return ts
@@ -174,11 +202,11 @@ def read_input(
     # Configuration
     input_cfg = TimeSeriesInputConfig.model_validate(config)
     # Read
-    et_ts = read_et_time_series(input_cfg.et_time_series)
+    et_ts = read_et_time_series(input_cfg.et_time_series, input_cfg.dates)
     radiation_ts = None
     if len(input_cfg.radiation) > 0:
         radiation_ts = read_radiation_time_series(input_cfg.radiation)
     et_sd = None
     if len(input_cfg.et_single_date) > 0:
-        et_sd = read_et_time_series(input_cfg.et_single_date)
+        et_sd = read_et_single_date(input_cfg.et_single_date)
     return et_ts, radiation_ts, et_sd
