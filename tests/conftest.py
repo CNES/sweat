@@ -3,6 +3,19 @@ import os
 import pytest
 
 
+def pytest_addoption(parser):
+    parser.addoption(
+        "--runslow",
+        action="store_true",
+        default=False,
+        help="run tests marked as slow",
+    )
+
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "slow: mark test as slow")
+
+
 def pytest_collection_modifyitems(
     config: pytest.Config, items: list[pytest.Item]
 ):
@@ -25,18 +38,19 @@ def pytest_collection_modifyitems(
     # Always run test if it's a single test invoked from vscode
     if len(items) == 1 and "vscode_pytest" in config.invocation_params.args:
         return
-    skip_slow = pytest.mark.skip(reason="need --runslow option to run")
-    for item in items:
-        if "slow" in item.keywords:
-            item.add_marker(skip_slow)
+    if not config.getoption("--runslow"):
+        skip_slow = pytest.mark.skip(reason="need --runslow option to run")
+        for item in items:
+            if "slow" in item.keywords:
+                item.add_marker(skip_slow)
     for item in items:
         # Check if all tests have a marker
         if not any(
             marker.name
-            in ["unit", "functional", "end_to_end", "notebooks", "skip"]
+            in ["unit", "functional", "end_to_end", "notebooks", "skip", "slow"]
             for marker in item.iter_markers()
         ):
-            msg = f"Test {item.nodeid} is missing a required marker (unit, functional, end_to_end, notebooks, skip)"
+            msg = f"Test {item.nodeid} is missing a required marker (unit, functional, end_to_end, notebooks, slow, skip)"
             raise pytest.UsageError(msg)
         # Check if EVASPA_TEST_DATA_PATH is set for tests with require_test_data marker
         if "require_test_data" in item.keywords and not test_data_path:
