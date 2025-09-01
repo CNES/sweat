@@ -28,8 +28,9 @@ class TimeSeriesInputConfig(BaseModel):
 
     et_time_series: list[str]
     dates: list[pd.Timestamp] | None = Field(default=None)
-    radiation: list[str] = Field(default=[])
     et_single_date: list[str] = Field(default=[])
+    radiation: list[str] = Field(default=[])
+    dem: str | None = Field(default=None)
 
     @field_validator("dates", mode="before")
     @classmethod
@@ -47,6 +48,14 @@ class TimeSeriesInputConfig(BaseModel):
                 msg = f"Path not found: {file}"
                 raise OSError(msg)
         return files
+
+    @field_validator("dem")
+    @classmethod
+    def test_dem(cls, file: str) -> str:
+        if file is not None and not os.path.exists(file):
+            msg = f"Path to DEM not found: {file}"
+            raise OSError(msg)
+        return file
 
     @field_validator("et_time_series")
     @classmethod
@@ -195,7 +204,7 @@ def read_et_single_date(filenames: list[str]) -> xr.Dataset:
 
 def read_input(
     config: dict,
-) -> tuple[xr.Dataset, xr.Dataset | None, xr.Dataset | None]:
+) -> tuple[xr.Dataset, xr.Dataset | None, xr.Dataset | None, xr.Dataset | None]:
     """
     Read input data for time series
     """
@@ -209,4 +218,7 @@ def read_input(
     et_sd = None
     if len(input_cfg.et_single_date) > 0:
         et_sd = read_et_single_date(input_cfg.et_single_date)
-    return et_ts, radiation_ts, et_sd
+    dem = None
+    if input_cfg.dem is not None:
+        dem = read_data_from_file(input_cfg.dem)
+    return et_ts, radiation_ts, et_sd, dem

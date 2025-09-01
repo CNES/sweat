@@ -63,6 +63,7 @@ def test_version(version, tmp_path) -> None:
                     "tests", "data", "timeseries", "et_single_date_20250824.tif"
                 ),
             ],
+            "dem": os.path.join("tests", "data", "timeseries", "dem.tif"),
         },
         "output": {"path": str(d)},
         "params": {},
@@ -103,6 +104,7 @@ def test_check(tmp_path) -> None:
                     "tests", "data", "timeseries", "et_single_date_20250824.tif"
                 ),
             ],
+            "dem": os.path.join("tests", "data", "timeseries", "dem.tif"),
         },
         "output": {"path": str(d)},
         "params": {},
@@ -140,6 +142,7 @@ def test_check_debug(tmp_path) -> None:
                     "tests", "data", "timeseries", "et_single_date_20250824.tif"
                 ),
             ],
+            "dem": os.path.join("tests", "data", "timeseries", "dem.tif"),
         },
         "output": {"path": str(d)},
         "params": {},

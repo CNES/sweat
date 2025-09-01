@@ -31,7 +31,8 @@
             "tests/data/timeseries/et_single_date_20250826.tif",
             "tests/data/timeseries/et_single_date_20250828.tif",
             "tests/data/timeseries/et_single_date_20250829.tif"
-        ]
+        ],
+        "dem": "tests/data/timeseries/dem.tif"
     },
     "output": {
         "path": "out"

@@ -216,12 +216,12 @@ def timeseries(verbose, input_file):
     output_dir = Path(config.output.path)
     # Read input data
     logger.debug("Read input data...")
-    et_ts, radiation_ts, et_sd = read_ts_input_data(config.input)
+    et_ts, radiation_ts, et_sd, dem = read_ts_input_data(config.input)
     logger.info("Read input data: OK")
     # Run
     logger.debug("Run stic...")
     res = run_timeseries(
-        et_ts, radiation_ts, et_sd, config.params, config.debug
+        et_ts, radiation_ts, et_sd, dem, config.params, config.debug
     )
     logger.info("Run timeseries: OK")
     # Save configuration

@@ -493,6 +493,12 @@ def test_run_stic(entry, params, debug) -> None:
                         "et_single_date_20250829.tif",
                     ),
                 ],
+                "dem": os.path.join(
+                    "tests",
+                    "data",
+                    "timeseries",
+                    "dem.tif",
+                ),
             },
             {
                 "stack": {"et_single_date_filtering": {}},
@@ -615,6 +621,6 @@ def test_run_timeseries(entry, params, debug) -> None:
     """
     Test run EVASPA
     """
-    et_ts, radiation_ts, et_sd = api.read_ts_input_data(entry)
-    res = api.run_timeseries(et_ts, radiation_ts, et_sd, params, debug)
+    et_ts, radiation_ts, et_sd, dem = api.read_ts_input_data(entry)
+    res = api.run_timeseries(et_ts, radiation_ts, et_sd, dem, params, debug)
     assert res

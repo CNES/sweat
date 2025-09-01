@@ -14,6 +14,7 @@ import rioxarray as rio  # noqa: F401
 import xarray as xr
 from pyproj import CRS
 
+from evaspa.common.io import write_dataset
 from evaspa.timeseries import io_handler as ioh
 from evaspa.timeseries import status_handler as sh
 from evaspa.timeseries.constant import TimeSeriesVar as TSVar
@@ -95,7 +96,7 @@ def setup_test_data(test_data_dir):
     # Add CRS and transform metadata (compatible with rioxarray)
     et_ts = et_ts.rio.write_crs(CRS(4236))
     et_ts = et_ts.rio.write_transform(transform)
-    # Create a rdaiation dataset
+    # Create a radiation dataset
     radiation_ts = xr.Dataset(
         {
             TSVar.RADIATION.value: (
@@ -157,6 +158,30 @@ def setup_test_data(test_data_dir):
     # Add CRS and transform metadata (compatible with rioxarray)
     feed = feed.rio.write_crs(CRS(4236))
     feed = feed.rio.write_transform(transform)
+    # Create a DEM dataset
+    dem = xr.Dataset(
+        {
+            TSVar.HEIGHT.value: (
+                ["y", "x"],
+                np.array([[10.0], [10.0]]),
+            ),
+            TSVar.SLOPE.value: (
+                ["y", "x"],
+                np.array([[5.0], [5.0]]),
+            ),
+            TSVar.ASPECT.value: (
+                ["y", "x"],
+                np.array([[10.0], [10.0]]),
+            ),
+        },
+        coords={
+            "x": x_coords,
+            "y": y_coords,
+        },
+    )
+    # Add CRS and transform metadata (compatible with rioxarray)
+    dem = dem.rio.write_crs(CRS(4236))
+    dem = dem.rio.write_transform(transform)
     # Write data
     output_dir = str(test_data_dir)
     ioh.write_timeseries(
@@ -168,9 +193,10 @@ def setup_test_data(test_data_dir):
         radiation_ts, root_name="radiation", directory=output_dir
     )
     ioh.write_timeseries(feed, root_name="et_single_date", directory=output_dir)
+    write_dataset(dem, filename="dem.tif", directory=output_dir)
 
 
-def get_list_files(output_dir) -> tuple[list[str], list[str], list[str]]:
+def get_list_files(output_dir) -> tuple[list[str], list[str], list[str], str]:
     """
     Generate lists of file paths
     """
@@ -187,6 +213,7 @@ def get_list_files(output_dir) -> tuple[list[str], list[str], list[str]]:
             os.path.join(output_dir, file)
             for file in glob.glob("et_single_date_*.tif", root_dir=output_dir)
         ],
+        os.path.join(output_dir, "dem.tif"),
     )
 
 
@@ -195,7 +222,9 @@ def test_write_timeseries(test_data_dir) -> None:
     """
     Test write_timeseries
     """
-    et_ts_files, radiation_files, et_files = get_list_files(str(test_data_dir))
+    et_ts_files, radiation_files, et_files, dem = get_list_files(
+        str(test_data_dir)
+    )
     assert len(et_ts_files) > 0
     assert len(radiation_files) > 0
     assert len(et_files) > 0
@@ -205,24 +234,27 @@ def test_write_timeseries(test_data_dir) -> None:
         assert os.path.exists(file)
     for file in et_files:
         assert os.path.exists(file)
+    assert os.path.exists(dem)
 
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
     "keys",
     [
-        ["dates", "et_time_series", "radiation", "et_single_date"],
+        ["dates", "et_time_series", "radiation", "et_single_date", "dem"],
         ["et_time_series", "radiation", "et_single_date"],
         ["et_time_series", "radiation"],
         ["et_time_series"],
-        ["dates", "et_time_series"],
+        ["dates", "et_time_series", "dem"],
     ],
 )
 def test_timeseries_input_config(keys, test_data_dir) -> None:
     """
     Test TimeSeriesInputConfig
     """
-    et_ts_files, radiation_files, et_files = get_list_files(str(test_data_dir))
+    et_ts_files, radiation_files, et_files, dem_file = get_list_files(
+        str(test_data_dir)
+    )
     today = dt.datetime.now(tz=dt.timezone.utc).date()
     dates = pd.date_range(end=today, periods=7).to_list()
     # Convert to strings in desired format, e.g., "YYYY-MM-DD"
@@ -232,6 +264,7 @@ def test_timeseries_input_config(keys, test_data_dir) -> None:
         "et_time_series": et_ts_files,
         "radiation": radiation_files,
         "et_single_date": et_files,
+        "dem": dem_file,
     }
     # Create the subdictionary
     config = {k: full_config[k] for k in keys if k in full_config}
@@ -263,7 +296,7 @@ def test_extract_date_from_filename(test_data_dir) -> None:
     """
     Test function for extracting date of filename
     """
-    et_ts_files, _, _ = get_list_files(str(test_data_dir))
+    et_ts_files, _, _, _ = get_list_files(str(test_data_dir))
     date = ioh.extract_date_from_filename(sorted(et_ts_files)[-1])
     today = pd.to_datetime(
         (dt.datetime.now(tz=dt.timezone.utc) - dt.timedelta(days=1)).strftime(
@@ -279,7 +312,7 @@ def test_read_et_time_series(test_data_dir) -> None:
     """
     Test function for reading et time series files
     """
-    et_ts_files, _, _ = get_list_files(str(test_data_dir))
+    et_ts_files, _, _, _ = get_list_files(str(test_data_dir))
     today = dt.datetime.now(tz=dt.timezone.utc).date()
     dates = pd.date_range(end=today, periods=7).to_list()
     ts = ioh.read_et_time_series(et_ts_files, dates)
@@ -302,7 +335,7 @@ def test_read_et_time_series_without_dates(test_data_dir) -> None:
     """
     Test function for reading et time series files (without dates)
     """
-    et_ts_files, _, _ = get_list_files(str(test_data_dir))
+    et_ts_files, _, _, _ = get_list_files(str(test_data_dir))
     ts = ioh.read_et_time_series(et_ts_files, dates=None)
     assert ts
     assert ts.sizes[TSVar.TIME.value] == 6
@@ -323,7 +356,7 @@ def test_read_radiation_time_series(test_data_dir) -> None:
     """
     Test function for reading radiation time series files
     """
-    _, ts_files, _ = get_list_files(str(test_data_dir))
+    _, ts_files, _, _ = get_list_files(str(test_data_dir))
     ts = ioh.read_radiation_time_series(ts_files)
     assert ts
     assert ts.sizes[TSVar.TIME.value] == 7
@@ -340,7 +373,7 @@ def test_read_et_single_date(test_data_dir) -> None:
     """
     Test function for reading et sibgle date files
     """
-    _, _, files = get_list_files(str(test_data_dir))
+    _, _, files, _ = get_list_files(str(test_data_dir))
     ts = ioh.read_et_single_date(files)
     assert ts
     assert ts.sizes[TSVar.TIME.value] == 4
@@ -360,18 +393,20 @@ def test_read_et_single_date(test_data_dir) -> None:
 @pytest.mark.parametrize(
     "keys",
     [
-        ["dates", "et_time_series", "radiation", "et_single_date"],
+        ["dates", "et_time_series", "radiation", "et_single_date", "dem"],
         ["et_time_series", "radiation", "et_single_date"],
         ["et_time_series", "radiation"],
         ["et_time_series"],
-        ["dates", "et_time_series"],
+        ["dates", "et_time_series", "dem"],
     ],
 )
 def test_read_input(keys, test_data_dir) -> None:
     """
     Test TimeSeriesInputConfig
     """
-    et_ts_files, radiation_files, et_files = get_list_files(str(test_data_dir))
+    et_ts_files, radiation_files, et_files, dem_file = get_list_files(
+        str(test_data_dir)
+    )
     today = dt.datetime.now(tz=dt.timezone.utc).date()
     dates = pd.date_range(end=today, periods=7).to_list()
     # Convert to strings in desired format, e.g., "YYYY-MM-DD"
@@ -381,10 +416,11 @@ def test_read_input(keys, test_data_dir) -> None:
         "et_time_series": et_ts_files,
         "radiation": radiation_files,
         "et_single_date": et_files,
+        "dem": dem_file,
     }
     # Create the subdictionary
     config = {k: full_config[k] for k in keys if k in full_config}
-    et_ts, radiation_ts, et_sd = ioh.read_input(config)
+    et_ts, radiation_ts, et_sd, dem = ioh.read_input(config)
     assert et_ts
     if "radiation" in config:
         assert radiation_ts
@@ -394,3 +430,7 @@ def test_read_input(keys, test_data_dir) -> None:
         assert et_sd
     else:
         assert et_sd is None
+    if "dem" in config:
+        assert dem
+    else:
+        assert dem is None

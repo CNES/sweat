@@ -14,3 +14,6 @@ class TimeSeriesVar(Enum):
     VALID = "valid"
     RADIATION = "daily_radiation"
     TIME = "time"
+    HEIGHT = "height"
+    SLOPE = "slope"
+    ASPECT = "aspect"

@@ -25,27 +25,40 @@ class TimeSeriesStackConfig(BaseModel):
     )
 
 
-def fill_radiation_missing(data: xr.DataArray) -> xr.DataArray:
+def fill_radiation_missing(
+    data: xr.DataArray, dem: xr.Dataset | None
+) -> xr.DataArray:
     """
     Compute radiation at a missing date
     """
     date = pd.to_datetime(data["time"].item()).date()
     x = data.coords["x"]
     y = data.coords["y"]
+    slope = None
+    aspect = None
+    if (
+        dem is not None
+        and dem.get(TSVar.SLOPE.value, None) is not None
+        and dem.get(TSVar.ASPECT.value, None) is not None
+    ):
+        slope = dem[TSVar.SLOPE.value]
+        aspect = dem[TSVar.ASPECT.value]
     arr = compute_daily_toa_solar_radiation(
         date=date,
         x=x,
         y=y,
         crs=data.attrs.get("crs", None),
-        slope=None,
-        aspect=None,
+        slope=slope,
+        aspect=aspect,
     )
 
     return xr.DataArray(arr, coords=data.coords, dims=data.dims)
 
 
 def stack_time_series(
-    et_time_series: xr.Dataset, radiation_time_series: xr.Dataset
+    et_time_series: xr.Dataset,
+    radiation_time_series: xr.Dataset,
+    dem: xr.Dataset | None,
 ):
     """
     Create stack
@@ -80,7 +93,7 @@ def stack_time_series(
             aligned_radiation_ts[TSVar.RADIATION.value].loc[
                 {TSVar.TIME.value: time}
             ] = fill_radiation_missing(
-                aligned_radiation_ts[TSVar.RADIATION.value].sel(time=time)
+                aligned_radiation_ts[TSVar.RADIATION.value].sel(time=time), dem
             )
 
     return et_time_series.assign(
@@ -92,6 +105,7 @@ def run(
     et_time_series: xr.Dataset,
     radiation_time_series: xr.Dataset | None,
     et_single_date: xr.Dataset | None,
+    dem: xr.Dataset | None,
     et_single_date_filtering: dict,
 ) -> tuple[xr.Dataset, xr.Dataset | None]:
     """
@@ -115,4 +129,4 @@ def run(
         radiation_time_series = xr.Dataset(
             {TSVar.RADIATION.value: radiation_xr}
         )
-    return stack_time_series(et_time_series, radiation_time_series), et_sd
+    return stack_time_series(et_time_series, radiation_time_series, dem), et_sd

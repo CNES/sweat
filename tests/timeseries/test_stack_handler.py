@@ -15,6 +15,7 @@ import xarray as xr
 from pydantic import ValidationError
 from pyproj import CRS
 
+from evaspa.common.io import read_data_from_file, write_dataset
 from evaspa.timeseries import io_handler as ioh
 from evaspa.timeseries import stack_handler as sth
 from evaspa.timeseries import status_handler as sh
@@ -173,6 +174,30 @@ def setup_test_data(test_data_dir):
     # Add CRS and transform metadata (compatible with rioxarray)
     et_sd = et_sd.rio.write_crs(CRS(4236))
     et_sd = et_sd.rio.write_transform(transform)
+    # Create a DEM dataset
+    dem = xr.Dataset(
+        {
+            TSVar.HEIGHT.value: (
+                ["y", "x"],
+                np.array([[10.0], [10.0]]),
+            ),
+            TSVar.SLOPE.value: (
+                ["y", "x"],
+                np.array([[5.0], [5.0]]),
+            ),
+            TSVar.ASPECT.value: (
+                ["y", "x"],
+                np.array([[10.0], [10.0]]),
+            ),
+        },
+        coords={
+            "x": x_coords,
+            "y": y_coords,
+        },
+    )
+    # Add CRS and transform metadata (compatible with rioxarray)
+    dem = dem.rio.write_crs(CRS(4236))
+    dem = dem.rio.write_transform(transform)
     # Write data
     output_dir = str(test_data_dir)
     ioh.write_timeseries(
@@ -186,9 +211,10 @@ def setup_test_data(test_data_dir):
     ioh.write_timeseries(
         et_sd, root_name="et_single_date", directory=output_dir
     )
+    write_dataset(dem, filename="dem.tif", directory=output_dir)
 
 
-def get_list_files(output_dir) -> tuple[list[str], list[str], list[str]]:
+def get_list_files(output_dir) -> tuple[list[str], list[str], list[str], str]:
     """
     Generate lists of file paths
     """
@@ -205,6 +231,7 @@ def get_list_files(output_dir) -> tuple[list[str], list[str], list[str]]:
             os.path.join(output_dir, file)
             for file in glob.glob("et_single_date_*.tif", root_dir=output_dir)
         ],
+        os.path.join(output_dir, "dem.tif"),
     )
 
 
@@ -255,7 +282,7 @@ def test_timeseries_stack_config_error(config, error) -> None:
 @pytest.mark.unit
 def test_fill_radiation_missing() -> None:
     """
-    Test function for fiiling radiatio data at missing date
+    Test function for filling radiation data at missing date
     """
     data = xr.DataArray(
         data=np.array([[np.nan], [np.nan]]),
@@ -270,9 +297,59 @@ def test_fill_radiation_missing() -> None:
             "affine": affine.Affine(0.1, 0.0, -0.05, 0.0, -0.1, 40.05),
         },
     )
-    filled_data = sth.fill_radiation_missing(data)
+    filled_data = sth.fill_radiation_missing(data, dem=None)
     np.testing.assert_allclose(
         filled_data.values, np.array([[35275114.436], [35297798.513]])
+    )
+
+
+@pytest.mark.unit
+def test_fill_radiation_missing_with_dem() -> None:
+    """
+    Test function for filling radiation data at missing date
+    with DEM data
+    """
+    data = xr.DataArray(
+        data=np.array([[np.nan], [np.nan]]),
+        dims=["y", "x"],
+        coords={
+            "time": pd.to_datetime("2025-08-23"),
+            "x": np.array([0.0]),
+            "y": np.array([40.0, 39.9]),
+        },
+        attrs={
+            "crs": CRS(4326),
+            "affine": affine.Affine(0.1, 0.0, -0.05, 0.0, -0.1, 40.05),
+        },
+    )
+    # Create a DEM dataset
+    dem = xr.Dataset(
+        {
+            TSVar.HEIGHT.value: (
+                ["y", "x"],
+                np.array([[10.0], [10.0]]),
+            ),
+            TSVar.SLOPE.value: (
+                ["y", "x"],
+                np.array([[5.0], [5.0]]),
+            ),
+            TSVar.ASPECT.value: (
+                ["y", "x"],
+                np.array([[10.0], [10.0]]),
+            ),
+        },
+        coords={
+            "x": np.array([0.0]),
+            "y": np.array([40.0, 39.9]),
+        },
+        attrs={
+            "crs": CRS(4326),
+            "affine": affine.Affine(0.1, 0.0, -0.05, 0.0, -0.1, 40.05),
+        },
+    )
+    filled_data = sth.fill_radiation_missing(data, dem)
+    np.testing.assert_allclose(
+        filled_data.values, np.array([[34050036.737489], [34077366.434024]])
     )
 
 
@@ -281,10 +358,10 @@ def test_stack_time_series(test_data_dir) -> None:
     """
     Test function for reading et time series files
     """
-    et_ts_files, radiation_files, _ = get_list_files(str(test_data_dir))
+    et_ts_files, radiation_files, _, _ = get_list_files(str(test_data_dir))
     et_ts = ioh.read_et_time_series(et_ts_files, None)
     radiation_ts = ioh.read_radiation_time_series(radiation_files)
-    ts = sth.stack_time_series(et_ts, radiation_ts)
+    ts = sth.stack_time_series(et_ts, radiation_ts, dem=None)
     assert ts
     assert ts.sizes[TSVar.TIME.value] == 7
     assert ts.sizes["x"] == 1
@@ -302,7 +379,7 @@ def test_stack_time_series_with_missing_dates(test_data_dir) -> None:
     """
     Test function for reading et time series files
     """
-    et_ts_files, radiation_files, _ = get_list_files(str(test_data_dir))
+    et_ts_files, radiation_files, _, _ = get_list_files(str(test_data_dir))
     # Create radiation time series with missing files
     radiation_dates = [0, 1, 2, 3, 5]
     radiation_files_with_missing_dates = [
@@ -312,7 +389,7 @@ def test_stack_time_series_with_missing_dates(test_data_dir) -> None:
     radiation_ts = ioh.read_radiation_time_series(
         radiation_files_with_missing_dates
     )
-    ts = sth.stack_time_series(et_ts, radiation_ts)
+    ts = sth.stack_time_series(et_ts, radiation_ts, dem=None)
     assert ts
     assert ts.sizes[TSVar.TIME.value] == 7
     assert ts.sizes["x"] == 1
@@ -330,12 +407,13 @@ def test_run(test_data_dir) -> None:
     """
     Test run function for preparing time series
     """
-    et_ts_files, radiation_files, et_sd_files = get_list_files(
+    et_ts_files, radiation_files, et_sd_files, dem_file = get_list_files(
         str(test_data_dir)
     )
     et_ts = ioh.read_et_time_series(et_ts_files, None)
     radiation_ts = ioh.read_radiation_time_series(radiation_files)
     et_sd = ioh.read_et_single_date(et_sd_files)
+    dem = read_data_from_file(dem_file)
     et_single_date_filtering = {
         "flags": {"op": "==", "value": 0},
     }
@@ -343,6 +421,7 @@ def test_run(test_data_dir) -> None:
         et_ts,
         radiation_ts,
         et_sd,
+        dem,
         et_single_date_filtering=et_single_date_filtering,
     )
     assert ts

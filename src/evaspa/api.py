@@ -157,7 +157,7 @@ def read_input_data(entry: dict) -> xr.Dataset:
 
 def read_ts_input_data(
     entry: dict,
-) -> tuple[xr.Dataset, xr.Dataset | None, xr.Dataset | None]:
+) -> tuple[xr.Dataset, xr.Dataset | None, xr.Dataset | None, xr.Dataset | None]:
     """
     Read time series input data
 
@@ -174,15 +174,17 @@ def read_ts_input_data(
         Radiation time series dataset
     et_sd: xr.Dataset
         Daily ET single date dataset
+    dem: xr.Dataset
+        DEM
     """
     # Validate input config
     msg = f"Input: {entry}"
     logger.debug(msg)
     input_config = TimeSeriesInputConfig.model_validate(entry)
     # Read input data
-    et_ts, radiation_ts, et_sd = read_ts_input(input_config.model_dump())
+    et_ts, radiation_ts, et_sd, dem = read_ts_input(input_config.model_dump())
     logger.debug("Read input data: OK")
-    return et_ts, radiation_ts, et_sd
+    return et_ts, radiation_ts, et_sd, dem
 
 
 def run_evaspa(
@@ -352,6 +354,7 @@ def run_timeseries(
     et_ts: xr.Dataset,
     radiation_ts: xr.Dataset | None,
     et_sd: xr.Dataset | None,
+    dem: xr.Dataset | None,
     params: dict,
     debug: dict | None = None,
 ) -> xr.Dataset:
@@ -366,6 +369,8 @@ def run_timeseries(
         Radiation time series dataset
     et_sd: xr.Dataset
         Daily ET single date dataset
+    dem: xr.Dataset
+        DEM (height, slope, aspect)
     params: dict
         Parameter configuration
     debug: dict
@@ -394,6 +399,7 @@ def run_timeseries(
         et_ts,
         radiation_ts,
         et_sd,
+        dem,
         et_single_date_filtering=params_config.stack.et_single_date_filtering.model_dump(),
     )
     logger.debug("Prepare time series stack: OK")
