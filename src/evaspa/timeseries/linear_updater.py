@@ -48,7 +48,25 @@ class LinearUpdater(Updater):
         self, index: int, prev_index: int, next_index: int, data: xr.Dataset
     ) -> tuple[float, sh.ProcessingMode]:
         """
-        Interpolate data
+        Interpolate data between previous index and next index.
+
+        Parameters
+        ----------
+        index: int
+            Index position to considered
+        previous_index: int
+            Previous index used to interpolate
+        next_index: int
+            Next index used to interpolate
+        data: xr.Dataset
+            Data used to interpolate
+
+        Returns
+        -------
+        value: float
+            Interpolated value
+        status: STATUS_TYPE
+            Updated status
         """
         # Retrieve data
         prev_et = (
@@ -96,7 +114,25 @@ class LinearUpdater(Updater):
         self, index: int, prev_index: int, data: xr.Dataset
     ) -> tuple[float, sh.ProcessingMode]:
         """
-        Extrapolate
+        Extrapolate data between from previous index.
+
+        Parameters
+        ----------
+        index: int
+            Index position to considered
+        previous_index: int
+            Previous index used to extrapolate
+        next_index: int
+            Next index used to extrapolate
+        data: xr.Dataset
+            Data used to extrapolate
+
+        Returns
+        -------
+        value: float
+            Extrapolated value
+        status: STATUS_TYPE
+            Updated status
         """
         # Retrieve data
         prev_et = (
@@ -125,7 +161,25 @@ class LinearUpdater(Updater):
         self, index: int, next_index: int, data: xr.Dataset
     ) -> tuple[float, sh.ProcessingMode]:
         """
-        Backward extrapolate
+        Backward extrapolate from next index.
+
+        Parameterscou
+        ----------
+        index: int
+            Index position to considered
+        previous_index: int
+            Previous index used to extrapolate
+        next_index: int
+            Next index used to extrapolate
+        data: xr.Dataset
+            Data used to extrapolate
+
+        Returns
+        -------
+        value: float
+            Extrapolated value
+        status: STATUS_TYPE
+            Updated status
         """
         # Retrieve data
         next_et = (

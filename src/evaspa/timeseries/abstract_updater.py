@@ -23,6 +23,13 @@ class Updater(ABC):
     def __init__(self, strict_mode: bool, radiation_mode: sh.RadiationMode):
         """
         Init method
+
+        Parameters
+        ----------
+        strict_mode: bool
+            Only use acquisition to interpolate/extrapolate
+        radiation_mode: RadiationMode
+            Radiation mode to use
         """
         self.strict_mode = strict_mode
         self.radiation_mode = radiation_mode
@@ -31,12 +38,29 @@ class Updater(ABC):
     def get_requested_variables(self) -> list[str]:
         """
         Get the requested variables for updating time series
+
+        Returns
+        -------
+        variables: list[str]
+            Requested variables
         """
         return self.variables
 
     def find_previous(self, status_arr: npt.NDArray, index: int) -> int:
         """
-        Find previous index
+        Find previous index. Return -1 if not found.
+
+        Parameters
+        ----------
+        status_arr: array_like
+            Bit array
+        index: int
+            Index position to considered
+
+        Returns
+        -------
+        previous: int
+            Previous index
         """
         # Iterate through the list in reverse order from the target index
         if index == 0:
@@ -63,7 +87,19 @@ class Updater(ABC):
 
     def find_next(self, status_arr: npt.NDArray, index: int) -> int:
         """
-        Find
+        Find next index. Return -1 if not found.
+
+        Parameters
+        ----------
+        status_arr: array_like
+            Bit array
+        index: int
+            Index position to considered
+
+        Returns
+        -------
+        next: int
+            Next index
         """
         # Iterate through the list in reverse order from the target index
         if index == len(status_arr) - 1:
@@ -93,7 +129,25 @@ class Updater(ABC):
         self, index: int, prev_index: int, next_index: int, data: xr.Dataset
     ) -> tuple[float, sh.ProcessingMode]:
         """
-        Interpolate data
+        Interpolate data between previous index and next index.
+
+        Parameters
+        ----------
+        index: int
+            Index position to considered
+        previous_index: int
+            Previous index used to interpolate
+        next_index: int
+            Next index used to interpolate
+        data: xr.Dataset
+            Data used to interpolate
+
+        Returns
+        -------
+        value: float
+            Interpolated value
+        status: STATUS_TYPE
+            Updated status
         """
 
     @abstractmethod
@@ -101,7 +155,25 @@ class Updater(ABC):
         self, index: int, prev_index: int, data: xr.Dataset
     ) -> tuple[float, sh.ProcessingMode]:
         """
-        Extrapolate
+        Extrapolate data between from previous index.
+
+        Parameters
+        ----------
+        index: int
+            Index position to considered
+        previous_index: int
+            Previous index used to extrapolate
+        next_index: int
+            Next index used to extrapolate
+        data: xr.Dataset
+            Data used to extrapolate
+
+        Returns
+        -------
+        value: float
+            Extrapolated value
+        status: STATUS_TYPE
+            Updated status
         """
 
     @abstractmethod
@@ -109,7 +181,25 @@ class Updater(ABC):
         self, index: int, next_index: int, data: xr.Dataset
     ) -> tuple[float, sh.ProcessingMode]:
         """
-        Backward extrapolate
+        Backward extrapolate from next index.
+
+        Parameterscou
+        ----------
+        index: int
+            Index position to considered
+        previous_index: int
+            Previous index used to extrapolate
+        next_index: int
+            Next index used to extrapolate
+        data: xr.Dataset
+            Data used to extrapolate
+
+        Returns
+        -------
+        value: float
+            Extrapolated value
+        status: STATUS_TYPE
+            Updated status
         """
 
     def update_new_acquisition(
@@ -117,6 +207,18 @@ class Updater(ABC):
     ) -> xr.Dataset:
         """
         Update with new acquisition
+
+        Parameters
+        ----------
+        data: xr.Dataset
+            Data to update
+        feed: xr.Dataset
+            Data corresponding new acquisitions
+
+        Returns
+        -------
+        updated: xr.Dataset
+            Updated data
         """
         stack = False
         ts = data.copy()
@@ -174,7 +276,23 @@ class Updater(ABC):
         self, index: int, status: sh.STATUS_TYPE, data: xr.Dataset
     ) -> tuple[float, sh.STATUS_TYPE]:
         """
-        Update nodata
+        Update nodata.
+
+        Parameters
+        ----------
+        index: int
+            Index position to considered
+        status: STATUS_TYPE
+            Actual status
+        data: xr.Dataset
+            Data used to update
+
+        Returns
+        -------
+        value: float
+            Upadted value
+        status: STATUS_TYPE
+            Updated status
         """
         prev_index = self.find_previous(data[TSVar.FLAGS.value].data, index)
         next_index = self.find_next(data[TSVar.FLAGS.value].data, index)
@@ -227,6 +345,22 @@ class Updater(ABC):
     ) -> tuple[float, sh.STATUS_TYPE]:
         """
         Update interpolated data
+
+        Parameters
+        ----------
+        index: int
+            Index position to considered
+        status: STATUS_TYPE
+            Actual status
+        data: xr.Dataset
+            Data used to update
+
+        Returns
+        -------
+        value: float
+            Upadted value
+        status: STATUS_TYPE
+            Updated status
         """
         prev_index = self.find_previous(data[TSVar.FLAGS.value].data, index)
         next_index = self.find_next(data[TSVar.FLAGS.value].data, index)
@@ -257,6 +391,22 @@ class Updater(ABC):
     ) -> tuple[float, sh.STATUS_TYPE]:
         """
         Update extraplated data
+
+        Parameters
+        ----------
+        index: int
+            Index position to considered
+        status: STATUS_TYPE
+            Actual status
+        data: xr.Dataset
+            Data used to update
+
+        Returns
+        -------
+        value: float
+            Upadted value
+        status: STATUS_TYPE
+            Updated status
         """
         prev_index = self.find_previous(data[TSVar.FLAGS.value].values, index)
         next_index = self.find_next(data[TSVar.FLAGS.value].values, index)
@@ -315,6 +465,18 @@ class Updater(ABC):
     ) -> xr.Dataset:
         """
         Update time series with new acquisitions
+
+        Parameters
+        ----------
+        data: xr.Dataset
+            Data to update
+        feed: xr.Dataset
+            Data corresponding new acquisitions
+
+        Returns
+        -------
+        updated: xr.Dataset
+            Updated data
         """
         # Get ET and status time series
         value_ts = data[TSVar.ET.value].values.copy()
@@ -348,6 +510,16 @@ class Updater(ABC):
     def update_time_series(self, data: xr.Dataset) -> xr.Dataset:
         """
         Update time series
+
+        Parameters
+        ----------
+        data: xr.Dataset
+            Data to update
+
+        Returns
+        -------
+        updated: xr.Dataset
+            Updated data
         """
         # Get ET and status time series
         value_ts = data[TSVar.ET.value].values.copy()
@@ -378,6 +550,18 @@ class Updater(ABC):
     def update(self, data: xr.Dataset, feed: xr.Dataset | None) -> xr.Dataset:
         """
         Update
+
+        Parameters
+        ----------
+        data: xr.Dataset
+            Data to update
+        feed: xr.Dataset
+            Data corresponding new acquisitions
+
+        Returns
+        -------
+        updated: xr.Dataset
+            Updated data
         """
         # Get cdimensions with order
         original_dims = list(data.sizes.keys())

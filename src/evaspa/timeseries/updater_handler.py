@@ -65,7 +65,19 @@ class UpdaterConfig(BaseModel):
 
 def create(method=UpdateMethod, params=dict) -> Updater:
     """
-    Factory
+    Factory to create a updater instance
+
+    Parameters
+    ----------
+    method: UpdateMethod
+        Type of updater to create
+    params: dict
+        Parameters used to configure the updater
+
+    Returns
+    -------
+    updater: Updater
+        Updater instance
     """
     if method == UpdateMethod.linear:
         cfg = LinearUpdaterParams.model_validate(params)
@@ -83,6 +95,20 @@ def create(method=UpdateMethod, params=dict) -> Updater:
 def run(data: xr.Dataset, feed: xr.Dataset | None, config=dict):
     """
     Run update
+
+    Parameters
+    ----------
+    data: xr.Dataset
+        Data to update
+    feed: xr.Dataset
+        Data corresponding new acquisitions
+    config: dict
+        Configuration for update the time series
+
+    Returns
+    -------
+    updated: xr.Dataset
+        Updated data
     """
     updater_config = UpdaterConfig.model_validate(config)
     # Create updater

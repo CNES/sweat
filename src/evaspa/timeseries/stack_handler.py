@@ -30,6 +30,18 @@ def fill_radiation_missing(
 ) -> xr.DataArray:
     """
     Compute radiation at a missing date
+
+    Parameters
+    ----------
+    data: xr.Dataset
+        Data to update
+    dem: xr.Dataset
+        DEM
+
+    Returns
+    -------
+    updated: xr.Dataset
+        Updated data
     """
     date = pd.to_datetime(data["time"].item()).date()
     x = data.coords["x"]
@@ -59,24 +71,25 @@ def stack_time_series(
     et_time_series: xr.Dataset,
     radiation_time_series: xr.Dataset,
     dem: xr.Dataset | None,
-):
+) -> xr.Dataset:
     """
-    Create stack
-    Fill the second dataset (ds2) to match the time dimension of the first dataset (ds1)
-    using a custom fill function.
+    Create a stack containing ET and radiation time series
+    if radiation do not exist compute theoritical value.
 
-    Parameters:
-    ds1 (xarray.Dataset): The first dataset with the desired time dimension.
-    ds2 (xarray.Dataset): The second dataset to be filled.
-    fill_func (callable): A custom function that takes a time index and returns the filled value.
+    Parameters
+    ----------
+    et_time_series: xr.Dataset
+        ET time series
+    radiation_time_series: xr.Dataset
+        Radiation time series
+    dem: xr.Dataset
+        DEM
 
-    Returns:
-    xarray.Dataset: The filled second dataset aligned with the first dataset's time dimension.
+    Returns
+    -------
+    updated: xr.Dataset
+        Updated data
     """
-    # Create a stack if radiation do not exist compute theoritical
-    # use_topo
-    # flags
-    # use data test with spatial coordinates
     # Reindex radiation time series to match the time dimension of ET time series
     aligned_radiation_ts = radiation_time_series.reindex(
         {TSVar.TIME.value: et_time_series[TSVar.TIME.value]}, method=None
@@ -110,6 +123,24 @@ def run(
 ) -> tuple[xr.Dataset, xr.Dataset | None]:
     """
     Filter and stack time series data
+
+    Parameters
+    ----------
+    et_time_series: xr.Dataset
+        ET time series
+    radiation_time_series: xr.Dataset
+        Radiation time series
+    et_single_date: xr.Dataset
+        ET single date
+    dem: xr.Dataset
+        DEM
+    et_single_date_filtering: dict
+        Configuration to filter ET single date
+
+    Returns
+    -------
+    updated: xr.Dataset
+        Updated data
     """
     # Process ET single date
     et_sd = None

@@ -9,6 +9,10 @@ WINDOW_SIZE = 7
 
 
 class TimeSeriesVar(Enum):
+    """
+    Variables used in time series dataset
+    """
+
     ET = "et"
     FLAGS = "flags"
     VALID = "valid"

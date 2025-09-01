@@ -35,6 +35,9 @@ class TimeSeriesInputConfig(BaseModel):
     @field_validator("dates", mode="before")
     @classmethod
     def convert_and_sort_dates(cls, v: Any) -> list[pd.Timestamp]:
+        """
+        Convert dates from string to timestamp and sort them
+        """
         # Convert each value to pandas.Timestamp
         timestamps = [pd.Timestamp(item) for item in v]
         # Sort the list
@@ -43,6 +46,9 @@ class TimeSeriesInputConfig(BaseModel):
     @field_validator("et_time_series", "radiation", "et_single_date")
     @classmethod
     def test_path(cls, files: list[str]) -> list[str]:
+        """
+        Check file paths
+        """
         for file in files:
             if not os.path.exists(file):
                 msg = f"Path not found: {file}"
@@ -52,6 +58,9 @@ class TimeSeriesInputConfig(BaseModel):
     @field_validator("dem")
     @classmethod
     def test_dem(cls, file: str) -> str:
+        """
+        Check DEM path
+        """
         if file is not None and not os.path.exists(file):
             msg = f"Path to DEM not found: {file}"
             raise OSError(msg)
@@ -60,6 +69,9 @@ class TimeSeriesInputConfig(BaseModel):
     @field_validator("et_time_series")
     @classmethod
     def test_timeseries(cls, files: list[str]) -> list[str]:
+        """
+        Check that the ET time series is not empty
+        """
         if len(files) == 0:
             msg = "No files to read for ET time series"
             raise ValueError(msg)
@@ -73,6 +85,15 @@ def write_timeseries(
 ) -> None:
     """
     Write time series. For each date, write a dataset.
+
+    Parameters
+    ----------
+    data: xr.Dataset
+        Dataset to write
+    root_name: str
+        Root used for filenames
+    directory: str
+        Path to the directory
     """
     for date, data_by_date in data.groupby("time"):
         # Convert date to string
@@ -90,6 +111,16 @@ def write_timeseries(
 def extract_date_from_filename(filename: str) -> pd.Timestamp:
     """
     Extract date from filename
+
+    Parameters
+    ----------
+    filename: str
+        Filename containing a date (format YYYYMMDD)
+
+    Returns
+    -------
+    date: pd.Timestamp
+        Date
     """
     pattern = r".*_([0-9]{8})\..*"
     m = re.match(pattern, filename)
@@ -107,6 +138,16 @@ def extract_date_from_filename(filename: str) -> pd.Timestamp:
 def read_time_series(filenames: list[str]) -> xr.Dataset:
     """
     Read time series
+
+    Parameters
+    ----------
+    filenames: list[str]
+        List of filenames
+
+    Returns
+    -------
+    xarr: xr.Dataset
+        Data
     """
     if len(filenames) == 0:
         msg = "No files to read"
@@ -138,6 +179,18 @@ def read_et_time_series(
 ) -> xr.Dataset:
     """
     Read time series
+
+    Parameters
+    ----------
+    filenames: list[str]
+        List of filenames
+    dates: list[pd.Timestamp]
+        List of dates to consider in the time series
+
+    Returns
+    -------
+    xarr: xr.Dataset
+        Data
     """
     # Read the time series
     ts = read_time_series(filenames)
@@ -177,6 +230,16 @@ def read_et_time_series(
 def read_radiation_time_series(filenames: list[str]) -> xr.Dataset:
     """
     Read radiation time series
+
+    Parameters
+    ----------
+    filenames: list[str]
+        List of filenames
+
+    Returns
+    -------
+    xarr: xr.Dataset
+        Data
     """
     # Read the time series
     ts = read_time_series(filenames)
@@ -188,6 +251,16 @@ def read_radiation_time_series(filenames: list[str]) -> xr.Dataset:
 def read_et_single_date(filenames: list[str]) -> xr.Dataset:
     """
     Read ET products
+
+    Parameters
+    ----------
+    filenames: list[str]
+        List of filenames
+
+    Returns
+    -------
+    xarr: xr.Dataset
+        Data
     """
     # Read the time series
     ts = read_time_series(filenames)
@@ -207,6 +280,22 @@ def read_input(
 ) -> tuple[xr.Dataset, xr.Dataset | None, xr.Dataset | None, xr.Dataset | None]:
     """
     Read input data for time series
+
+    Parameters
+    ----------
+    config: dict
+        Input information
+
+    Returns
+    -------
+    et_ts: xr.Dataset
+        ET time series
+    radiation_ts: xr.Dataset
+        Radiation time series
+    et_sd: xr.Dataset
+        ET single dates
+    dem: xr.Dataset
+        DEM
     """
     # Configuration
     input_cfg = TimeSeriesInputConfig.model_validate(config)

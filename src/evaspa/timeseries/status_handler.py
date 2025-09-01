@@ -133,6 +133,26 @@ def set_status(
 ) -> STATUS_TYPE:
     """
     Set status
+
+    Parameters
+    ----------
+    state: State
+        State of the pixel
+    processing: ProcessingMode
+        Processing mode of the pixel
+    updated: bool
+        Boolean to indicate if the pixel has been updated
+    radiation: RadiationMode
+        Radiation mode used to compute
+    aux_data: AuxDataStatus
+        Status of auxiliary data used
+    distance: int
+        Distance used for interpolation/extrapolation
+
+    Returns
+    -------
+    status: STATUS_TYPE
+        Created status
     """
     status = BLANK_STATUS
     # Set state
@@ -160,6 +180,28 @@ def update_status(
 ) -> STATUS_TYPE:
     """
     Update status
+
+    Parameters
+    ----------
+    status: STATUS_TYPE
+        Actual status
+    state: State
+        State of the pixel
+    processing: ProcessingMode
+        Processing mode of the pixel
+    updated: bool
+        Boolean to indicate if the pixel has been updated
+    radiation: RadiationMode
+        Radiation mode used to compute
+    aux_data: AuxDataStatus
+        Status of auxiliary data used
+    distance: int
+        Distance used for interpolation/extrapolation
+
+    Returns
+    -------
+    status: STATUS_TYPE
+        Updated status
     """
     if state is not None:
         status &= np.bitwise_not(MSK_STATE)  # Reset state
@@ -182,6 +224,16 @@ def update_status(
 def get_state(bit_array: STATUS_TYPE) -> State:
     """
     Get State
+
+    Parameters
+    ----------
+    bit_array: STATUS_TYPE
+        Bit array
+
+    Returns
+    -------
+    state: State
+        State of the pixel
     """
     return State(bit_array & MSK_STATE)  # Isolate the first two bits
 
@@ -189,6 +241,16 @@ def get_state(bit_array: STATUS_TYPE) -> State:
 def get_processing_mode(bit_array: STATUS_TYPE) -> ProcessingMode:
     """
     Get processing mode
+
+    Parameters
+    ----------
+    bit_array: STATUS_TYPE
+        Bit array
+
+    Returns
+    -------
+    mode: ProcessingMode
+        Processing mode of the pixel
     """
     return ProcessingMode(_extract_bit(bit_array, PROCESSING_MODE_POSITION))
 
@@ -196,17 +258,50 @@ def get_processing_mode(bit_array: STATUS_TYPE) -> ProcessingMode:
 def get_radiation_mode(bit_array: STATUS_TYPE) -> RadiationMode:
     """
     Get radiation mode
+
+    Parameters
+    ----------
+    bit_array: STATUS_TYPE
+        Bit array
+
+    Returns
+    -------
+    mode: RadiationMode
+        Radiation mode of the pixel
     """
     return RadiationMode(_extract_bit(bit_array, RADIATION_MODE_POSITION))
 
 
 def get_distance(bit_array: STATUS_TYPE) -> int:
+    """
+    Get radiation mode
+
+    Parameters
+    ----------
+    bit_array: STATUS_TYPE
+        Bit array
+
+    Returns
+    -------
+    distance: int
+        Distance used for interpolation/extrapolation
+    """
     return ((bit_array & MSK_DISTANCE) >> DISTANCE_POSITION).astype(int)
 
 
 def is_updated(bit_array: STATUS_TYPE) -> bool:
     """
-    Test is updated
+    Check if updated
+
+    Parameters
+    ----------
+    bit_array: STATUS_TYPE
+        Bit array
+
+    Returns
+    -------
+    updated: bool
+        True is if pixel has been updated
     """
     return ((STATUS_TYPE(bit_array) >> UPDATED_POSITION) & 0b1).astype(bool)
 
@@ -214,6 +309,18 @@ def is_updated(bit_array: STATUS_TYPE) -> bool:
 def check_state(bit_array: STATUS_TYPE, state: State) -> bool:
     """
     Check state
+
+    Parameters
+    ----------
+    bit_array: STATUS_TYPE
+        Bit array
+    state: State
+        State to check
+
+    Returns
+    -------
+    checked: bool
+        Return true if states match
     """
     return bit_array & MSK_STATE == state.value
 
@@ -221,6 +328,18 @@ def check_state(bit_array: STATUS_TYPE, state: State) -> bool:
 def check_processing_mode(bit_array: STATUS_TYPE, mode: ProcessingMode) -> bool:
     """
     Check processing mode
+
+    Parameters
+    ----------
+    bit_array: STATUS_TYPE
+        Bit array
+    mode: ProcessingMode
+        Processing mode to check
+
+    Returns
+    -------
+    checked: bool
+        Return true if modes match
     """
     return _extract_bit(bit_array, PROCESSING_MODE_POSITION) == mode.value
 
@@ -230,6 +349,18 @@ def check_radiation_mode(
 ) -> bool:
     """
     Check radiation status
+
+    Parameters
+    ----------
+    bit_array: STATUS_TYPE
+        Bit array
+    radiation: RadiationMode
+        Radiation mode to check
+
+    Returns
+    -------
+    checked: bool
+        Return true if modes match
     """
     return _extract_bit(bit_array, RADIATION_MODE_POSITION) == radiation.value
 
@@ -237,6 +368,16 @@ def check_radiation_mode(
 def print_status(bit_array: STATUS_TYPE) -> str:
     """
     Print status
+
+    Parameters
+    ----------
+    bit_array: STATUS_TYPE
+        Bit array
+
+    Returns
+    -------
+    status: str
+        status
     """
     return (
         f"Status : State={get_state(bit_array)}, "
