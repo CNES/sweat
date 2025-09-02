@@ -107,6 +107,7 @@ markers = [
     "end_to_end: mark a test as an end-to-end test.",
     "notebooks: mark a test that runs notebooks.",
     "slow: mark a test that is slow to run.",
+    "docs: mark a test for docs.",
     "skip: mark a test that must be skipped.",
     "require_test_data: mark a test that requires EVASPA_TEST_DATA_PATH environment variable to be set to the test dataset folder",
 ]

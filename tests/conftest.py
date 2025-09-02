@@ -47,7 +47,7 @@ def pytest_collection_modifyitems(
         # Check if all tests have a marker
         if not any(
             marker.name
-            in ["unit", "functional", "end_to_end", "notebooks", "skip", "slow"]
+            in ["unit", "functional", "end_to_end", "notebooks", "skip", "docs"]
             for marker in item.iter_markers()
         ):
             msg = f"Test {item.nodeid} is missing a required marker (unit, functional, end_to_end, notebooks, slow, skip)"
