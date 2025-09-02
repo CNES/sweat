@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from evaspa.common import filter
 from evaspa.common.solar import compute_daily_toa_solar_radiation
+from evaspa.debugging import register_debugging
 from evaspa.timeseries.constant import TimeSeriesVar as TSVar
 
 
@@ -114,6 +115,7 @@ def stack_time_series(
     )
 
 
+@register_debugging
 def run(
     et_time_series: xr.Dataset,
     radiation_time_series: xr.Dataset | None,
