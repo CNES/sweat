@@ -106,7 +106,7 @@ Example:
 ```
 ### Params section
 
-The **params** section describe the parameters used for the processing. See [detailed parameters configuration](evaspa/configuration.md)
+The **params** section describe the parameters used for the processing. See [detailed parameters configuration](configuration.md)
 
 ### Debug section
 

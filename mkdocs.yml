@@ -125,11 +125,17 @@ nav:
     - Usage: stic/usage.md
     - Configuration:
       - Processing steps: stic/configuration.md
-  - Dev: dev.md
+  - Timeseries:
+    - Algorithm: timeseries/algorithm.md
+    - Usage: timeseries/usage.md
+    - Configuration:
+      - Processing steps: timeseries/configuration.md
+  - Dev: development_guide.md
   - Tutorials:
     - Overview: tutorials.md
     - EVASPA notebook: notebooks/run_evaspa.ipynb
     - STIC notebook: notebooks/run_stic.ipynb
+    - ET time series notebook: notebooks/run_timeseries.ipynb
   - API: api/
   - todo.md
 
