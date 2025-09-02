@@ -35,6 +35,13 @@ class LinearUpdaterParams(BaseModel):
 class LinearUpdater(Updater):
     """
     Linear upindexr
+
+    Parameters
+    ----------
+    strict_mode: bool
+        Only use acquisition to interpolate/extrapolate
+    radiation_mode: RadiationMode
+        Radiation mode to use
     """
 
     def __init__(self, strict_mode: bool, radiation_mode: sh.RadiationMode):
