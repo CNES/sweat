@@ -6,11 +6,12 @@ Module for filtering functions
 from __future__ import annotations
 
 import operator
+import re
 from functools import reduce
 from typing import Literal
 
 import xarray as xr
-from pydantic import BaseModel, ConfigDict, Field, RootModel
+from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator
 
 from evaspa.common.constant import (
     FLAGS_TYPE,
@@ -34,14 +35,60 @@ OPS = {
 }
 
 
+class PercentileValue:
+    """
+    Class to manange percentile
+    """
+
+    def __init__(self, percentile: float):
+        if not (0 <= percentile <= 100):  # noqa: PLR2004
+            msg = "Percentile must be between 0 and 100"
+            raise ValueError(msg)
+        self.percentile = percentile
+
+    def __repr__(self):
+        return f"percentile({self.percentile})"
+
+
 # Simple condition
 class SimpleCondition(BaseModel):
+    """
+    Class to describe a simple condition
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+
     op: Literal["==", "!=", ">", ">=", "<", "<="]
-    value: float
+    value: float | PercentileValue
+
+    @field_validator("value", mode="before")
+    @classmethod
+    def parse_value(cls, v):
+        """
+        Check value and convert if necessary to percentile
+        """
+        if isinstance(v, float | int):
+            return float(v)
+        if isinstance(v, PercentileValue):
+            return v
+        if isinstance(v, str):
+            match = re.match(r"percentile\((\d+(\.\d+)?)\)", v.strip())
+            if match:
+                percentile = float(match.group(1))
+                return PercentileValue(percentile)
+        msg = (
+            "value must be a float or a percentile or a "
+            "string in percentile format like 'percentile(90)'"
+        )
+        raise ValueError(msg)
 
 
 # Composite condition with 'and'/'or' logic
 class CompositeCondition(BaseModel):
+    """
+    Class to describe a condition with or/and
+    """
+
     model_config = ConfigDict(extra="forbid")
     and_: list[ConditionType] | None = Field(default=None, alias="and")
     or_: list[ConditionType] | None = Field(default=None, alias="or")
@@ -56,6 +103,10 @@ CompositeCondition.model_rebuild()
 
 # Final config mapping variable names to conditions
 class FilteringConfig(RootModel):
+    """
+    Class to describe the filtering to be applied
+    """
+
     root: dict[str, ConditionType]
 
 
@@ -76,7 +127,14 @@ def eval_condition(da: xr.DataArray, cond: dict) -> xr.DataArray:
         Evaluated condition
     """
     op_func = OPS[cond["op"]]
-    return op_func(da, cond["value"])
+
+    if isinstance(cond["value"], PercentileValue):
+        # Compute the percentile along the DataArray
+        val = float(da.quantile(cond["value"].percentile / 100.0))
+    else:
+        val = cond["value"]  # it's just a float
+
+    return op_func(da, val)
 
 
 def apply_condition(da: xr.DataArray, cond: dict) -> xr.DataArray:
@@ -103,9 +161,9 @@ def apply_condition(da: xr.DataArray, cond: dict) -> xr.DataArray:
     and_results = []
     or_results = []
 
-    if "and" in cond:
+    if cond.get("and") is not None:
         and_results = [apply_condition(da, c) for c in cond["and"]]
-    if "or" in cond:
+    if cond.get("or") is not None:
         or_results = [apply_condition(da, c) for c in cond["or"]]
 
     result = xr.full_like(da, 1, dtype=int)
@@ -137,6 +195,9 @@ def detect_valid_pixels(data: xr.Dataset, config: dict) -> xr.DataArray:
     valid: xr.DataArray
         Valid pixels
     """
+    checked_config = FilteringConfig.model_validate(config).model_dump(
+        by_alias=True
+    )
     # Check if dataset is not empty
     if len(data.data_vars) == 0:
         msg = "Dataset is empty, filtering not possible"
@@ -145,7 +206,7 @@ def detect_valid_pixels(data: xr.Dataset, config: dict) -> xr.DataArray:
     valid_mask = xr.full_like(next(iter(data.data_vars.values())), 1, dtype=int)
 
     # Loop over all the conditions
-    for var_name, condition in config.items():
+    for var_name, condition in checked_config.items():
         if var_name not in data:
             msg = f"Variable {var_name} not found"
             logger.warning(msg)

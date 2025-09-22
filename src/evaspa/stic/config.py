@@ -33,7 +33,8 @@ class STICFilteringConfig(FilteringConfig):
     Configuration for STIC filtering
     """
 
-    @field_validator("root", mode="before")
+    # @field_validator("root", mode="before")
+    @model_validator(mode="before")
     @classmethod
     def update_config(cls, v):
         if isinstance(v, dict):

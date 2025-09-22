@@ -49,6 +49,22 @@ def convert_dataset(variables: dict) -> xr.Dataset:
                 "or": [{"op": "==", "value": 10}, {"op": "==", "value": 20}],
             }
         },
+        {
+            "lulc": {
+                "or": [{"op": "==", "value": 10}, {"op": "==", "value": 20}],
+            },
+            "lst": {
+                "and": [{"op": ">", "value": 291}, {"op": "<", "value": 298}]
+            },
+        },
+        {
+            "lst": {
+                "and": [
+                    {"op": ">", "value": "percentile(1)"},
+                    {"op": "<", "value": "percentile(98)"},
+                ]
+            }
+        },
     ],
 )
 def test_filteringconfig(config) -> None:
@@ -68,6 +84,9 @@ def test_filteringconfig(config) -> None:
         },
         {
             "cloud": {"op": "=="},
+        },
+        {
+            "lst": {"op": ">", "value": "percentile=2"},
         },
     ],
 )
@@ -144,6 +163,11 @@ def test_eval_condition(entry, cond, expected) -> None:
             {"or": [{"op": "==", "value": 10}, {"op": "==", "value": 8}]},
             np.array([[True, False], [True, False]]),
         ),
+        pytest.param(
+            np.array([[10, 5], [8, 7]]),
+            {"op": ">", "value": filter.PercentileValue(50)},
+            np.array([[True, False], [True, False]]),
+        ),
     ],
 )
 def test_apply_condition(entry, cond, expected) -> None:
@@ -180,6 +204,12 @@ def test_apply_condition(entry, cond, expected) -> None:
                 }
             },
             np.array([[True, False], [False, True]]),
+        ),
+        pytest.param(
+            {
+                "lst": {"op": ">=", "value": "percentile(50)"},
+            },
+            np.array([[True, True], [False, True]]),
         ),
         pytest.param(
             {
