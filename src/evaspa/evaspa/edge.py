@@ -6,6 +6,7 @@ Module containing edges classes
 from __future__ import annotations
 
 import json
+import re
 import sys
 from abc import ABC, abstractmethod
 from enum import Enum
@@ -69,6 +70,27 @@ class EdgePosition(Enum):
 
     TOP = "top"
     BOTTOM = "bottom"
+
+
+class PercentileValue:
+    """
+    Class to manange percentile
+    """
+
+    def __init__(self, percentile: float):
+        if not (0 <= percentile <= 100):  # noqa: PLR2004
+            msg = "Percentile must be between 0 and 100"
+            raise ValueError(msg)
+        self.percentile = percentile
+
+    def __repr__(self):
+        return f"percentile({self.percentile})"
+
+    def __gt__(self, other: PercentileValue) -> bool:
+        return self.percentile > other.percentile
+
+    def __ge__(self, other: PercentileValue) -> bool:
+        return self.percentile >= other.percentile
 
 
 class Edge(BaseModel, ABC):
@@ -174,10 +196,17 @@ class Edge(BaseModel, ABC):
 class RegressionEdge(Edge, ABC):
     """Class for polynomial edge"""
 
-    model_config = ConfigDict(allow_inf_nan=True, ser_json_inf_nan="strings")
+    model_config = ConfigDict(
+        allow_inf_nan=True,
+        ser_json_inf_nan="strings",
+        arbitrary_types_allowed=True,
+    )
     interval_type: IntervalType
-    interval_nb: int = 20
-    interval_size: float = 0.05
+    interval_nb: int = 10
+    interval_size: float = 0.1
+    interval_limits: (
+        tuple[float, float] | tuple[PercentileValue, PercentileValue] | None
+    ) = None
     percentile: tuple[float, float] | None = None
     nb_points: int | None = None
     selection: SelectionMethod = SelectionMethod.MEDIAN
@@ -188,14 +217,19 @@ class RegressionEdge(Edge, ABC):
     @classmethod
     def check_option(cls, data: Any) -> Any:
         """
-        Check option for points selection
+        Check options
         """
-        if isinstance(data, dict) and (
-            ("percentile" in data and "nb_points" in data)
-            or ("percentile" not in data and "nb_points" not in data)
-        ):
-            msg = "Point selection must be either using a percentile or a number of points"
-            raise ValueError(msg)
+        if isinstance(data, dict):
+            # Check option for points selection
+            if ("percentile" in data and "nb_points" in data) or (
+                "percentile" not in data and "nb_points" not in data
+            ):
+                msg = "Point selection must be either using a percentile or a number of points"
+                raise ValueError(msg)
+            # Check option for interval creation
+            if "interval_nb" in data and "interval_size" in data:
+                msg = "Interval selection must be either using a size or a number of intervals"
+                raise ValueError(msg)
         return data
 
     @field_validator("percentile")
@@ -228,6 +262,59 @@ class RegressionEdge(Edge, ABC):
             raise ValueError(msg)
         return p
 
+    @classmethod
+    def _convert(cls, v: Any) -> float | PercentileValue:
+        """
+        Convert to float or percentile
+        """
+        if isinstance(v, float | int):
+            return float(v)
+        if isinstance(v, PercentileValue):
+            return v
+        if isinstance(v, str):
+            match = re.match(r"percentile\((\d+(\.\d+)?)\)", v.strip())
+            if match:
+                percentile = float(match.group(1))
+                return PercentileValue(percentile)
+        msg = (
+            "value must be a float or a percentile or a "
+            "string in percentile format like 'percentile(90)'"
+        )
+        raise ValueError(msg)
+
+    @field_validator("interval_limits", mode="before")
+    @classmethod
+    def check_interval_limits(
+        cls,
+        p: tuple[Any, Any],
+    ) -> tuple[float, float] | tuple[PercentileValue, PercentileValue]:
+        """
+        Check the consistency of interval limits
+
+        Parameters
+        ----------
+        p: tuple[float,float]
+            Interval limits
+
+        Returns
+        -------
+        limits: tuple[float,float]
+            Validated interval limits
+        """
+        try:
+            limits = tuple(cls._convert(v) for v in p)
+            if type(limits[0]) is not type(limits[1]):
+                msg = "Mismatch in type for interval limits"
+                raise TypeError(msg)  # noqa: TRY301
+            if limits[0] >= limits[1]:  # type: ignore
+                msg = "Lower limit greater than upper limit"
+                raise ValueError(msg)  # noqa: TRY301
+        except (ValueError, TypeError) as e:
+            msg = f"Error in interval limits: {e}"
+            raise ValueError(msg) from e
+        else:
+            return limits  # type: ignore
+
     @field_validator("nb_points")
     @classmethod
     def check_nb_points(cls, nb: int) -> int:
@@ -251,9 +338,10 @@ class RegressionEdge(Edge, ABC):
 
     @field_validator("interval_nb")
     @classmethod
-    def check_interval_nb(cls, nb: int, info: ValidationInfo) -> int:
+    def check_interval_nb(cls, nb: int) -> int:
         """
-        Check the consistency of the interval number, if interval type is "density".
+        Check the consistency of the interval number, if interval type is "density"
+        or "interval_size".
 
         Parameters
         ----------
@@ -267,14 +355,9 @@ class RegressionEdge(Edge, ABC):
         interval_nb: int
             Validated interval number
         """
-        if info.data.get("interval_type") == IntervalType.DENSITY:
-            if (nb <= 0) or (nb > NB_INTERVAL_MAX):
-                msg = f"Number of intervals must be between 1 and {NB_INTERVAL_MAX}"
-                raise ValueError(msg)
-        else:
-            logger.warning(
-                "Number of intervals is ignored for interval type SIZE"
-            )
+        if (nb <= 0) or (nb > NB_INTERVAL_MAX):
+            msg = f"Number of intervals must be between 1 and {NB_INTERVAL_MAX}"
+            raise ValueError(msg)
         return nb
 
     @field_validator("interval_size")
@@ -326,6 +409,44 @@ class RegressionEdge(Edge, ABC):
         if info.data.get("breakpoint") is not None:
             use_bp = True
         return use_bp
+
+    def _prepare(self, var: npt.NDArray, lst: npt.NDArray) -> pd.DataFrame:
+        """
+        Prepare data
+
+        Parameters
+        ----------
+        lst: np.array
+            Land surface temperature
+        var: np.array
+            Variable used versus temperature (ex: Albedo)
+
+        Returns
+        -------
+        data: DataFrame
+            Prepared data in a dataframe format
+        """
+        if var.shape != lst.shape:
+            msg = "LST and variable do not have the same size"
+            raise ValueError(msg)
+        # Filter interval limits
+        df = pd.DataFrame(data={"lst": lst.reshape(-1), "var": var.reshape(-1)})
+        if self.interval_limits is not None:
+            value_min = self.interval_limits[0]
+            if isinstance(value_min, PercentileValue):
+                value_min = df["var"].quantile(value_min.percentile / 100)
+            value_max = self.interval_limits[1]
+            if isinstance(value_max, PercentileValue):
+                value_max = df["var"].quantile(value_max.percentile / 100)
+            df.loc[
+                (df["var"] < value_min) | (df["var"] > value_max),
+                "var",
+            ] = np.nan
+        return (
+            df.dropna(axis=0, how="any")
+            .sort_values(by="var")
+            .reset_index(drop=True)
+        )
 
     def get_points(
         self, var: npt.ArrayLike, lst: npt.ArrayLike
@@ -413,6 +534,16 @@ class RegressionEdge(Edge, ABC):
             # Intervals with the same number of elements
             interval_size = int(np.floor(len(values) / self.interval_nb))
             intervals = pd.Series(np.arange(len(values)) // interval_size)
+            intervals.loc[intervals >= self.interval_nb] = self.interval_nb - 1
+        elif (
+            self.interval_type == IntervalType.SIZE
+            and "interval_nb" in self.model_fields_set
+        ):
+            # Intervals with the same number of elements
+            value_min = values.min()
+            value_max = values.max()
+            interval_size = (value_max - value_min) / self.interval_nb
+            intervals = ((values - value_min) / interval_size).astype(int)
             intervals.loc[intervals >= self.interval_nb] = self.interval_nb - 1
         else:
             # Intervals with a fixed size
@@ -538,6 +669,10 @@ class RegressionEdge(Edge, ABC):
         interval_prop = (
             f"interval_nb={self.interval_nb},"
             if self.interval_type == IntervalType.DENSITY
+            or (
+                self.interval_type == IntervalType.SIZE
+                and "interval_nb" in self.model_fields_set
+            )
             else f"interval_size={self.interval_size},"
         )
         percentile_prop = (
@@ -565,6 +700,10 @@ class RegressionEdge(Edge, ABC):
         interval_prop = (
             f"  - interval_nb={self.interval_nb}\n"
             if self.interval_type == IntervalType.DENSITY
+            or (
+                self.interval_type == IntervalType.SIZE
+                and "interval_nb" in self.model_fields_set
+            )
             else f"  - interval_size={self.interval_size}\n"
         )
         percentile_prop = (
@@ -596,10 +735,18 @@ class RegressionEdge(Edge, ABC):
             (
                 "interval_nb"
                 if self.interval_type.name == IntervalType.DENSITY.name
+                or (
+                    self.interval_type == IntervalType.SIZE
+                    and "interval_nb" in self.model_fields_set
+                )
                 else "interval_size"
             ): (
                 self.interval_nb
                 if self.interval_type.name == IntervalType.DENSITY.name
+                or (
+                    self.interval_type == IntervalType.SIZE
+                    and "interval_nb" in self.model_fields_set
+                )
                 else self.interval_size
             ),
             ("percentile" if self.percentile is not None else "nb_points"): (

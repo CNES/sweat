@@ -174,11 +174,74 @@ def test_flat_percentile_edge_error(config) -> None:
             {
                 "position": "top",
                 "interval_type": "size",
+                "interval_size": 0.25,
+                "nb_points": 1,
+                "selection": "median",
+            },
+            np.array([0, 0, 0, 1, 1, 2, 2, 2, 3, 3]),
+        ),
+        pytest.param(
+            {
+                "position": "top",
+                "interval_type": "size",
+                "interval_nb": 10,
+                "nb_points": 1,
+                "selection": "median",
+            },
+            np.array([0, 1, 2, 2, 3, 5, 5, 6, 8, 9]),
+        ),
+        pytest.param(
+            {
+                "position": "top",
+                "interval_type": "density",
+                "interval_nb": 5,
+                "nb_points": 1,
+                "selection": "median",
+            },
+            np.array([0, 0, 1, 1, 2, 2, 3, 3, 4, 4]),
+        ),
+    ],
+)
+def test_get_intervals(config, expected) -> None:
+    """
+    Test method get_points in RegressionEdge
+    """
+    # Generate data
+    var = np.array([0.0, 0.15, 0.21, 0.28, 0.35, 0.57, 0.58, 0.62, 0.8, 1.0])
+    lst = np.ones(10)
+    # Compute
+    edge = LinearEdge.model_validate(config)
+    df = edge._prepare(var, lst)  # noqa
+    intervals = edge._get_intervals(df["var"])  # noqa
+    # Check
+    np.testing.assert_array_almost_equal(intervals, expected, decimal=2)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("config", "expected"),
+    [
+        pytest.param(
+            {
+                "position": "top",
+                "interval_type": "size",
                 "interval_size": 0.5,
                 "nb_points": 1,
                 "selection": "median",
             },
-            np.array([-0.68, -0.19, 0.26, 0.69, 1.16, 1.63]),
+            np.array([-0.65, -0.17, 0.28, 0.83]),
+        ),
+        pytest.param(
+            {
+                "position": "top",
+                "interval_type": "size",
+                "interval_nb": 10,
+                "nb_points": 1,
+                "selection": "median",
+            },
+            np.array(
+                [-0.88, -0.65, -0.48, -0.3, -0.09, 0.1, 0.3, 0.5, 0.69, 1.0]
+            ),
         ),
         pytest.param(
             {
@@ -189,7 +252,7 @@ def test_flat_percentile_edge_error(config) -> None:
                 "selection": "median",
             },
             np.array(
-                [-0.32, -0.03, 0.15, 0.29, 0.41, 0.53, 0.66, 0.8, 0.98, 1.33]
+                [-0.32, -0.03, 0.15, 0.29, 0.41, 0.53, 0.66, 0.8, 0.98, 1.0]
             ),
         ),
     ],
@@ -201,6 +264,7 @@ def test_get_points(config, expected) -> None:
     # Generate data
     np.random.seed(0)
     var = np.random.normal(0.5, 0.5, 1000)
+    var = np.clip(var, -1, 1)
     lst = np.ones(1000)
     # Compute
     edge = Edge.create("LinearEdge", config)
