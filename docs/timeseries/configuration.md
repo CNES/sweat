@@ -15,6 +15,7 @@ The value is either a single condition or a combined conditionThe key correspond
 
 A simple condition is composed of an operator and a value.
 The list of available operators are `"==", "!=", ">", ">=", "<", "<="`.
+The value can be either a float or a string in percentile format like 'percentile(90)'.
 
 ```json
 {"op": "OPERATOR", "value": "VALUE"}
@@ -23,6 +24,10 @@ The list of available operators are `"==", "!=", ">", ">=", "<", "<="`.
 Example
 ```json
 {"op": "==", "value": 0}
+```
+or
+```json
+{"op": "<=", "value": "percentile(95)"}
 ```
 
 #### Combined condition

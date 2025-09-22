@@ -59,7 +59,9 @@ Therefore, an edge is characterized by:
      
 * for edge based on a point selection for regression (inherited from *RegressionEdge*), a configuration **config**: 
     - **interval_type**: an interval type either fixed size *size* or fixed density *density*
-    - **interval_nb**: a number of intervals (for density interval type) or **interval_size**: a size of intervals (for fixed size type)
+    - **interval_nb**: a number of intervals (for density interval type or fixed size type) or **interval_size**: a size of intervals (for fixed size type only)
+    - **interval_limits**: limits for interval to consider for point selecttion
+    - **nb_points**: number of points to considered for point selection 
     - **percentile**: a percentile interval to considered for point selection 
     - **percentile_limit** (*optional*): the maximum number of points to be considered in the percentile interval 
     - **selection**: a regression point selection criteria (*median*,*mean*,*max*,*min*)
