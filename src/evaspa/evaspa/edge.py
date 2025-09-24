@@ -185,7 +185,7 @@ class Edge(BaseModel, ABC):
             return getattr(sys.modules[__name__], name).model_validate_json(
                 json.dumps(config)
             )
-        except KeyError as e:
+        except AttributeError as e:
             msg = f"Class {name} is not defined"
             raise EdgeError(msg) from e
         except ValidationError as e:
@@ -208,6 +208,7 @@ class RegressionEdge(Edge, ABC):
         tuple[float, float] | tuple[PercentileValue, PercentileValue] | None
     ) = None
     percentile: tuple[float, float] | None = None
+    percentile_limit: int | None = None
     nb_points: int | None = None
     selection: SelectionMethod = SelectionMethod.MEDIAN
     use_breakpoint: bool = False
@@ -261,6 +262,27 @@ class RegressionEdge(Edge, ABC):
             msg = "Percentile must be an interval between [0,100]"
             raise ValueError(msg)
         return p
+
+    @field_validator("percentile_limit")
+    @classmethod
+    def check_percentile_limit(cls, limit: int | None) -> int | None:
+        """
+        Check the percentile limit (number of points to keep)
+
+        Parameters
+        ----------
+        limit: int
+            Percentile limit
+
+        Returns
+        -------
+        check_limit: int
+            Validated percentile limit
+        """
+        if limit is not None and limit <= 0:
+            msg = "Percentile limit must be greater than 0"
+            raise ValueError(msg)
+        return limit
 
     @classmethod
     def _convert(cls, v: Any) -> float | PercentileValue:
@@ -383,9 +405,8 @@ class RegressionEdge(Edge, ABC):
                 msg = f"Number of intervals must be between 0 and {SIZE_INTERVAL_MAX}"
                 raise ValueError(msg)
         else:
-            logger.warning(
-                "Size of intervals is ignored for interval type DENSITY"
-            )
+            msg = "Size of intervals does not work for interval type DENSITY"
+            raise ValueError(msg)
         return size
 
     @field_validator("use_breakpoint")
@@ -448,6 +469,20 @@ class RegressionEdge(Edge, ABC):
             .reset_index(drop=True)
         )
 
+    def _select(self, df: pd.Series) -> float:
+        """
+        Point selection in an interval
+        """
+        if self.percentile_limit is not None:
+            if self.position.name == EdgePosition.TOP.name:
+                return df.nlargest(self.percentile_limit, keep="all").agg(
+                    self.selection.value
+                )
+            return df.nsmallest(self.percentile_limit, keep="all").agg(
+                self.selection.value
+            )
+        return df.agg(self.selection.value)
+
     def get_points(
         self, var: npt.ArrayLike, lst: npt.ArrayLike
     ) -> tuple[npt.NDArray, npt.NDArray]:
@@ -493,7 +528,7 @@ class RegressionEdge(Edge, ABC):
                         group["lst"]
                         <= np.percentile(group["lst"], self.percentile[1])
                     )
-                ].agg(self.selection.value)
+                ].pipe(self._select)
                 if not np.isnan(value):
                     var_values.append(group["var"].median())
                     lst_values.append(value)
@@ -676,9 +711,13 @@ class RegressionEdge(Edge, ABC):
             else f"interval_size={self.interval_size},"
         )
         percentile_prop = (
-            f"percentile={self.percentile},"
+            (
+                f"percentile={self.percentile}, percentile_limit={self.percentile_limit},"
+                if self.percentile_limit is not None
+                else f"percentile={self.percentile},"
+            )
             if self.percentile is not None
-            else f"nb_points={self.nb_points},"
+            else f"nb_points={self.nb_points}"
         )
         break_prop = (
             f"breakpoint={self.breakpoint}," if self.use_breakpoint else ""
@@ -707,9 +746,13 @@ class RegressionEdge(Edge, ABC):
             else f"  - interval_size={self.interval_size}\n"
         )
         percentile_prop = (
-            f"  - percentile={self.percentile}\n"
+            (
+                f"  - percentile={self.percentile} (limit={self.percentile_limit}\n"
+                if self.percentile_limit is not None
+                else f"  - percentile={self.percentile}\n"
+            )
             if self.percentile is not None
-            else f"  - nb points={self.nb_points}\n"
+            else f"   - nb_points={self.nb_points}\n"
         )
         break_prop = (
             f"\n  - breakpoint={self.breakpoint},"
@@ -753,6 +796,11 @@ class RegressionEdge(Edge, ABC):
                 self.percentile
                 if self.percentile is not None
                 else self.nb_points
+            ),
+            **(
+                {"percentile_limit": self.percentile_limit}
+                if self.percentile_limit is not None
+                else {}
             ),
             "selection": self.selection.value,
             "use_breakpoint": self.use_breakpoint,
@@ -860,37 +908,6 @@ class ThresholdLinearEdge(RegressionEdge):
         """
         return self.coeffs[0] * np.array(var) + self.coeffs[1]
 
-    def fit_numpy(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
-        """
-        For each interval, compute the point coordinates used for the regression:
-          - the abscissa value is obtained by taking the median.
-          - the ordinate value is obtained by applying the
-          selection method to the percentile interval.
-        Perform a linear regression from the points
-
-        Parameters
-        ----------
-        lst: np.array_like
-            Land surface temperature
-        var: np.array_like
-            Variable used versus temperature (ex: Albedo)
-        """
-        # Get points for linear regression
-        var_values, lst_values = self.get_points(var, lst)
-        # Remove points below the threshold
-        if self.position.name == EdgePosition.TOP.name:
-            cut = np.nanargmax(lst_values[::-1])
-        else:
-            cut = np.nanargmin(lst_values[::-1])
-        cut = len(lst_values) - cut - 1
-        self.threshold = var_values[cut]
-        if cut == len(lst_values) - 1:
-            logger.warning("ThresholdLinearEdge: Threshold not found")
-            # Linear regression
-            self.coeffs = tuple(np.polyfit(var_values, lst_values, 1))
-        # Linear regression
-        self.coeffs = tuple(np.polyfit(var_values[cut:], lst_values[cut:], 1))
-
     def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
         """
         For each interval, compute the point coordinates used for the regression:
@@ -996,42 +1013,6 @@ class DoubleLinearEdge(RegressionEdge):
                 lambda x: self.coeffs2[0] * x + self.coeffs2[1],
             ],
         )
-
-    def fit_numpy(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
-        """
-        For each interval, compute the point coordinates used for the regression:
-          - the abscissa value is obtained by taking the median.
-          - the ordinate value is obtained by applying the
-          selection method to the percentile interval.
-        Perform a linear regression from the points
-
-        Parameters
-        ----------
-        lst: np.array_like
-            Land surface temperature
-        var: np.array_like
-            Variable used versus temperature (ex: Albedo)
-        """
-        # Get points for linear regression
-        var_values, lst_values = self.get_points(var, lst)
-        # Remove points below the threshold
-        if self.position.name == EdgePosition.TOP.name:
-            cut = np.nanargmax(lst_values[::-1])
-        else:
-            cut = np.nanargmin(lst_values[::-1])
-        cut = len(lst_values) - cut - 1
-        self.fit_breakpoint = var_values[cut]
-        if cut == len(lst_values) - 1:
-            logger.warning("DoubleLinearEdge: second regression impossible")
-            self.coeffs1 = tuple(np.polyfit(var_values, lst_values, 1))
-            self.coeffs2 = self.coeffs1
-        elif cut == 0:
-            logger.warning("DoubleLinearEdge: first regression impossible")
-            self.coeffs2 = tuple(np.polyfit(var_values, lst_values, 1))
-            self.coeffs1 = self.coeffs2
-        # Linear regression
-        self.coeffs1 = tuple(np.polyfit(var_values[:cut], lst_values[:cut], 1))
-        self.coeffs2 = tuple(np.polyfit(var_values[cut:], lst_values[cut:], 1))
 
     def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
         """
@@ -1148,45 +1129,6 @@ class FlatLinearEdge(RegressionEdge):
                 lambda x: self.coeffs2[0] * x + self.coeffs2[1],
             ],
         )
-
-    def fit_numpy(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
-        """
-        For each interval, compute the point coordinates used for the regression:
-          - the abscissa value is obtained by taking the median.
-          - the ordinate value is obtained by applying the
-          selection method to the percentile interval.
-        Perform a linear regression from the points
-
-        Parameters
-        ----------
-        lst: np.array_like
-            Land surface temperature
-        var: np.array_like
-            Variable used versus temperature (ex: Albedo)
-        """
-        # Get points for linear regression
-        var_values, lst_values = self.get_points(var, lst)
-        # Remove points below the threshold
-        if self.position.name == EdgePosition.TOP.name:
-            cut = np.nanargmax(lst_values[::-1])
-        else:
-            cut = np.nanargmin(lst_values[::-1])
-        cut = len(lst_values) - cut - 1
-        self.fit_breakpoint = var_values[cut]
-        if cut == len(lst_values) - 1:
-            logger.warning("FlatLinearEdge: second regression impossible")
-            self.coeffs1 = lst_values[cut]
-            self.coeffs2 = (0.0, self.coeffs1)
-        elif cut == 0:
-            logger.warning("FlatLinearEdge: first regression impossible")
-            self.coeffs2 = tuple(np.polyfit(var_values, lst_values, 1))
-            self.coeffs1 = self.coeffs2[0] * var_values[0] + self.coeffs2[1]
-        else:
-            # Linear regression
-            self.coeffs2 = tuple(
-                np.polyfit(var_values[cut:], lst_values[cut:], 1)
-            )
-            self.coeffs1 = self.coeffs2[0] * var_values[cut] + self.coeffs2[1]
 
     def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
         """
@@ -1487,6 +1429,7 @@ class FlatPercentileEdge(Edge):
 
     model_config = ConfigDict(allow_inf_nan=True, ser_json_inf_nan="strings")
     percentile: tuple[float, float] | None = None
+    percentile_limit: int | None = None
     nb_points: int | None = None
     selection: SelectionMethod = SelectionMethod.MEDIAN
     value: float = float("inf")
@@ -1532,6 +1475,27 @@ class FlatPercentileEdge(Edge):
             raise ValueError(msg)
         return p
 
+    @field_validator("percentile_limit")
+    @classmethod
+    def check_percentile_limit(cls, limit: int | None) -> int | None:
+        """
+        Check the percentile limit (number of points to keep)
+
+        Parameters
+        ----------
+        limit: int
+            Percentile limit
+
+        Returns
+        -------
+        check_limit: int
+            Validated percentile limit
+        """
+        if limit is not None and limit <= 0:
+            msg = "Percentile limit must be greater than 0"
+            raise ValueError(msg)
+        return limit
+
     @field_validator("nb_points")
     @classmethod
     def check_nb_points(cls, nb: int) -> int:
@@ -1569,6 +1533,20 @@ class FlatPercentileEdge(Edge):
         """
         return self.value * np.ones_like(np.array(var))
 
+    def _select(self, df: pd.Series) -> float:
+        """
+        Point selection in an interval
+        """
+        if self.percentile_limit is not None:
+            if self.position.name == EdgePosition.TOP.name:
+                return df.nlargest(self.percentile_limit, keep="all").agg(
+                    self.selection.value
+                )
+            return df.nsmallest(self.percentile_limit, keep="all").agg(
+                self.selection.value
+            )
+        return df.agg(self.selection.value)
+
     def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
         """
         Edge is defined by the max or the min of LST
@@ -1586,7 +1564,7 @@ class FlatPercentileEdge(Edge):
             self.value = df["lst"][
                 (df["lst"] >= np.percentile(df["lst"], self.percentile[0]))
                 & (df["lst"] <= np.percentile(df["lst"], self.percentile[1]))
-            ].agg(self.selection.value)
+            ].pipe(self._select)
         # Selection with the numver of points
         elif self.nb_points is not None:
             if self.position.name == EdgePosition.TOP.name:
@@ -1607,7 +1585,11 @@ class FlatPercentileEdge(Edge):
         String conversion method
         """
         percentile_prop = (
-            f"percentile={self.percentile}"
+            (
+                f"percentile={self.percentile}, percentile_limit={self.percentile_limit},"
+                if self.percentile_limit is not None
+                else f"percentile={self.percentile},"
+            )
             if self.percentile is not None
             else f"nb_points={self.nb_points}"
         )
@@ -1624,9 +1606,13 @@ class FlatPercentileEdge(Edge):
         String conversion method for end-users
         """
         percentile_prop = (
-            f"percentile={self.percentile}"
+            (
+                f"  - percentile={self.percentile} (limit={self.percentile_limit}\n"
+                if self.percentile_limit is not None
+                else f"  - percentile={self.percentile}\n"
+            )
             if self.percentile is not None
-            else f"nb_points={self.nb_points}"
+            else f"   - nb_points={self.nb_points}\n"
         )
         return (
             f"FlatPercentileEdge\n"
@@ -1646,6 +1632,11 @@ class FlatPercentileEdge(Edge):
                 self.percentile
                 if self.percentile is not None
                 else self.nb_points
+            ),
+            **(
+                {"percentile_limit": self.percentile_limit}
+                if self.percentile_limit is not None
+                else {}
             ),
             "selection": self.selection.value,
             "value": float(self.value),
