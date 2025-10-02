@@ -15,9 +15,9 @@ from evaspa.stic import flux
         pytest.param(-50, 2, 36000, 0.6, 0.585602),
     ],
 )
-def test_f_g_actualsurface(rn, lai, local_time, m, expected) -> None:
+def test_compute_g_flux(rn, lai, local_time, m, expected) -> None:
     """
     Test function for converting to local time
     """
-    res = flux.f_g_actualsurface(rn, lai, local_time, m)
+    res = flux.compute_g_flux(rn, lai, local_time, m)
     np.testing.assert_almost_equal(res, expected, decimal=3)

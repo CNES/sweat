@@ -25,14 +25,20 @@ TG_MAX = 100000  # for dry surface
     nogil=True,
     cache=True,
 )
-def f_g_actualsurface(
+def compute_g_flux(
     rn: float,
     lai: float,
     local_time: float,
     m: float,
 ) -> float:
     """
-    Compute G flux
+    Compute soil heat flux, called G flux.
+
+    Notes
+    -----
+    Santanello, J. A., and M. A. Friedl, 2003:
+    Diurnal Covariation in Soil Heat Flux and
+    Net Radiation. J. Appl. Meteor. Climatol., 42, 851-862
 
     Parameters
     ----------
@@ -50,7 +56,7 @@ def f_g_actualsurface(
     g_flux: float
         G flux
     """
-    rn_soil = rn * np.exp(-KRN * lai)  # Correction on 12/11/2021
+    rn_soil = rn * np.exp(-KRN * lai)
 
     sol_noon = f32(12) * f32(60) * f32(60)
     tg0 = sol_noon - local_time

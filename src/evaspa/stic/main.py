@@ -23,7 +23,7 @@ from evaspa.common.constant import (
 )
 from evaspa.common.flux import compute_et_from_le, create_net_radiation
 from evaspa.logging import LoggerManager
-from evaspa.stic.flux import f_g_actualsurface
+from evaspa.stic.flux import compute_g_flux
 from evaspa.stic.functions import (
     convert_to_celsius,
     convert_to_local_time,
@@ -187,7 +187,7 @@ def run_stic_model_pixel(
     # Save dewpoint temperature at source/sink height
     t0d_old = t0d
 
-    g_flux = f_g_actualsurface(rn, lai, local_time, m_soil)
+    g_flux = compute_g_flux(rn, lai, local_time, m_soil)
     available_energy = rn - g_flux
 
     (g_aero, g_surf, delta_t, ef) = f_stateeq(
@@ -305,7 +305,7 @@ def run_stic_model_pixel(
         alpha = min(alpha, f32(2.0))
 
         # Re-estimate net available energy
-        g_flux = f_g_actualsurface(rn, lai, local_time, m)
+        g_flux = compute_g_flux(rn, lai, local_time, m)
         available_energy = rn - g_flux
 
         # Re-estimate conductances and states
