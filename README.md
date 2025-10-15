@@ -28,12 +28,7 @@ To activate the environment
 pixi shell
 ```
 
-### Install sweat
-```console
-pip install .
-```
-
-To use notebook
+### Install notebook
 ```console
 pip install .[notebook]
 ```
