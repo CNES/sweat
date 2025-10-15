@@ -30,3 +30,6 @@ precommit:
 
 precommit-all:
 	$(RUN) pre-commit run --all-files
+
+docs:
+	$(RUN) mkdocs build
