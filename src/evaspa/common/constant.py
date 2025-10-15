@@ -7,9 +7,6 @@ from enum import Enum
 
 import numpy as np
 
-# Constant
-PSYCHROMETRIC_CST = 0.67
-
 
 # Dataset variables
 class ETVar(Enum):

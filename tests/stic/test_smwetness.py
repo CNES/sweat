@@ -156,7 +156,7 @@ from evaspa.stic import smwetness
         ),
     ],
 )
-def test_f_soilmoisture_initialize(
+def test_initialize_soilmoisture(
     slope,
     ts,
     ta,
@@ -192,7 +192,7 @@ def test_f_soilmoisture_initialize(
         es,
         t0d,
         ds,
-    ) = smwetness.f_soilmoisture_initialize(
+    ) = smwetness.initialize_soil_moisture(
         slope,
         ts,
         ta,
@@ -348,7 +348,7 @@ def test_f_soilmoisture_initialize(
         ),
     ],
 )
-def test_f_soilmoisture_iterate(
+def test_iterate_soilmoisture(
     slope,
     s1,
     s2,
@@ -382,7 +382,7 @@ def test_f_soilmoisture_iterate(
         m_canopy,
         m_soil,
         m_rz,
-    ) = smwetness.f_soilmoisture_iterate(
+    ) = smwetness.iterate_soil_moisture(
         slope,
         s1,
         s2,

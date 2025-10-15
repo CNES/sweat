@@ -18,28 +18,31 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from evaspa.common.constant import (
     FLAGS_TYPE,
-    PSYCHROMETRIC_CST,
     ETVar,
 )
 from evaspa.common.flux import compute_et_from_le, create_net_radiation
 from evaspa.logging import LoggerManager
-from evaspa.stic.flux import f_g_actualsurface
+from evaspa.stic.constant import PSYCHROMETRIC_CST, PT_CST
+from evaspa.stic.flux import (
+    compute_g_flux,
+    compute_le_h_fluxes,
+    initiate_le_h_fluxes,
+)
 from evaspa.stic.functions import (
-    convert_to_celsius,
+    compute_canopy_air_saturation_vapor_pressure,
+    compute_canopy_air_vapor_pressure_deficit,
+    compute_psychrometrics,
+    compute_state_equations,
+    convert_kelvin_to_celsius,
     convert_to_local_time,
     convert_to_rh,
-    f_psychrometrics,
-    f_stateeq,
 )
 from evaspa.stic.smwetness import (
-    f_soilmoisture_initialize,
-    f_soilmoisture_iterate,
+    initialize_soil_moisture,
+    iterate_soil_moisture,
 )
 
 logger = LoggerManager.get_logger(__name__)
-
-# Constants
-ALPHA = 1.26
 
 # if bit 1 activated : The pixel is invalid : STIC not converged
 MSK_STIC_NOT_CONVERGED = 1 << 3
@@ -152,7 +155,8 @@ def run_stic_model_pixel(
         s4,
         rho,
         cp,
-    ) = f_psychrometrics(ts, ta, td, rh)
+    ) = compute_psychrometrics(ts, ta, td, rh)
+
     # 2. Initialize
     # -------------
 
@@ -162,7 +166,7 @@ def run_stic_model_pixel(
     # es: vapor pressure at surface temperature
     # t0d: dewpoint temperature at source/sink height
     # ds: vapor pressure deficit of the air at the surface
-    (m, _, m_soil, _, _, es, t0d, ds) = f_soilmoisture_initialize(
+    (m, _, m_soil, _, _, es, t0d, ds) = initialize_soil_moisture(
         slope,
         ts,
         ta,
@@ -178,48 +182,35 @@ def run_stic_model_pixel(
         s3,
         s4,
     )
-    # Saturation vapor pressure at t0
+    # Initialize saturation vapor pressure at t0
     e0star = esstar
-    # Vapor pressure at t0
+    # Initialiaze vapor pressure at t0
     e0 = es
-    # Priestley taylor parameter
-    alpha = f32(ALPHA)
+    # Initialize alpha to Priestley taylor parameter
+    alpha = f32(PT_CST)
     # Save dewpoint temperature at source/sink height
     t0d_old = t0d
-
-    g_flux = f_g_actualsurface(rn, lai, local_time, m_soil)
+    # Compute G flux
+    g_flux = compute_g_flux(rn, lai, local_time, m_soil)
+    # Compute available energy
     available_energy = rn - g_flux
-
-    (g_aero, g_surf, delta_t, ef) = f_stateeq(
+    # Compute state equestions
+    (g_aero, g_surf, delta_t, ef) = compute_state_equations(
         rho, cp, alpha, slope, available_energy, e0, ea, e0star, m
     )
+    # Initialize t0
     t0 = delta_t + ta
+    # Compute LE and H fluxes
+    le_flux, h_flux = initiate_le_h_fluxes(
+        slope, g_aero, g_surf, available_energy, da, rho, cp
+    )
+    # TODO: To check
     slope0 = (e0star - ea) / (t0 - td)
-
-    # Calculate ET and H based on initial results from state eqs.
-    # McNaughton and Jarvis (1986)
-    omega = ((slope / f32(PSYCHROMETRIC_CST)) + f32(1)) / (
-        (slope / f32(PSYCHROMETRIC_CST)) + f32(1) + g_aero / g_surf
-    )
-    le_flux_eq = (available_energy * (slope / f32(PSYCHROMETRIC_CST))) / (
-        (slope / f32(PSYCHROMETRIC_CST)) + f32(1)
-    )
-    le_flux_imp = (
-        (cp * f32(0.0289644) / f32(PSYCHROMETRIC_CST)) * g_surf * f32(40) * da
-    )
-    le_flux = omega * le_flux_eq + (1 - omega) * le_flux_imp
-
-    h_flux = (
-        f32(PSYCHROMETRIC_CST) * available_energy * (1 + g_aero / g_surf)
-        - rho * cp * g_aero * da
-    ) / (
-        slope + f32(PSYCHROMETRIC_CST) * (1 + g_aero / g_surf)
-    )  # Deduced from the PM equation
 
     # 3. Iteration
     # ------------
 
-    # Initialize iteration
+    # Initialize iteration loop
     le_flux_old = le_flux
     le_error = f32(0.05)
     steps = 0
@@ -227,24 +218,17 @@ def run_stic_model_pixel(
 
     # Iteration step
     while le_error > threshold and steps < nb_steps:
-        # Re-estimate saturated vapor pressure at source/sink height
-        e0star = ea + (f32(PSYCHROMETRIC_CST) * le_flux * (g_aero + g_surf)) / (
-            rho * cp * g_aero * g_surf
+        # Re-estimate saturated vapor pressure at canopy/air height
+        e0star = compute_canopy_air_saturation_vapor_pressure(
+            le_flux, ea, esstar, g_aero, g_surf, rho, cp, f32(PSYCHROMETRIC_CST)
         )
-        e0star = e0star if e0star >= f32(0.0) else esstar
-        e0star = e0star if e0star < f32(250.0) else f32(250.0)
 
-        # Re-estimate vapor pressure at source/sink height
-        d0 = (
-            (g_aero / g_surf)
-            * (
-                f32(PSYCHROMETRIC_CST)
-                / (slope + f32(PSYCHROMETRIC_CST) * (f32(1) + g_aero / g_surf))
-            )
-            * (da + ((slope * available_energy) / (rho * cp * g_aero)))
+        # Re-estimate vapor pressure deficit at canopy/air height
+        d0 = compute_canopy_air_vapor_pressure_deficit(
+            slope, g_aero, g_surf, available_energy, da, ds, rho, cp
         )
-        d0 = d0 if d0 >= f32(0.0) else ds
 
+        # Re-estimate vapor pressure at canopy/air height (hPa)
         e0 = e0star - d0
         if e0 < f32(0.0):
             e0 = es
@@ -252,15 +236,21 @@ def run_stic_model_pixel(
             e0 = es
         if e0 > e0star:
             e0 = es
+        # TODO: To check difference with STIC-JPL
+        # if e0 < f32(0.0):
+        #    e0 = es
+        # if e0 > e0star:
+        #    e0 = e0star
 
-        # Re-estimate M (direct LST feedback into M computation)
+        # Re-estimate dewpoint temperature at source/sink height
         t0d = td + (f32(PSYCHROMETRIC_CST) * le_flux) / (rho * cp * g_aero * s1)
         if t0d < td:
             t0d = td
         if t0d > ts:
             t0d = t0d_old
 
-        (m, _, _, m_soil, _) = f_soilmoisture_iterate(
+        # Re-estimate M (direct LST feedback into M computation)
+        (m, _, _, m_soil, _) = iterate_soil_moisture(
             slope,
             s1,
             s2,
@@ -282,6 +272,7 @@ def run_stic_model_pixel(
         )
 
         # Re-estimate PT coefficient
+        # TODO: Check formulation (slope0)
         alpha = (
             g_surf
             * slope0
@@ -305,11 +296,11 @@ def run_stic_model_pixel(
         alpha = min(alpha, f32(2.0))
 
         # Re-estimate net available energy
-        g_flux = f_g_actualsurface(rn, lai, local_time, m)
+        g_flux = compute_g_flux(rn, lai, local_time, m)
         available_energy = rn - g_flux
 
         # Re-estimate conductances and states
-        (g_aero, g_surf, delta_t, ef) = f_stateeq(
+        (g_aero, g_surf, delta_t, ef) = compute_state_equations(
             rho,
             cp,
             alpha,
@@ -324,15 +315,11 @@ def run_stic_model_pixel(
         t0 = delta_t + ta
 
         # Re-estimate latent heat flux
-        le_flux = (
-            (rho * cp / f32(PSYCHROMETRIC_CST))
-            * ((g_aero * g_surf) / (g_aero + g_surf))
-            * (slope * (t0 - ta) + da)
+        le_flux, h_flux = compute_le_h_fluxes(
+            slope, g_aero, g_surf, available_energy, da, ta, t0, ea, e0, rho, cp
         )
 
-        if (le_flux < f32(0.0)) & (le_flux < available_energy):
-            le_flux = rho * cp * g_aero * (e0 - ea) / f32(PSYCHROMETRIC_CST)
-
+        # TODO: To check
         slope0 = (
             (PSYCHROMETRIC_CST * le_flux) / (rho * cp * g_surf) + (e0 - ea)
         ) / (t0 - td)
@@ -345,13 +332,6 @@ def run_stic_model_pixel(
         converged = le_error < threshold
 
     # Final output from the STIC model
-    # Compute H flux
-    h_flux = (
-        PSYCHROMETRIC_CST * available_energy * (f32(1) + g_aero / g_surf)
-        - rho * cp * g_aero * da
-    ) / (
-        slope + f32(PSYCHROMETRIC_CST) * (f32(1) + g_aero / g_surf)
-    )  # Deduced from the PM equation
     # Compute EF
     ef = le_flux / (le_flux + h_flux)
     ef = min(max(ef, f32(0.0)), f32(1.0))
@@ -506,13 +486,13 @@ def prepare(
     new_data = data.copy()
     # Converting temperature from Kelvin to Celsius degree
     new_data[ETVar.LST.value] = xr.apply_ufunc(
-        convert_to_celsius, data[ETVar.LST.value]
+        convert_kelvin_to_celsius, data[ETVar.LST.value]
     )
     new_data[ETVar.TEMPERATURE.value] = xr.apply_ufunc(
-        convert_to_celsius, data[ETVar.TEMPERATURE.value]
+        convert_kelvin_to_celsius, data[ETVar.TEMPERATURE.value]
     )
     new_data[ETVar.DEWPOINT_TEMPERATURE.value] = xr.apply_ufunc(
-        convert_to_celsius, data[ETVar.DEWPOINT_TEMPERATURE.value]
+        convert_kelvin_to_celsius, data[ETVar.DEWPOINT_TEMPERATURE.value]
     )
     # Converting to relative humidity percentage
     new_data[ETVar.RH.value] = xr.apply_ufunc(

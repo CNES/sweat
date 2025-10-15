@@ -39,14 +39,14 @@ CP_DRY = 1005.0
 PSYCHROMETRIC_CST = 0.67
 # Tetens parameters
 # https://en.wikipedia.org/wiki/Tetens_equation
-A_TETENS = 6.13753  # TODO: bibliographic reference 6.1078
+A_TETENS = 6.13753  # Bibliographic reference 6.1078
 B_TETENS = 17.27
 C_TETENS = 237.3
 
 
-def convert_to_celsius(lst: npt.ArrayLike) -> npt.NDArray:
+def convert_kelvin_to_celsius(lst: npt.ArrayLike) -> npt.NDArray:
     """
-    Converting from Kelvin to Celsus degree
+    Converting from Kelvin to Celsius degree
 
     Parameters
     ----------
@@ -59,6 +59,23 @@ def convert_to_celsius(lst: npt.ArrayLike) -> npt.NDArray:
         Temperature in Celsius
     """
     return np.array(lst) - CST_KELVIN
+
+
+def convert_celsius_to_kelvin(lst: npt.ArrayLike) -> npt.NDArray:
+    """
+    Converting from Celsius to Kelvin degree
+
+    Parameters
+    ----------
+    lst: np.array_like
+        Temperature in kelvin
+
+    Returns
+    -------
+    lst: np.array
+        Temperature in Celsius
+    """
+    return np.array(lst) + CST_KELVIN
 
 
 def convert_to_local_time(
@@ -159,7 +176,22 @@ def convert_to_rh(
 )
 def _tetens(t: float) -> float:
     """
-    Tetens equation
+    Calculate the saturation vapour pressure of water using Tetens equation
+
+    Notes
+    -----
+    See:
+    - https://en.wikipedia.org/wiki/Tetens_equation
+
+    Parameters
+    ----------
+    t: float
+        Temperature (degC)
+
+    Returns
+    -------
+    svp: float
+        Saturation vapor pressure (hPa)
     """
     # Saturation vapor pressure at surface temperature TS (unit hPa)
     return f32(A_TETENS) * exp((f32(B_TETENS) * t) / (t + f32(C_TETENS)))
@@ -173,6 +205,23 @@ def _tetens(t: float) -> float:
 def _tetens_derivative(t: float) -> float:
     """
     Derivative of Tetens equation
+    Calculate the slope of the saturation vapour pressure of water
+    versus temperature using the derivative of Tetens equation
+
+    Notes
+    -----
+    See:
+    - https://en.wikipedia.org/wiki/Tetens_equation
+
+    Parameters
+    ----------
+    t: float
+        Temperature (degC)
+
+    Returns
+    -------
+    slope: float
+        Slope of saturation vapor pressure (hPa/degC)
     """
     return f32(B_TETENS) * f32(C_TETENS) * _tetens(t) / (t + f32(C_TETENS)) ** 2
 
@@ -182,7 +231,7 @@ def _tetens_derivative(t: float) -> float:
     nogil=True,
     cache=True,
 )
-def f_psychrometrics(
+def compute_psychrometrics(
     ts: float, ta: float, td: float, rh: float
 ) -> tuple[
     float, float, float, float, float, float, float, float, float, float, float
@@ -190,18 +239,13 @@ def f_psychrometrics(
     """
     Compute psychrometrics:
     - esstar: saturation vapor pressure at surface temperature, TS (unit hPa)
-    - eastar: saturated vapor pressure at air temperature (hPa)
-    - ea: atmosphere vapor pressure (hPa)
-    - da: atmosphere vapor pressure deficit (hPa)
-    - slope: slope of saturation vapor pressure versus air temperature at TA (hPa/degC)
-    -s1,s2,s3,s4 : splopes of saturation vapor pressure versus temperature
+    - eastar: saturation vapor pressure at air temperature (hPa)
+    - ea: actual vapor pressure of air (hPa)
+    - da: Vapor pressure deficit of air (hPa)
+    - slope: slope of saturation vapor pressure versus air temperature at Ta (hPa/degC)
+    - s1,s2,s3,s4 : slopes of saturation vapor pressure versus temperature (hPa/degC)
     - rho: air density (kg.m-3)
     - cp: specific heat of air at constant pressure (J.kg-1.K-1)
-
-    Notes
-    -----
-    See:
-    - https://en.wikipedia.org/wiki/Tetens_equation
 
     Parameters
     ----------
@@ -221,19 +265,20 @@ def f_psychrometrics(
     eastar: float
         Saturation vapor pressure at air temperature (hPa)
     ea: float
-        Atmosphere vapour pressure (hPa) at air temperature
+        Atmosphere vapor pressure (hPa) at air temperature
     da: float
-        Atmosphere vapour pressure deficit (hPa) at the reference height
+        Atmosphere vapor pressure deficit (hPa) at the reference height
     slope: float
-        Slope of saturation vapor pressure versus air temperature at TA (hPa/degC)
+        Slope of saturation vapor pressure versus
+        air temperature at TA (hPa/degC)
     s1: float
-        Slope of saturation vapor pressure versus temperature
+        Slope of saturation vapor pressure versus temperature (hPa/degC)
     s2: float
-        Slope of saturation vapor pressure versus temperature
+        Slope of saturation vapor pressure versus temperature (hPa/degC)
     s3: float
-        Slope of saturation vapor pressure versus temperature
+        Slope of saturation vapor pressure versus temperature (hPa/degC)
     s4: float
-        Slope of saturation vapor pressure versus temperature
+        Slope of saturation vapor pressure versus temperature (hPa/degC)
     rho: float
         Air density (kg.m-3)
     cp: float
@@ -255,11 +300,15 @@ def f_psychrometrics(
     # slope of saturation vapor pressure versus temperature at Ta (hPa)
     slope = _tetens_derivative(ta)
     # slope of saturation vapor pressure versus temperature at Td (hPa)
-    s1 = _tetens_derivative(td)
+    # TODO: To chose between the two formulations
+    # s1 = _tetens_derivative(td)
+    s1 = (45.03 + 3.014 * td + 0.05345 * td**2 + 0.00224 * td**3) * 1e-2
     # Avoid division by zero
     s2 = (esstar - ea) / (ts - td) if abs(ts - td) > f32(1.0e-7) else s1
     # slope of saturation vapor pressure versus temperature at Ts (hPa)
-    s3 = _tetens_derivative(ts)
+    # TODO: To chose between the two formulations
+    # s3 = _tetens_derivative(ts)
+    s3 = (45.03 + 3.014 * ts + 0.05345 * ts**2 + 0.00224 * ts**3) * 1e-2
     s4 = (eastar - ea) / (ta - td) if abs(ta - td) > f32(1.0e-7) else s1
     # Specific humidity
     qref = (f32(MWRATIO) * ea) / (
@@ -274,10 +323,13 @@ def f_psychrometrics(
         / (f32(R_DRY) * (ta + f32(CST_KELVIN)))
     )
     # Density of air
-    rho = rho_dry * (
-        (f32(1) + r) / (f32(1) + r / f32(MWRATIO))
-    )  # density of air
+    # TODO: Check formula
+    # rho = rho_dry * (
+    #    (f32(1) + qref) / (f32(1) + qref * f32(R_WET) / f32(R_DRY))
+    # )
+    rho = rho_dry * ((f32(1) + r) / (f32(1) + r / f32(MWRATIO)))
     # Specific heat of air
+
     cp = qref * f32(CP_WET) + (f32(1) - qref) * f32(CP_DRY)
 
     return (
@@ -300,7 +352,7 @@ def f_psychrometrics(
     nogil=True,
     cache=True,
 )
-def f_stateeq(
+def compute_state_equations(
     rho: float,
     cp: float,
     alpha: float,
@@ -312,44 +364,55 @@ def f_stateeq(
     m: float,
 ) -> tuple[float, float, float, float]:
     """
-    Compute state equation#s
+    Compute STIC state equations with modified
+    Priestley Taylor and Penman Monteith
+
+    Notes
+    -----
+    Mallick, K. et al. (2015). Reintroducing radiometric surface
+    temperature into the Penman-Monteith formulation.
+    Water Resources Research, 51, 6214-6243
 
     Parameters
     ----------
     rho: float
         Air density (kg.m-3)
     cp: float
-        Specific heat of air at constant pressure (J.kg-1.K-1)
+        Specific heat capacity of air
+        at constant pressure (J.kg-1.K-1)
     alpha: float
         Empirical constant accounting for the vapor
         pressure deficit and resistance values
     slope: float
         Slope of saturation vapor pressure
-        versus air temperature at TA (hPa/degC)
+        versus air temperature at Ta (hPa/degC)
     phi: float
-        Available energy
+        Available energy (W.m-2)
     e0: float
-        Vapor pressure at temperature t0 (hPa)
+        Vapor pressure at the reference height (hPa)
     ea: float
         Atmosphere vapor pressure (hPa)
     e0star: float
-        Saturated vapor pressure at temperature t0 (hPa)
+        Saturation vapor pressure at the refence height (hPa)
     m: float
         Surface moisture (0-1)
 
     Returns
     -------
     g_aero: float
-        Aerodynamic conductance
+        Aerodynamic conductance (m.s-1)
     g_surf: float
-        Surface conductance
+        Surface conductance (m.s-1)
     delta_t: float
-        T0-Ta
+        Difference between temperature at the reference height T0
+        and air temperature Ta (degC)
     ef: float
-        Evaporative fraction
+        Evaporative fraction (0-1)
     """
+    epsilon = f32(1e-7)  # Small value to prevent division by zero
+
     # Aerodynamic conductance
-    g_aero = (f32(2) * phi * alpha * slope * f32(PSYCHROMETRIC_CST)) / (
+    g_aero_den = (
         f32(2) * cp * slope * e0 * rho
         - f32(2) * cp * slope * ea * rho
         - f32(2) * cp * ea * f32(PSYCHROMETRIC_CST) * rho
@@ -358,9 +421,15 @@ def f_stateeq(
         - cp * m * e0 * f32(PSYCHROMETRIC_CST) * rho
         + cp * m * e0star * f32(PSYCHROMETRIC_CST) * rho
     )
+    g_aero_den = g_aero_den if abs(g_aero_den) > epsilon else epsilon
+    g_aero = (f32(2) * phi * alpha * slope * f32(PSYCHROMETRIC_CST)) / (
+        g_aero_den
+    )
+    # Adjust the abnormal conductances
+    g_aero = min(max(g_aero, f32(0.0001)), f32(0.2))
 
     # Surface conductance
-    denominator = (
+    g_surf_den = (
         cp * e0star**2 * f32(PSYCHROMETRIC_CST) * rho
         - cp * e0**2 * f32(PSYCHROMETRIC_CST) * rho
         - f32(2) * cp * slope * e0**2 * rho
@@ -373,19 +442,21 @@ def f_stateeq(
         + cp * m * e0star**2 * f32(PSYCHROMETRIC_CST) * rho
         - f32(2) * cp * m * e0 * e0star * f32(PSYCHROMETRIC_CST) * rho
     )
-    denominator = max(denominator, f32(0.00001))  # when e0star == e0
-    g_surf = (
-        -(
-            f32(2)
-            * (
-                phi * alpha * slope * ea * f32(PSYCHROMETRIC_CST)
-                - phi * alpha * slope * e0 * f32(PSYCHROMETRIC_CST)
-            )
+    g_surf_den = g_surf_den if abs(g_surf_den) > epsilon else epsilon
+    g_surf = -(
+        f32(2)
+        * (
+            phi * alpha * slope * ea * f32(PSYCHROMETRIC_CST)
+            - phi * alpha * slope * e0 * f32(PSYCHROMETRIC_CST)
         )
-        / denominator
-    )
+    ) / (g_surf_den)
+    # Adjust the abnormal conductances
+    # TODO: To check difference with STIC-JPL [0.0001,0.2]
+    g_surf = min(max(g_surf, f32(0.0001)), f32(0.06))
 
     # T0 - TA
+    delta_t_den = f32(2) * alpha * slope * f32(PSYCHROMETRIC_CST)
+    delta_t_den = delta_t_den if abs(delta_t_den) > epsilon else epsilon
     delta_t = (
         f32(2) * slope * e0
         - f32(2) * slope * ea
@@ -396,10 +467,13 @@ def f_stateeq(
         + m * e0star * f32(PSYCHROMETRIC_CST)
         + f32(2) * alpha * slope * ea
         - f32(2) * alpha * slope * e0
-    ) / (f32(2) * alpha * slope * f32(PSYCHROMETRIC_CST))
+    ) / (delta_t_den)
+    # Maximum surface-air temperature difference rarely overpasses 20 degC
+    # TODO: To check difference with STIC-JPL [-10,50]
+    delta_t = min(max(delta_t, f32(-10)), f32(20))
 
     # Evaporative fraction
-    ef = -(f32(2) * alpha * slope * ea - f32(2) * alpha * slope * e0) / (
+    ef_den = (
         f32(2) * slope * e0
         - f32(2) * slope * ea
         - f32(2) * ea * f32(PSYCHROMETRIC_CST)
@@ -408,13 +482,207 @@ def f_stateeq(
         - m * e0 * f32(PSYCHROMETRIC_CST)
         + m * e0star * f32(PSYCHROMETRIC_CST)
     )
-
-    # Adjust the abnormal conductances
-    g_aero = min(max(g_aero, f32(0.0001)), f32(0.2))
-    g_surf = min(max(g_surf, f32(0.0001)), f32(0.06))
-
-    # Maximum surface-air temperature difference rarely overpasses 20 degC
-    delta_t = min(max(delta_t, f32(-10)), f32(20))
+    ef_den = ef_den if abs(ef_den) > epsilon else epsilon
+    ef = -(f32(2) * alpha * slope * ea - f32(2) * alpha * slope * e0) / (ef_den)
+    # Clip value for EF
+    # TODO: To check difference with STIC-JPL [0,1]
     ef = min(max(ef, f32(0.0001)), f32(1.0))
 
     return (g_aero, g_surf, delta_t, ef)
+
+
+@njit(
+    (f32)(
+        f32,
+        f32,
+        f32,
+        f32,
+        f32,
+        f32,
+        f32,
+        f32,
+    ),
+    nogil=True,
+    cache=True,
+    inline="always",
+)
+def compute_canopy_air_saturation_vapor_pressure(
+    le_flux: float,
+    ea: float,
+    esstar: float,
+    g_a: float,
+    g_s: float,
+    rho: float,
+    cp: float,
+    gamma: float,
+) -> float:
+    """
+    Compute the saturation vapor pressure at canopy/air.
+
+    Parameters
+    ----------
+    le_flux: float
+        Latent heat flux [W/m^2]
+    ea: float
+        Actual vapor pressure [hPa]
+    esstar: float
+        Saturated vapor pressure [hPa]
+    g_a: float
+        Aerodynamic conductance [mol/m^2/s]
+    g_s: float
+        Conductance of stomata [mol/m^2/s]
+    rho: float, _
+        Air density (kg/m^3)
+    cp: float
+        Specific heat at constant pressure (J/kg/K)
+    gamma: float
+        Psychrometric constant (hPa/°C)
+
+    Returns
+    -------
+    e0star: float
+        Canopy/air saturated vapor pressure
+    """
+    e0star = ea + (gamma * le_flux * (g_a + g_s)) / (rho * cp * g_a * g_s)
+    e0star = e0star if e0star >= f32(0.0) else esstar
+    # TODO: To check difference with STIC-JPL
+    # e0star = e0star if e0star < f32(250.0) else esstar
+    return e0star if e0star < f32(250.0) else f32(250.0)
+
+
+@njit(
+    (f32)(
+        f32,
+        f32,
+        f32,
+        f32,
+        f32,
+        f32,
+        f32,
+        f32,
+    ),
+    nogil=True,
+    cache=True,
+    inline="always",
+)
+def compute_canopy_air_vapor_pressure_deficit(
+    slope: float,
+    g_aero: float,
+    g_surf: float,
+    phi: float,
+    da: float,
+    ds: float,
+    rho: float,
+    cp: float,
+) -> float:
+    """
+    Compute the canopy/air vapor pressure deficit.
+
+    Parameters
+    ----------
+    slope: float
+        Slope of saturation vapor pressure versus
+        air temperature at TA (hPa/degC)
+    g_aero: float
+        Aerodynamic conductance (m.s-1)
+    g_surf: float
+        Surface conductance (m.s-1)
+    phi: float
+        Available energy (W.m-2)
+    da: float
+        Atmosphere vapor pressure deficit (hPa) at the reference height
+    ds: float
+        Atmosphere vapor pressure deficit (hPa) at the surface
+    rho: float, _
+        Air density (kg/m^3)
+    cp: float
+        Specific heat at constant pressure (J/kg/K)
+
+    Returns
+    -------
+    d0: float
+        Canopy/air vapor pressure deficit
+    """
+    d0 = (
+        (g_aero / g_surf)
+        * (
+            f32(PSYCHROMETRIC_CST)
+            / (slope + f32(PSYCHROMETRIC_CST) * (f32(1) + g_aero / g_surf))
+        )
+        * (da + ((slope * phi) / (rho * cp * g_aero)))
+    )
+    return d0 if d0 >= f32(0.0) else ds
+
+
+@njit(
+    (f32)(
+        f32,
+        f32,
+        f32,
+        f32,
+        f32,
+        f32,
+        f32,
+        f32,
+    ),
+    nogil=True,
+    cache=True,
+    inline="always",
+)
+def compute_alpha_coefficient(
+    slope: float,
+    g_aero: float,
+    g_surf: float,
+    ta: float,
+    t0: float,
+    e0star: float,
+    ea: float,
+    m: float,
+) -> float:
+    """
+    Compute the alpha coefficient, i.e. Priestley-Taylor coefficient.
+
+    Parameters
+    ----------
+    slope: float
+        Slope of saturation vapor pressure versus
+        air temperature at TA (hPa/degC)
+    g_aero: float
+        Aerodynamic conductance (m.s-1)
+    g_surf: float
+        Surface conductance (m.s-1)
+    ta: float
+        Air temperature (degC)
+    t0: float
+        Air/Canopy temperature (degC)
+    e0star: float
+        Saturation vapor pressure at air/canopy (hPa)
+    ea: float
+        Atmosphere vapor pressure (hPa)
+    m: float, _
+        Soil moisture (0-1)
+
+    Returns
+    -------
+    alpha: float
+        Priestley-Taylor coefficient
+    """
+    alpha = (
+        g_surf
+        * (e0star - ea)
+        * (
+            f32(2) * slope
+            + f32(2) * f32(PSYCHROMETRIC_CST)
+            + f32(PSYCHROMETRIC_CST) * (g_aero / g_surf) * (f32(1) + m)
+        )
+    ) / (
+        f32(2)
+        * slope
+        * (
+            f32(PSYCHROMETRIC_CST) * (t0 - ta) * (g_aero + g_surf)
+            + g_surf * (e0star - ea)
+        )
+    )
+    if alpha < f32(0.0):
+        alpha = f32(1.0)
+    return min(alpha, f32(2.0))
