@@ -92,13 +92,13 @@ filterwarnings = [
 testpaths=["tests"]
 
 [tool.coverage.run]
-source_pkgs = ["sweat", "tests"]
+source = ["sweat","tests"]
 branch = true
 parallel = true
 omit = [
   "src/sweat/__about__.py",
   "./.pixi/*",
-  "./hooks/*"
+  "./hooks/*",
 ]
 
 [tool.coverage.paths]
