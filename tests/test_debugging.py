@@ -4,7 +4,7 @@ import time
 
 import pytest
 
-from evaspa.debugging import (
+from sweat.debugging import (
     configure_debugging,
     debugging,
     get_registered_functions,

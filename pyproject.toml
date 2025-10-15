@@ -1,13 +1,9 @@
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
 [project]
-name = "evaspa"
-dynamic = ["version"]
-description = "Python implementation of EVASPA algorithm"
+name = "sweat"
+description = "Spatial Waterstress and Evapotranspiration Assessment for TRISHNA: Python implementation of EVASPA, STIC and ET timeseries algorithms"
 readme = "README.md"
-requires-python = ">=3.10"
+version = "0.0.1"
+requires-python = ">=3.12"
 license = "LicenseRef-Public-Domain"
 keywords = []
 authors = [
@@ -16,9 +12,8 @@ authors = [
 classifiers = [
   "Development Status :: 4 - Beta",
   "Programming Language :: Python",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
@@ -26,7 +21,7 @@ dependencies = [
   "geopandas",
   "numpy<2.3",
   "pandas",
-  "scipy",
+  "scipy<1.18",
   "xarray",
   "rasterio",
   "scikit-image",
@@ -41,13 +36,14 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-  "hatch",
   "pytest",
   "pytest-cov",
   "pre-commit",
   "pip-review",
   "nbformat",
   "nbconvert",
+  "ruff",
+  "mypy",
 ]
 notebook = [
   "matplotlib",
@@ -66,38 +62,17 @@ docs = [
 ]
 
 [project.urls]
-Source = "https://gitlab.cnes.fr/cesbio/evaspa"
+Source = "https://src.koda.cnrs.fr/trishna/sweat"
 
 [project.scripts]
-evaspa = "evaspa.cli:evaspa"
-evaspa-tiling = "evaspa.cli:evaspa_tiling"
-stic = "evaspa.cli:stic"
-timeseries = "evaspa.cli:timeseries"
+evaspa = "sweat.cli:evaspa"
+evaspa-tiling = "sweat.cli:evaspa_tiling"
+stic = "sweat.cli:stic"
+timeseries = "sweat.cli:timeseries"
 
-[tool.hatch.metadata]
-allow-direct-references = true
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/evaspa"]
-
-[tool.hatch.version]
-path = "src/evaspa/__about__.py"
-
-[tool.hatch.envs.hatch-static-analysis]
-config-path = "none"
-dependencies = ["ruff==0.11.1"]
-
-[tool.hatch.envs.hatch-test]
-default-args = ["tests"]
-dependencies = [
-  "coverage[toml]>=6.5",
-  "pytest",
-]
-[tool.hatch.envs.hatch-test.scripts]
-run = "pytest{env:HATCH_TEST_ARGS:} {args}"
-run-cov = "coverage run -m pytest{env:HATCH_TEST_ARGS:} {args}"
-cov-combine = "coverage combine"
-cov-report = "coverage report"
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 addopts = ["-m", "not skip or not slow"]
@@ -116,28 +91,18 @@ filterwarnings = [
 ]
 testpaths=["tests"]
 
-[[tool.hatch.envs.hatch-test.matrix]]
-python = ["3.10", "3.11", "3.12"]
-
-[tool.hatch.envs.types]
-dependencies = [
-  "mypy>=1.0.0",
-]
-[tool.hatch.envs.types.scripts]
-check = "mypy --install-types --non-interactive {args:src/evaspa tests}"
-
 [tool.coverage.run]
-source_pkgs = ["evaspa", "tests"]
+source_pkgs = ["sweat", "tests"]
 branch = true
 parallel = true
 omit = [
-  "src/evaspa/__about__.py",
+  "src/sweat/__about__.py",
   "./.pixi/*",
   "./hooks/*"
 ]
 
 [tool.coverage.paths]
-evaspa = ["src/evaspa"]
+sweat = ["src/sweat"]
 tests = ["tests"]
 
 [tool.coverage.report]
@@ -177,7 +142,7 @@ channels = ["conda-forge"]
 platforms = ["linux-64","win-64", "osx-64", "osx-arm64"]
 
 [tool.pixi.pypi-dependencies]
-evaspa = { path = ".", editable = true }
+sweat = { path = ".", editable = true }
 
 [tool.pixi.environments]
 default = { solve-group = "default" }
@@ -195,4 +160,4 @@ hdf4 = ">=4.2.15,<5"
 hdf5 = ">=1.14.4,<2"
 netcdf4 = ">=1.7.2,<2"
 h5netcdf = ">=1.4.1,<2"
-numpy = "<2.3"
+numpy = ">=2.2,<2.3"

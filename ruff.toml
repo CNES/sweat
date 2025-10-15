@@ -560,7 +560,7 @@ select = [
 ban-relative-imports = "all"
 
 [lint.isort]
-known-first-party = ["evaspa"]
+known-first-party = ["sweat"]
 
 [lint.flake8-pytest-style]
 fixture-parentheses = false

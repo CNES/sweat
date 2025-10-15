@@ -1,6 +1,6 @@
-# Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
+# Copyright: (c) 2025 CESBIO / Centre National d'Etudes Spatiales
 """
-Module for EVASPA configuration management
+Module for time series configuration management
 """
 
 from __future__ import annotations
@@ -16,32 +16,41 @@ from pydantic import (
     model_validator,
 )
 
-from evaspa.__about__ import __version__
-from evaspa.common.daily import DailyConfig
-from evaspa.common.filter import FilteringConfig
-from evaspa.common.io import InputConfig, OutputConfig
-from evaspa.debugging import DebuggingConfig
-from evaspa.evaspa.ef import EFConfig
-from evaspa.evaspa.seb import SEBConfig
-from evaspa.logging import LoggerManager
+from sweat.__about__ import __version__
+from sweat.common.io import OutputConfig
+from sweat.debugging import DebuggingConfig
+from sweat.logging import LoggerManager
+from sweat.timeseries.io_handler import TimeSeriesInputConfig
+from sweat.timeseries.stack_handler import TimeSeriesStackConfig
+from sweat.timeseries.updater_handler import UpdaterConfig
 
 logger = LoggerManager.get_logger(__name__)
 
 
-class EVASPAInputFile(BaseModel):
+class TimeSeriesParamsConfig(BaseModel):
     """
     Class describing the format of the input file
     """
 
     model_config = ConfigDict(extra="forbid")
 
-    input: InputConfig
+    stack: TimeSeriesStackConfig = Field(default=TimeSeriesStackConfig())
+    update: UpdaterConfig = Field(default=UpdaterConfig())
+
+
+class TimeSeriesInputFile(BaseModel):
+    """
+    Class describing the format of the input file
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    input: TimeSeriesInputConfig
     output: OutputConfig
-    params: EVASPAParamsConfig
+    params: TimeSeriesParamsConfig = Field(default=TimeSeriesParamsConfig())
     debug: DebuggingConfig = Field(default=DebuggingConfig())
     version: str = Field(default=str(__version__))
 
-    # TODO: Validate the path for debugging with the output path
     @field_validator("version")
     @classmethod
     def update_version(cls, v: str) -> str:
@@ -65,22 +74,9 @@ class EVASPAInputFile(BaseModel):
         return self
 
 
-class EVASPAParamsConfig(BaseModel):
+def check_config_timeseries(config: dict) -> dict:
     """
-    Configuration for parameters to run EVASPA
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    filtering: FilteringConfig = Field(default=FilteringConfig({}))
-    ef: EFConfig
-    seb: SEBConfig = Field(default=SEBConfig())
-    daily: DailyConfig = Field(default=DailyConfig())
-
-
-def check_config_evaspa(config: dict) -> dict:
-    """
-    Check configuration for EVASPA
+    Check configuration
 
     Parameters
     ----------
@@ -92,5 +88,5 @@ def check_config_evaspa(config: dict) -> dict:
     checked_config: dict
         Checked dictionary containing the configuration parameters
     """
-    cfg = EVASPAInputFile.model_validate(config)
+    cfg = TimeSeriesInputFile.model_validate(config)
     return cfg.model_dump(mode="json")

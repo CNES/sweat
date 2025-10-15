@@ -4,7 +4,7 @@
 import numpy as np
 import pytest
 
-from evaspa.stic import smwetness
+from sweat.stic import smwetness
 
 
 @pytest.mark.unit

@@ -7,7 +7,7 @@ import pytest
 import xarray as xr
 from pyproj import CRS
 
-from evaspa.evaspa import seb
+from sweat.evaspa import seb
 
 
 def setup_data(

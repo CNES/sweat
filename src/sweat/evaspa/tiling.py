@@ -14,8 +14,8 @@ from sensorsio import mgrs
 from shapely.geometry import MultiPolygon
 from shapely.ops import unary_union
 
-from evaspa.evaspa.zones import define_valid_zones
-from evaspa.logging import LoggerManager
+from sweat.evaspa.zones import define_valid_zones
+from sweat.logging import LoggerManager
 
 logger = LoggerManager.get_logger(__name__)
 

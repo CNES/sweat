@@ -8,8 +8,8 @@ import pytest
 import xarray as xr
 from pydantic import ValidationError
 
-from evaspa.common.constant import ETVar
-from evaspa.stic import main
+from sweat.common.constant import ETVar
+from sweat.stic import main
 
 
 def setup_data(
@@ -87,7 +87,7 @@ def setup_data(
         },
         attrs={
             "description": "Test data",
-            "date": dt.datetime(2025, 7, 24, 12, 30, tzinfo=dt.timezone.utc),
+            "date": dt.datetime(2025, 7, 24, 12, 30, tzinfo=dt.UTC),
             "crs": 4326,
         },
     )
@@ -369,7 +369,7 @@ def test_prepare():
         },
         attrs={
             "description": "Test data",
-            "date": dt.datetime.now(tz=dt.timezone.utc),
+            "date": dt.datetime.now(tz=dt.UTC),
             "crs": 4326,
         },
     )

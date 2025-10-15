@@ -7,7 +7,7 @@
 # GIT_FILE_SIZE_LIMIT=42000000 git commit -m "This commit is allowed file sizes up to 42MB"
 
 # Maximum file size limit in bytes
-limit=${GIT_FILE_SIZE_LIMIT:-5000000} # Default 5MB
+limit=${GIT_FILE_SIZE_LIMIT:-10000000} # Default 10MB
 limitInMB=$(( $limit / 1000000 ))
 
 # Move to the repo root so git files paths make sense
@@ -40,7 +40,7 @@ done
 
 if $shouldFail
 then
-    echo If you really need to commit this file, you can override the size limit by setting the GIT_FILE_SIZE_LIMIT environment variable, e.g. GIT_FILE_SIZE_LIMIT=42000000 for 42MB. Or, commit with the --no-verify switch to skip the check entirely, you naughty boy!
+    echo If you really need to commit this file, you can override the size limit by setting the GIT_FILE_SIZE_LIMIT environment variable, e.g. GIT_FILE_SIZE_LIMIT=42000000 for 42MB. Or, commit with the --no-verify switch to skip the check entirely.
 	  echo Commit aborted
     exit 1;
 fi

@@ -13,15 +13,15 @@ import numpy.typing as npt
 import xarray as xr
 from pydantic import BaseModel, ConfigDict, Field
 
-from evaspa.common.constant import FLAGS_TYPE, ETVar
-from evaspa.common.flux import (
+from sweat.common.constant import FLAGS_TYPE, ETVar
+from sweat.common.flux import (
     compute_et_from_le,
     compute_rn,
     correct_shortwave_radiation,
 )
-from evaspa.debugging import register_debugging
-from evaspa.evaspa.merging import MergeMethod, merge_to_dataset
-from evaspa.logging import LoggerManager
+from sweat.debugging import register_debugging
+from sweat.evaspa.merging import MergeMethod, merge_to_dataset
+from sweat.logging import LoggerManager
 
 logger = LoggerManager.get_logger(__name__)
 

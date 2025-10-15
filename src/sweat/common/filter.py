@@ -13,14 +13,14 @@ from typing import Literal
 import xarray as xr
 from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator
 
-from evaspa.common.constant import (
+from sweat.common.constant import (
     FLAGS_TYPE,
     MSK_INPUT_FILTERED,
     MSK_INPUT_NODATA,
     ETVar,
 )
-from evaspa.debugging import register_debugging
-from evaspa.logging import LoggerManager
+from sweat.debugging import register_debugging
+from sweat.logging import LoggerManager
 
 logger = LoggerManager.get_logger(__name__)
 

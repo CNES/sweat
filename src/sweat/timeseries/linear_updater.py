@@ -6,9 +6,9 @@ Module for linear interpolation/extrapolation
 import xarray as xr
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from evaspa.timeseries import status_handler as sh
-from evaspa.timeseries.abstract_updater import Updater
-from evaspa.timeseries.constant import TimeSeriesVar as TSVar
+from sweat.timeseries import status_handler as sh
+from sweat.timeseries.abstract_updater import Updater
+from sweat.timeseries.constant import TimeSeriesVar as TSVar
 
 
 class LinearUpdaterParams(BaseModel):

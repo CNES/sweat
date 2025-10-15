@@ -9,7 +9,7 @@ import pytest
 import xarray as xr
 from pyproj import CRS
 
-from evaspa.common import flux
+from sweat.common import flux
 
 
 def setup_data(
@@ -289,7 +289,7 @@ def test_correct_shortwave_radiation(
     """
     Test function for correcting direct shortwave radiation
     """
-    date = dt.datetime(2025, 6, 10, 10, 0, 0, tzinfo=dt.timezone.utc)
+    date = dt.datetime(2025, 6, 10, 10, 0, 0, tzinfo=dt.UTC)
     res = flux.correct_shortwave_radiation(
         rsd=rsd,
         slope=slope,
@@ -334,7 +334,7 @@ def test_correct_shortwave_radiation_with_warnings(
     Test function for correcting direct shortwave radiation
     """
     caplog.clear()
-    date = dt.datetime(2025, 6, 10, 10, 0, 0, tzinfo=dt.timezone.utc)
+    date = dt.datetime(2025, 6, 10, 10, 0, 0, tzinfo=dt.UTC)
     flux.correct_shortwave_radiation(
         rsd=rsd,
         slope=slope,

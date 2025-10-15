@@ -13,9 +13,9 @@ import xarray as xr
 from pyproj import CRS
 from scipy.constants import c, h, k, pi
 
-from evaspa.common.solar import compute_diffuse_fraction, compute_sun_angles
-from evaspa.debugging import register_debugging
-from evaspa.logging import LoggerManager
+from sweat.common.solar import compute_diffuse_fraction, compute_sun_angles
+from sweat.debugging import register_debugging
+from sweat.logging import LoggerManager
 
 logger = LoggerManager.get_logger(__name__)
 # Stefan-Boltzmann constant

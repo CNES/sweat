@@ -17,8 +17,8 @@ from pydantic import (
     model_validator,
 )
 
-from evaspa.timeseries.abstract_updater import Updater
-from evaspa.timeseries.linear_updater import LinearUpdater, LinearUpdaterParams
+from sweat.timeseries.abstract_updater import Updater
+from sweat.timeseries.linear_updater import LinearUpdater, LinearUpdaterParams
 
 
 class UpdateMethod(str, Enum):

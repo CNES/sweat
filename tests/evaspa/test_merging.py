@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from evaspa.evaspa.merging import MergeMethod, merge, merge_to_dataset
+from sweat.evaspa.merging import MergeMethod, merge, merge_to_dataset
 
 
 @pytest.mark.unit

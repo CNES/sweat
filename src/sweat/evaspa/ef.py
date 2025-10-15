@@ -10,7 +10,7 @@ import os
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Self
 
 import numpy as np
 import numpy.typing as npt
@@ -23,13 +23,12 @@ from pydantic import (
     ValidationError,
     model_validator,
 )
-from typing_extensions import Self
 
-from evaspa.common.constant import FLAGS_TYPE, ETVar
-from evaspa.debugging import register_debugging
-from evaspa.evaspa.edge import Edge, EdgeConfig, EdgeError
-from evaspa.evaspa.merging import MergeMethod, merge_to_dataset
-from evaspa.logging import LoggerManager
+from sweat.common.constant import FLAGS_TYPE, ETVar
+from sweat.debugging import register_debugging
+from sweat.evaspa.edge import Edge, EdgeConfig, EdgeError
+from sweat.evaspa.merging import MergeMethod, merge_to_dataset
+from sweat.logging import LoggerManager
 
 logger = LoggerManager.get_logger(__name__)
 

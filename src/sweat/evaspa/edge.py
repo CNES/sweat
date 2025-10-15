@@ -26,7 +26,7 @@ from pydantic import (
     model_validator,
 )
 
-from evaspa.logging import LoggerManager
+from sweat.logging import LoggerManager
 
 logger = LoggerManager.get_logger(__name__)
 

@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 from pydantic import ValidationError
 
-from evaspa.evaspa.edge import (
+from sweat.evaspa.edge import (
     DoubleLinearEdge,
     Edge,
     EdgeError,

@@ -10,7 +10,7 @@ import xarray as xr
 from pydantic import ValidationError
 from pyproj import CRS
 
-from evaspa.common import io
+from sweat.common import io
 
 
 @pytest.mark.unit

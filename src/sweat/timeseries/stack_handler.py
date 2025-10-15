@@ -8,10 +8,10 @@ import pandas as pd
 import xarray as xr
 from pydantic import BaseModel, ConfigDict, Field
 
-from evaspa.common import filter
-from evaspa.common.solar import compute_daily_toa_solar_radiation
-from evaspa.debugging import register_debugging
-from evaspa.timeseries.constant import TimeSeriesVar as TSVar
+from sweat.common import filter
+from sweat.common.solar import compute_daily_toa_solar_radiation
+from sweat.debugging import register_debugging
+from sweat.timeseries.constant import TimeSeriesVar as TSVar
 
 
 class TimeSeriesStackConfig(BaseModel):

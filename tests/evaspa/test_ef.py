@@ -11,8 +11,8 @@ import numpy.typing as npt
 import pytest
 import xarray as xr
 
-import evaspa.evaspa.ef
-from evaspa.evaspa.ef import (
+import sweat.evaspa.ef
+from sweat.evaspa.ef import (
     EFCheckConfig,
     EFConfig,
     EFConfigError,
@@ -869,7 +869,7 @@ def test_get_available_configuration() -> None:
     """
     names = get_available_configuration()
     config_path = os.path.join(
-        os.path.dirname(os.path.abspath(evaspa.evaspa.ef.__file__)),
+        os.path.dirname(os.path.abspath(sweat.evaspa.ef.__file__)),
         "conf",
     )
     configs = [
@@ -893,7 +893,7 @@ def test_get_variables_from_models(config_name, expected):
     Test function to get variables required by EF models
     """
     config_file = os.path.join(
-        os.path.dirname(evaspa.evaspa.ef.__file__),
+        os.path.dirname(sweat.evaspa.ef.__file__),
         "conf",
         f"{config_name}.json",
     )

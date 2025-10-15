@@ -8,7 +8,7 @@ from numba import float32 as f32  # to define f32
 from numba import njit
 from numba.types import Tuple
 
-from evaspa.stic.constant import PSYCHROMETRIC_CST, PT_CST
+from sweat.stic.constant import PSYCHROMETRIC_CST, PT_CST
 
 
 @njit(

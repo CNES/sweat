@@ -12,14 +12,14 @@ used in TRISHNA mission to compute evapotranspiration:
 ### Clone the repository
 
 ```console
-git clone https://src.koda.cnrs.fr/trishna/evaspa.git
+git clone https://src.koda.cnrs.fr/trishna/sweat.git
 ```
 
 ### Install prerequisites
 
 The prerequisites are installed by [pixi](https://pixi.sh/).
 ```console
-cd evaspa/
+cd sweat/
 pixi install
 ``` 
 
@@ -28,7 +28,7 @@ To activate the environment
 pixi shell
 ```
 
-### Install evaspa
+### Install sweat
 ```console
 pip install .
 ```

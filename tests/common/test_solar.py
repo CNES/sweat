@@ -13,7 +13,7 @@ from dateutil import tz
 from pyproj import CRS
 from sensorsio.utils import bb_transform
 
-from evaspa.common import solar
+from sweat.common import solar
 
 
 def setup_dataset(
@@ -84,7 +84,7 @@ def test_to_latlon():
     ("date", "lat", "lon", "expected"),
     [
         pytest.param(
-            dt.datetime(2025, 1, 12, 16, 00, 00, tzinfo=dt.timezone.utc),
+            dt.datetime(2025, 1, 12, 16, 00, 00, tzinfo=dt.UTC),
             42,
             0,
             dt.datetime(
@@ -92,7 +92,7 @@ def test_to_latlon():
             ),
         ),
         pytest.param(
-            dt.datetime(2025, 1, 12, 16, 00, 00, tzinfo=dt.timezone.utc),
+            dt.datetime(2025, 1, 12, 16, 00, 00, tzinfo=dt.UTC),
             42,
             -80,
             dt.datetime(
@@ -130,13 +130,13 @@ def test_day_angle(date, expected):
     ("date", "expected"),
     [
         pytest.param(
-            dt.datetime(2025, 6, 25, 12, 0, 0, tzinfo=dt.timezone.utc), 3.012
+            dt.datetime(2025, 6, 25, 12, 0, 0, tzinfo=dt.UTC), 3.012
         ),
         pytest.param(
-            dt.datetime(2024, 6, 24, 12, 0, 0, tzinfo=dt.timezone.utc), 3.004
+            dt.datetime(2024, 6, 24, 12, 0, 0, tzinfo=dt.UTC), 3.004
         ),
         pytest.param(
-            dt.datetime(2024, 6, 24, 10, 0, 0, tzinfo=dt.timezone.utc), 3.003
+            dt.datetime(2024, 6, 24, 10, 0, 0, tzinfo=dt.UTC), 3.003
         ),
     ],
 )
@@ -155,7 +155,7 @@ def test_fractional_year_angle(date, expected):
         pytest.param(dt.date(2025, 1, 8), -6.70),
         pytest.param(dt.date(2025, 6, 5), 1.72),
         pytest.param(
-            dt.datetime(2025, 6, 25, 2, 50, 0, tzinfo=dt.timezone.utc), -2.28
+            dt.datetime(2025, 6, 25, 2, 50, 0, tzinfo=dt.UTC), -2.28
         ),
     ],
 )
@@ -172,7 +172,7 @@ def test_equation_of_time_milne(date, expected):
     ("date", "expected"),
     [
         pytest.param(
-            dt.datetime(2025, 6, 25, 6, 50, 0, tzinfo=dt.timezone.utc), -2.15
+            dt.datetime(2025, 6, 25, 6, 50, 0, tzinfo=dt.UTC), -2.15
         ),
     ],
 )
@@ -189,13 +189,13 @@ def test_equation_of_time_noaa(date, expected):
     ("date", "lon", "lat", "expected"),
     [
         pytest.param(
-            dt.datetime(2025, 6, 4, 10, 30, 00, tzinfo=dt.timezone.utc),
+            dt.datetime(2025, 6, 4, 10, 30, 00, tzinfo=dt.UTC),
             1.0,
             43.1,
             -21.03,
         ),
         pytest.param(
-            dt.datetime(2025, 12, 10, 17, 50, 00, tzinfo=dt.timezone.utc),
+            dt.datetime(2025, 12, 10, 17, 50, 00, tzinfo=dt.UTC),
             -74.0,
             40.5,
             15.11,
@@ -268,14 +268,14 @@ def test_sunrise_angle(date, lat, expected):
     ("date", "x", "y", "crs", "expected"),
     [
         pytest.param(
-            dt.datetime(2025, 2, 4, 11, 0, 0, tzinfo=dt.timezone.utc),
+            dt.datetime(2025, 2, 4, 11, 0, 0, tzinfo=dt.UTC),
             1.0,
             45.0,
             None,
             (63.1, 161.24),
         ),
         pytest.param(
-            dt.datetime(2025, 2, 4, 11, 0, 0, tzinfo=dt.timezone.utc),
+            dt.datetime(2025, 2, 4, 11, 0, 0, tzinfo=dt.UTC),
             1.0,
             45.0,
             CRS(4326),
@@ -297,7 +297,7 @@ def test_compute_sun_angles(date, x, y, crs, expected):
     ("date", "sza", "saa", "slope", "aspect", "expected"),
     [
         pytest.param(
-            dt.datetime(2025, 6, 21, 12, 0, 0, tzinfo=dt.timezone.utc),
+            dt.datetime(2025, 6, 21, 12, 0, 0, tzinfo=dt.UTC),
             0,
             0,
             0,
@@ -305,7 +305,7 @@ def test_compute_sun_angles(date, x, y, crs, expected):
             1322.49,
         ),
         pytest.param(
-            dt.datetime(2025, 6, 21, 17, 0, 0, tzinfo=dt.timezone.utc),
+            dt.datetime(2025, 6, 21, 17, 0, 0, tzinfo=dt.UTC),
             0,
             90,
             0,
@@ -313,7 +313,7 @@ def test_compute_sun_angles(date, x, y, crs, expected):
             1322.49,
         ),
         pytest.param(
-            dt.datetime(2025, 6, 21, 17, 0, 0, tzinfo=dt.timezone.utc),
+            dt.datetime(2025, 6, 21, 17, 0, 0, tzinfo=dt.UTC),
             30,
             90,
             0,
@@ -321,7 +321,7 @@ def test_compute_sun_angles(date, x, y, crs, expected):
             1145.31,
         ),
         pytest.param(
-            dt.datetime(2025, 6, 21, 17, 0, 0, tzinfo=dt.timezone.utc),
+            dt.datetime(2025, 6, 21, 17, 0, 0, tzinfo=dt.UTC),
             30,
             90,
             20,
@@ -329,7 +329,7 @@ def test_compute_sun_angles(date, x, y, crs, expected):
             1302.4,
         ),
         pytest.param(
-            dt.datetime(2025, 6, 21, 17, 0, 0, tzinfo=dt.timezone.utc),
+            dt.datetime(2025, 6, 21, 17, 0, 0, tzinfo=dt.UTC),
             30,
             0,
             60,
@@ -355,7 +355,7 @@ def test_compute_toa_solar_radiation_from_angles(
     ("date", "x", "y", "crs", "slope", "aspect", "expected"),
     [
         pytest.param(
-            dt.datetime(2025, 6, 4, 17, 0, 0, tzinfo=dt.timezone.utc),
+            dt.datetime(2025, 6, 4, 17, 0, 0, tzinfo=dt.UTC),
             0.0,
             30.0,
             CRS(4326),
@@ -364,7 +364,7 @@ def test_compute_toa_solar_radiation_from_angles(
             516.74,
         ),
         pytest.param(
-            dt.datetime(2025, 6, 4, 17, 0, 0, tzinfo=dt.timezone.utc),
+            dt.datetime(2025, 6, 4, 17, 0, 0, tzinfo=dt.UTC),
             0.0,
             30.0,
             CRS(4326),
@@ -387,7 +387,7 @@ def test_compute_toa_solar_radiation(date, x, y, crs, slope, aspect, expected):
     ("date", "x", "y", "crs", "slope", "aspect", "expected"),
     [
         pytest.param(
-            dt.datetime(2025, 6, 4, 17, 0, 0, tzinfo=dt.timezone.utc),
+            dt.datetime(2025, 6, 4, 17, 0, 0, tzinfo=dt.UTC),
             0.0,
             30.0,
             CRS(4326),
@@ -396,7 +396,7 @@ def test_compute_toa_solar_radiation(date, x, y, crs, slope, aspect, expected):
             516.74,
         ),
         pytest.param(
-            dt.datetime(2025, 6, 4, 17, 0, 0, tzinfo=dt.timezone.utc),
+            dt.datetime(2025, 6, 4, 17, 0, 0, tzinfo=dt.UTC),
             0.0,
             30.0,
             CRS(4326),
@@ -423,7 +423,7 @@ def test_compute_toa_solar_radiation_from_hour_angle(
     ("date", "x", "y", "crs", "expected"),
     [
         pytest.param(
-            dt.datetime(2025, 2, 4, 11, 0, 0, tzinfo=dt.timezone.utc),
+            dt.datetime(2025, 2, 4, 11, 0, 0, tzinfo=dt.UTC),
             1,
             45,
             CRS(4326),
@@ -444,7 +444,7 @@ def test_toa_daily_irradiance(date, x, y, crs, expected):
     ("date", "x", "y", "crs", "slope", "aspect", "expected"),
     [
         pytest.param(
-            dt.datetime(2025, 2, 4, 11, 0, 0, tzinfo=dt.timezone.utc),
+            dt.datetime(2025, 2, 4, 11, 0, 0, tzinfo=dt.UTC),
             1,
             45,
             CRS(4326),
@@ -471,7 +471,7 @@ def test_compute_daily_toa_solar_radiation(
     ("date", "x", "y", "crs", "slope", "aspect", "expected"),
     [
         pytest.param(
-            dt.datetime(2025, 2, 4, 11, 0, 0, tzinfo=dt.timezone.utc),
+            dt.datetime(2025, 2, 4, 11, 0, 0, tzinfo=dt.UTC),
             1,
             45,
             CRS(4326),
@@ -498,7 +498,7 @@ def test_compute_diffuse_fraction():
     """
     Test function for computing toa daily solar radiation for a given position
     """
-    date = dt.datetime(2025, 2, 4, 11, 0, 0, tzinfo=dt.timezone.utc)
+    date = dt.datetime(2025, 2, 4, 11, 0, 0, tzinfo=dt.UTC)
     data = setup_dataset(
         variables=["rsd"],
         date=date,
@@ -515,21 +515,21 @@ def test_compute_diffuse_fraction():
     ("date", "x", "y", "crs", "expected"),
     [
         pytest.param(
-            dt.datetime(2025, 6, 16, 12, 0, 0, tzinfo=dt.timezone.utc),
+            dt.datetime(2025, 6, 16, 12, 0, 0, tzinfo=dt.UTC),
             -74,
             40,
             None,
             25416.05,
         ),
         pytest.param(
-            dt.datetime(2025, 6, 16, 12, 0, 0, tzinfo=dt.timezone.utc),
+            dt.datetime(2025, 6, 16, 12, 0, 0, tzinfo=dt.UTC),
             -74,
             40,
             4326,
             25416.05,
         ),
         pytest.param(
-            dt.datetime(2025, 6, 16, 12, 0, 0, tzinfo=dt.timezone.utc),
+            dt.datetime(2025, 6, 16, 12, 0, 0, tzinfo=dt.UTC),
             585360,
             4428236,
             32618,

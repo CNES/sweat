@@ -7,9 +7,9 @@ import numpy as np
 import pytest
 from shapely.geometry import Polygon
 
-from evaspa.evaspa import zones
-from evaspa.misc import trishna
-from evaspa.misc.dem import get_dem_from_tiles
+from sweat.evaspa import zones
+from sweat.misc import trishna
+from sweat.misc.dem import get_dem_from_tiles
 
 
 def get_test_data_path() -> str:

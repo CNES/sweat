@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 from shapely.geometry import MultiPolygon, Polygon
 
-from evaspa.evaspa import tiling
+from sweat.evaspa import tiling
 
 
 def get_data_path() -> str:

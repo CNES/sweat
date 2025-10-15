@@ -5,7 +5,7 @@ import datetime as dt
 import numpy as np
 import pytest
 
-from evaspa.stic import functions
+from sweat.stic import functions
 
 
 @pytest.mark.unit
@@ -13,21 +13,21 @@ from evaspa.stic import functions
     ("date", "x", "y", "crs", "expected"),
     [
         pytest.param(
-            dt.datetime(2025, 6, 16, 12, 0, 0, tzinfo=dt.timezone.utc),
+            dt.datetime(2025, 6, 16, 12, 0, 0, tzinfo=dt.UTC),
             -74,
             40,
             None,
             25440.0,
         ),
         pytest.param(
-            dt.datetime(2025, 6, 16, 12, 0, 0, tzinfo=dt.timezone.utc),
+            dt.datetime(2025, 6, 16, 12, 0, 0, tzinfo=dt.UTC),
             -74,
             40,
             4326,
             25440.0,
         ),
         pytest.param(
-            dt.datetime(2025, 6, 16, 12, 0, 0, tzinfo=dt.timezone.utc),
+            dt.datetime(2025, 6, 16, 12, 0, 0, tzinfo=dt.UTC),
             585360,
             4428236,
             32618,

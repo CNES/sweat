@@ -15,11 +15,11 @@ import xarray as xr
 from pydantic import ValidationError
 from pyproj import CRS
 
-from evaspa.common.io import read_data_from_file, write_dataset
-from evaspa.timeseries import io_handler as ioh
-from evaspa.timeseries import stack_handler as sth
-from evaspa.timeseries import status_handler as sh
-from evaspa.timeseries.constant import TimeSeriesVar as TSVar
+from sweat.common.io import read_data_from_file, write_dataset
+from sweat.timeseries import io_handler as ioh
+from sweat.timeseries import stack_handler as sth
+from sweat.timeseries import status_handler as sh
+from sweat.timeseries.constant import TimeSeriesVar as TSVar
 
 # TODO: run a setup for create data, check if it is possible
 
@@ -46,7 +46,7 @@ def setup_test_data(test_data_dir):
     window_size = 7  # Time
     x_size = 1
     y_size = 2
-    today = dt.datetime.now(tz=dt.timezone.utc).date()
+    today = dt.datetime.now(tz=dt.UTC).date()
     dates = np.array(pd.date_range(end=today, periods=window_size).to_list())
     # Define transform: (origin_x, origin_y), pixel size = 0.1 degree
     transform = affine.Affine.translation(0, 40) * affine.Affine.scale(

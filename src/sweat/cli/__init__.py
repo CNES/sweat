@@ -5,8 +5,8 @@ from pathlib import Path
 
 import click
 
-from evaspa.__about__ import __version__
-from evaspa.api import (
+from sweat.__about__ import __version__
+from sweat.api import (
     generate_tiles,
     read_input_data,
     read_ts_input_data,
@@ -15,14 +15,14 @@ from evaspa.api import (
     run_stic,
     run_timeseries,
 )
-from evaspa.common.config import read_config, write_config
-from evaspa.common.io import write_dataset
-from evaspa.evaspa.config import EVASPAInputFile
-from evaspa.evaspa.tiling import write_regroup
-from evaspa.logging import LoggerManager
-from evaspa.stic.config import STICInputFile
-from evaspa.timeseries.config import TimeSeriesInputFile
-from evaspa.timeseries.io_handler import write_timeseries
+from sweat.common.config import read_config, write_config
+from sweat.common.io import write_dataset
+from sweat.evaspa.config import EVASPAInputFile
+from sweat.evaspa.tiling import write_regroup
+from sweat.logging import LoggerManager
+from sweat.stic.config import STICInputFile
+from sweat.timeseries.config import TimeSeriesInputFile
+from sweat.timeseries.io_handler import write_timeseries
 
 logger = LoggerManager.get_logger(__name__)
 

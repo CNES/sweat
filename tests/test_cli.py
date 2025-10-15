@@ -6,7 +6,7 @@ import os
 import pytest
 from click.testing import CliRunner
 
-from evaspa import cli
+from sweat import cli
 
 
 @pytest.mark.end_to_end

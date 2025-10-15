@@ -3,7 +3,7 @@
 
 import pytest
 
-from evaspa.misc import trishna
+from sweat.misc import trishna
 
 
 @pytest.mark.functional

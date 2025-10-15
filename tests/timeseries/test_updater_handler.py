@@ -9,9 +9,9 @@ import pytest
 import xarray as xr
 from pydantic import ValidationError
 
-from evaspa.timeseries import updater_handler
-from evaspa.timeseries.constant import TimeSeriesVar as TSVar
-from evaspa.timeseries.status_handler import STATUS_TYPE
+from sweat.timeseries import updater_handler
+from sweat.timeseries.constant import TimeSeriesVar as TSVar
+from sweat.timeseries.status_handler import STATUS_TYPE
 
 
 @pytest.mark.unit
@@ -73,7 +73,7 @@ def test_run() -> None:
     """
     # Setup data
     window_size = 7
-    today = dt.datetime.now(tz=dt.timezone.utc).date()
+    today = dt.datetime.now(tz=dt.UTC).date()
     dates = np.array(pd.date_range(end=today, periods=window_size).to_list())
     ts = xr.Dataset(
         {

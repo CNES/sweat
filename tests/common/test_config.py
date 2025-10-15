@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-import evaspa.common.config as cfg
+import sweat.common.config as cfg
 
 
 @pytest.mark.unit

@@ -4,7 +4,7 @@
 import numpy as np
 import pytest
 
-from evaspa.stic import flux
+from sweat.stic import flux
 
 
 @pytest.mark.unit

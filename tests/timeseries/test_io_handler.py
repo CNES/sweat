@@ -14,10 +14,10 @@ import rioxarray as rio  # noqa: F401
 import xarray as xr
 from pyproj import CRS
 
-from evaspa.common.io import write_dataset
-from evaspa.timeseries import io_handler as ioh
-from evaspa.timeseries import status_handler as sh
-from evaspa.timeseries.constant import TimeSeriesVar as TSVar
+from sweat.common.io import write_dataset
+from sweat.timeseries import io_handler as ioh
+from sweat.timeseries import status_handler as sh
+from sweat.timeseries.constant import TimeSeriesVar as TSVar
 
 # TODO: run a setup for create data, check if it is possible
 
@@ -45,7 +45,7 @@ def setup_test_data(test_data_dir):
     window_size = 7  # Time
     x_size = 1
     y_size = 2
-    today = dt.datetime.now(tz=dt.timezone.utc).date()
+    today = dt.datetime.now(tz=dt.UTC).date()
     dates = np.array(pd.date_range(end=today, periods=window_size).to_list())
     # Define transform: (origin_x, origin_y), pixel size = 0.1 degree
     transform = affine.Affine.translation(0, 40) * affine.Affine.scale(
@@ -255,7 +255,7 @@ def test_timeseries_input_config(keys, test_data_dir) -> None:
     et_ts_files, radiation_files, et_files, dem_file = get_list_files(
         str(test_data_dir)
     )
-    today = dt.datetime.now(tz=dt.timezone.utc).date()
+    today = dt.datetime.now(tz=dt.UTC).date()
     dates = pd.date_range(end=today, periods=7).to_list()
     # Convert to strings in desired format, e.g., "YYYY-MM-DD"
     date_strings = [date.strftime("%Y-%m-%d") for date in dates]
@@ -299,7 +299,7 @@ def test_extract_date_from_filename(test_data_dir) -> None:
     et_ts_files, _, _, _ = get_list_files(str(test_data_dir))
     date = ioh.extract_date_from_filename(sorted(et_ts_files)[-1])
     today = pd.to_datetime(
-        (dt.datetime.now(tz=dt.timezone.utc) - dt.timedelta(days=1)).strftime(
+        (dt.datetime.now(tz=dt.UTC) - dt.timedelta(days=1)).strftime(
             "%Y%m%d"
         ),
         format="%Y%m%d",
@@ -313,7 +313,7 @@ def test_read_et_time_series(test_data_dir) -> None:
     Test function for reading et time series files
     """
     et_ts_files, _, _, _ = get_list_files(str(test_data_dir))
-    today = dt.datetime.now(tz=dt.timezone.utc).date()
+    today = dt.datetime.now(tz=dt.UTC).date()
     dates = pd.date_range(end=today, periods=7).to_list()
     ts = ioh.read_et_time_series(et_ts_files, dates)
     assert ts
@@ -407,7 +407,7 @@ def test_read_input(keys, test_data_dir) -> None:
     et_ts_files, radiation_files, et_files, dem_file = get_list_files(
         str(test_data_dir)
     )
-    today = dt.datetime.now(tz=dt.timezone.utc).date()
+    today = dt.datetime.now(tz=dt.UTC).date()
     dates = pd.date_range(end=today, periods=7).to_list()
     # Convert to strings in desired format, e.g., "YYYY-MM-DD"
     date_strings = [date.strftime("%Y-%m-%d") for date in dates]

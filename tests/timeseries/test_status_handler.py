@@ -3,7 +3,7 @@
 
 import pytest
 
-from evaspa.timeseries import status_handler as sh
+from sweat.timeseries import status_handler as sh
 
 
 @pytest.mark.unit

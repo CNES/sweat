@@ -10,9 +10,9 @@ import pytest
 import xarray as xr
 from pydantic import ValidationError
 
-from evaspa.timeseries.constant import TimeSeriesVar as TSVar
-from evaspa.timeseries.linear_updater import LinearUpdater, LinearUpdaterParams
-from evaspa.timeseries.status_handler import (
+from sweat.timeseries.constant import TimeSeriesVar as TSVar
+from sweat.timeseries.linear_updater import LinearUpdater, LinearUpdaterParams
+from sweat.timeseries.status_handler import (
     STATUS_TYPE,
     ProcessingMode,
     RadiationMode,
@@ -33,7 +33,7 @@ def setup_data(
     # Windows size
     window_size = size
     # Date time series
-    today = dt.datetime.now(tz=dt.timezone.utc).date()
+    today = dt.datetime.now(tz=dt.UTC).date()
     # Generate an array of consecutive dates
     dates = np.array(pd.date_range(end=today, periods=window_size).to_list())
     # Create radiation time series
@@ -280,7 +280,7 @@ def test_update_new_acquisition() -> None:
     # Window size
     window_size = 7
     # Date time series
-    today = dt.datetime.now(tz=dt.timezone.utc).date()
+    today = dt.datetime.now(tz=dt.UTC).date()
     # Generate an array of consecutive dates
     dates = np.array(pd.date_range(end=today, periods=window_size).to_list())
     ts = setup_data(
@@ -328,7 +328,7 @@ def test_update_with_new_acquisitions() -> None:
     # Window size
     window_size = 7
     # Date time series
-    today = dt.datetime.now(tz=dt.timezone.utc).date()
+    today = dt.datetime.now(tz=dt.UTC).date()
     # Generate an array of consecutive dates
     dates = np.array(pd.date_range(end=today, periods=window_size).to_list())
     ts = setup_data(
@@ -575,7 +575,7 @@ def test_update():
     """
     # Setup data
     window_size = 7
-    today = dt.datetime.now(tz=dt.timezone.utc).date()
+    today = dt.datetime.now(tz=dt.UTC).date()
     dates = np.array(pd.date_range(end=today, periods=window_size).to_list())
     ts = xr.Dataset(
         {
@@ -715,7 +715,7 @@ def test_update_no_feed():
     """
     # Setup data
     window_size = 7
-    today = dt.datetime.now(tz=dt.timezone.utc).date()
+    today = dt.datetime.now(tz=dt.UTC).date()
     dates = np.array(pd.date_range(end=today, periods=window_size).to_list())
     ts = xr.Dataset(
         {

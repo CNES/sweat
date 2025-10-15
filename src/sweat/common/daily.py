@@ -11,9 +11,9 @@ import numpy as np
 import xarray as xr
 from pydantic import BaseModel, ConfigDict, Field
 
-from evaspa.common import solar
-from evaspa.common.constant import FLAGS_TYPE, MSK_PROCESSING_FAILED, ETVar
-from evaspa.logging import LoggerManager
+from sweat.common import solar
+from sweat.common.constant import FLAGS_TYPE, MSK_PROCESSING_FAILED, ETVar
+from sweat.logging import LoggerManager
 
 logger = LoggerManager.get_logger(__name__)
 

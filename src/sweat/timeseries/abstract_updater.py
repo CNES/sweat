@@ -11,8 +11,8 @@ import numpy as np
 import numpy.typing as npt
 import xarray as xr
 
-from evaspa.timeseries import status_handler as sh
-from evaspa.timeseries.constant import TimeSeriesVar as TSVar
+from sweat.timeseries import status_handler as sh
+from sweat.timeseries.constant import TimeSeriesVar as TSVar
 
 
 class Updater(ABC):

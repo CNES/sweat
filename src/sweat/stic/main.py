@@ -16,19 +16,19 @@ from numba import int64 as i64  # to define i64
 from numba.types import Array, Tuple
 from pydantic import BaseModel, ConfigDict, Field
 
-from evaspa.common.constant import (
+from sweat.common.constant import (
     FLAGS_TYPE,
     ETVar,
 )
-from evaspa.common.flux import compute_et_from_le, create_net_radiation
-from evaspa.logging import LoggerManager
-from evaspa.stic.constant import PSYCHROMETRIC_CST, PT_CST
-from evaspa.stic.flux import (
+from sweat.common.flux import compute_et_from_le, create_net_radiation
+from sweat.logging import LoggerManager
+from sweat.stic.constant import PSYCHROMETRIC_CST, PT_CST
+from sweat.stic.flux import (
     compute_g_flux,
     compute_le_h_fluxes,
     initiate_le_h_fluxes,
 )
-from evaspa.stic.functions import (
+from sweat.stic.functions import (
     compute_canopy_air_saturation_vapor_pressure,
     compute_canopy_air_vapor_pressure_deficit,
     compute_psychrometrics,
@@ -37,7 +37,7 @@ from evaspa.stic.functions import (
     convert_to_local_time,
     convert_to_rh,
 )
-from evaspa.stic.smwetness import (
+from sweat.stic.smwetness import (
     initialize_soil_moisture,
     iterate_soil_moisture,
 )
@@ -83,7 +83,6 @@ class STICModelConfig(BaseModel):
         i64,
     ),
     nogil=True,
-    parallel=True,
     cache=True,
 )
 def run_stic_model_pixel(

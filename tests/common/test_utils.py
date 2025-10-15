@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from evaspa.common import utils
+from sweat.common import utils
 
 
 @pytest.mark.unit

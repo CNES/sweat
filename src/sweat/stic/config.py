@@ -16,14 +16,14 @@ from pydantic import (
     model_validator,
 )
 
-from evaspa.__about__ import __version__
-from evaspa.common.constant import ETVar
-from evaspa.common.daily import DailyConfig
-from evaspa.common.filter import FilteringConfig
-from evaspa.common.io import InputConfig, OutputConfig
-from evaspa.debugging import DebuggingConfig
-from evaspa.logging import LoggerManager
-from evaspa.stic.main import STICModelConfig, STICPrepareConfig
+from sweat.__about__ import __version__
+from sweat.common.constant import ETVar
+from sweat.common.daily import DailyConfig
+from sweat.common.filter import FilteringConfig
+from sweat.common.io import InputConfig, OutputConfig
+from sweat.debugging import DebuggingConfig
+from sweat.logging import LoggerManager
+from sweat.stic.main import STICModelConfig, STICPrepareConfig
 
 logger = LoggerManager.get_logger(__name__)
 

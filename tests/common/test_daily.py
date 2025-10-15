@@ -12,7 +12,7 @@ import xarray as xr
 from pyproj import CRS
 from sensorsio.utils import bb_transform
 
-from evaspa.common import daily
+from sweat.common import daily
 
 
 def setup_dataset(
@@ -79,7 +79,7 @@ def test_toa_daily_estimate(use_topo):
     """
     data = setup_dataset(
         ["var", "height", "slope", "aspect"],
-        dt.datetime(2025, 1, 9, 11, 30, 00, tzinfo=dt.timezone.utc),
+        dt.datetime(2025, 1, 9, 11, 30, 00, tzinfo=dt.UTC),
         wgs84_bounds=(1.0, 43.0, 2.0, 44.0),
         epsg=32631,
         max_value=105,
@@ -100,7 +100,7 @@ def test_toa_daily_estimate_missing_dem_data(caplog):
     caplog.clear()
     data = setup_dataset(
         ["var", "aspect"],
-        dt.datetime(2025, 1, 9, 11, 30, 00, tzinfo=dt.timezone.utc),
+        dt.datetime(2025, 1, 9, 11, 30, 00, tzinfo=dt.UTC),
         wgs84_bounds=(1.0, 43.0, 2.0, 44.0),
         epsg=32631,
         max_value=105,
@@ -122,7 +122,7 @@ def test_toa_daily_estimate_mising_crs():
     """
     data = setup_dataset(
         ["var"],
-        dt.datetime(2025, 1, 9, 11, 30, 00, tzinfo=dt.timezone.utc),
+        dt.datetime(2025, 1, 9, 11, 30, 00, tzinfo=dt.UTC),
         wgs84_bounds=(1.0, 43.0, 2.0, 44.0),
         epsg=32631,
         max_value=105,
@@ -144,7 +144,7 @@ def test_extrapolate_unknown_method(caplog):
     """
     data = setup_dataset(
         ["var"],
-        dt.datetime(2025, 1, 9, 11, 30, 00, tzinfo=dt.timezone.utc),
+        dt.datetime(2025, 1, 9, 11, 30, 00, tzinfo=dt.UTC),
         wgs84_bounds=(1.0, 43.0, 2.0, 44.0),
         epsg=32631,
         max_value=105,
@@ -164,7 +164,7 @@ def test_extrapolate_unavailable_variables(caplog):
     """
     data = setup_dataset(
         ["var"],
-        dt.datetime(2025, 1, 9, 11, 30, 00, tzinfo=dt.timezone.utc),
+        dt.datetime(2025, 1, 9, 11, 30, 00, tzinfo=dt.UTC),
         wgs84_bounds=(1.0, 43.0, 2.0, 44.0),
         epsg=32631,
         max_value=105,
@@ -216,7 +216,7 @@ def test_extrapolate_at_daily_scale(variables, method, use_topo, expected):
     """
     data = setup_dataset(
         ["var1", "var2", "var3", "height", "slope", "aspect"],
-        dt.datetime(2025, 1, 9, 11, 30, 00, tzinfo=dt.timezone.utc),
+        dt.datetime(2025, 1, 9, 11, 30, 00, tzinfo=dt.UTC),
         wgs84_bounds=(1.0, 43.0, 2.0, 44.0),
         epsg=32631,
         max_value=90,
@@ -244,7 +244,7 @@ def test_extrapolate_at_daily_scale_without_dem(caplog):
     caplog.clear()
     data = setup_dataset(
         ["var1", "var2", "var3"],
-        dt.datetime(2025, 1, 9, 11, 30, 00, tzinfo=dt.timezone.utc),
+        dt.datetime(2025, 1, 9, 11, 30, 00, tzinfo=dt.UTC),
         wgs84_bounds=(1.0, 43.0, 2.0, 44.0),
         epsg=32631,
         max_value=90,

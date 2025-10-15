@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-import evaspa.evaspa.config as cfg
-from evaspa.__about__ import __version__
+import sweat.evaspa.config as cfg
+from sweat.__about__ import __version__
 
 
 @pytest.mark.unit

@@ -9,23 +9,23 @@ import geopandas as gpd
 import pandas as pd
 import xarray as xr
 
-from evaspa.common import daily, filter, io
-from evaspa.common.constant import ETVar
-from evaspa.common.io import InputConfig
-from evaspa.debugging import DebuggingConfig, configure_debugging
-from evaspa.evaspa import ef, seb, tiling
-from evaspa.evaspa.config import EVASPAParamsConfig
-from evaspa.logging import LoggerManager
-from evaspa.misc import trishna
-from evaspa.stic import main as stic
-from evaspa.stic.config import STICParamsConfig
-from evaspa.timeseries import stack_handler as sth
-from evaspa.timeseries import updater_handler as uh
-from evaspa.timeseries.config import (
+from sweat.common import daily, filter, io
+from sweat.common.constant import ETVar
+from sweat.common.io import InputConfig
+from sweat.debugging import DebuggingConfig, configure_debugging
+from sweat.evaspa import ef, seb, tiling
+from sweat.evaspa.config import EVASPAParamsConfig
+from sweat.logging import LoggerManager
+from sweat.misc import trishna
+from sweat.stic import main as stic
+from sweat.stic.config import STICParamsConfig
+from sweat.timeseries import stack_handler as sth
+from sweat.timeseries import updater_handler as uh
+from sweat.timeseries.config import (
     TimeSeriesInputConfig,
     TimeSeriesParamsConfig,
 )
-from evaspa.timeseries.io_handler import read_input as read_ts_input
+from sweat.timeseries.io_handler import read_input as read_ts_input
 
 logger = LoggerManager.get_logger(__name__)
 

@@ -14,9 +14,9 @@ import pandas as pd
 import xarray as xr
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-import evaspa.timeseries.status_handler as sh
-from evaspa.common.io import read_data_from_file, write_dataset
-from evaspa.timeseries.constant import TimeSeriesVar as TSVar
+import sweat.timeseries.status_handler as sh
+from sweat.common.io import read_data_from_file, write_dataset
+from sweat.timeseries.constant import TimeSeriesVar as TSVar
 
 
 class TimeSeriesInputConfig(BaseModel):

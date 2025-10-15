@@ -16,7 +16,7 @@ from pyproj import CRS, Transformer
 from rasterio import warp
 from timezonefinder import TimezoneFinder
 
-from evaspa.logging import LoggerManager
+from sweat.logging import LoggerManager
 
 logger = LoggerManager.get_logger(__name__)
 

@@ -6,8 +6,8 @@ import pytest
 import xarray as xr
 from pydantic import ValidationError
 
-from evaspa.common import filter
-from evaspa.common.constant import FLAGS_TYPE
+from sweat.common import filter
+from sweat.common.constant import FLAGS_TYPE
 
 
 def convert_dataarray(arr: npt.NDArray) -> xr.DataArray:
