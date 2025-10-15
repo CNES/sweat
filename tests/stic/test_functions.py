@@ -57,11 +57,33 @@ def test_convert_to_local_time(date, x, y, crs, expected) -> None:
         ),
     ],
 )
-def test_convert_to_celsius(temperature, expected) -> None:
+def test_convert_kelvin_to_celsius(temperature, expected) -> None:
     """
     Test function for converting to clesius
     """
-    res = functions.convert_to_celsius(temperature)
+    res = functions.convert_kelvin_to_celsius(temperature)
+    np.testing.assert_almost_equal(res, expected, decimal=3)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("temperature", "expected"),
+    [
+        pytest.param(
+            -273.15,
+            0,
+        ),
+        pytest.param(
+            26.85,
+            300,
+        ),
+    ],
+)
+def test_convert_celsius_to_kelvin(temperature, expected) -> None:
+    """
+    Test function for converting to clesius
+    """
+    res = functions.convert_celsius_to_kelvin(temperature)
     np.testing.assert_almost_equal(res, expected, decimal=3)
 
 
@@ -111,72 +133,72 @@ def test_convert_to_rh(t2m, d2m, b, c, expected) -> None:
             25,
             19,
             69.36,
-            42.635787639301256,
-            31.830927921627044,
-            22.07793160644052,
-            9.752996315186525,
-            1.8960194745113388,
-            1.377511596721743,
-            1.8688960029873398,
-            2.445493138777766,
-            1.6254993858644209,
-            1.1747878524431108,
-            1016.4926440255699,
+            42.635799,
+            31.830929,
+            22.077932,
+            9.752996,
+            1.896020,
+            1.369556,
+            1.868897,
+            2.440350,
+            1.625499,
+            1.174905,
+            1016.492676,
         ),
         pytest.param(
             35,
             28,
             25,
             83.79,
-            56.4986,
-            37.9820,
-            31.82516,
-            6.15689,
-            2.21153,
-            1.8960,
-            2.46735,
-            3.12272,
+            56.498649,
+            37.982050,
+            31.825160,
+            6.156890,
+            2.211536,
+            1.887862,
+            2.467349,
+            3.120363,
             2.052297,
-            1.15882,
-            1021.6275,
+            1.159068,
+            1021.627518,
         ),
         pytest.param(
             36,
             28,
             15,
             45.1,
-            59.6972,
-            37.9820,
-            17.12990,
-            20.85215,
-            2.21153,
-            1.10322,
-            2.02701,
-            3.27540,
-            1.60401,
-            1.16524,
-            1013.9004,
+            59.697203,
+            37.982050,
+            17.129904,
+            20.852145,
+            2.211536,
+            1.098263,
+            2.027014,
+            3.273146,
+            1.604011,
+            1.165317,
+            1013.900388,
         ),
         pytest.param(
             15,
             15,
             15,
             100.0,
-            17.136,
-            17.136,
-            17.136,
-            0.0,
-            1.1032,
-            1.1032,
-            1.1032,
-            1.1032,
-            1.1032,
-            1.2178,
-            1013.9035,
+            17.135910,
+            17.135910,
+            17.135910,
+            0.000000,
+            1.103222,
+            1.098263,
+            1.098263,
+            1.098263,
+            1.098263,
+            1.217888,
+            1013.903503,
         ),
     ],
 )
-def test_f_psychrometrics(
+def test_compute_psychrometrics(
     ts,
     ta,
     td,
@@ -208,7 +230,7 @@ def test_f_psychrometrics(
         s4,
         rho,
         cp,
-    ) = functions.f_psychrometrics(ts, ta, td, rh)
+    ) = functions.compute_psychrometrics(ts, ta, td, rh)
     np.testing.assert_almost_equal(esstar, esstar_expected, decimal=3)
     np.testing.assert_almost_equal(eastar, eastar_expected, decimal=3)
     np.testing.assert_almost_equal(ea, ea_expected, decimal=3)
@@ -266,13 +288,43 @@ def test_f_psychrometrics(
             51.9,
             0.7,
             0.0001,
-            0.0001,
+            0.06,
             5.811882893226179,
             1,
         ),
+        pytest.param(
+            0.04,
+            1026,
+            1.3,
+            2.0,
+            50,
+            32.5,
+            45.7,
+            32.5,
+            0.7,
+            0.0001,
+            0.0001,
+            -0.53,
+            0.974,
+        ),
+        pytest.param(
+            0.04,
+            1026,
+            1.3,
+            2.0,
+            50,
+            32.5,
+            32.5,
+            32.5,
+            0.7,
+            0.2,
+            0.0001,
+            0.0,
+            0.0001,
+        ),
     ],
 )
-def test_f_stateeq(
+def test_compute_state_equations(
     rho,
     cp,
     alpha,
@@ -289,9 +341,8 @@ def test_f_stateeq(
 ) -> None:
     """
     Test function for computing state equations
-    TODO check result
     """
-    (g_aero, g_surf, delta_t, ef) = functions.f_stateeq(
+    (g_aero, g_surf, delta_t, ef) = functions.compute_state_equations(
         rho,
         cp,
         alpha,
@@ -306,3 +357,120 @@ def test_f_stateeq(
     np.testing.assert_almost_equal(g_surf, g_surf_expected, decimal=3)
     np.testing.assert_almost_equal(delta_t, delta_t_expected, decimal=3)
     np.testing.assert_almost_equal(ef, ef_expected, decimal=3)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    (
+        "le_flux",
+        "ea",
+        "esstar",
+        "g_aero",
+        "g_surf",
+        "rho",
+        "cp",
+        "gamma",
+        "expected",
+    ),
+    [
+        pytest.param(
+            209.44928,
+            22.07793,
+            42.6358,
+            0.015451,
+            0.009924,
+            1.174905,
+            1016.4927,
+            0.67,
+            41.5231,
+        ),
+    ],
+)
+def test_compute_canopy_air_saturation_vapor_pressure(
+    le_flux, ea, esstar, g_aero, g_surf, rho, cp, gamma, expected
+) -> None:
+    """
+    Test function for computing saturation vapor pressure at canopy/air height
+    """
+    res = functions.compute_canopy_air_saturation_vapor_pressure(
+        le_flux, ea, esstar, g_aero, g_surf, rho, cp, gamma
+    )
+    np.testing.assert_almost_equal(res, expected, decimal=3)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    (
+        "slope",
+        "g_aero",
+        "g_surf",
+        "available_energy",
+        "da",
+        "ds",
+        "rho",
+        "cp",
+        "expected",
+    ),
+    [
+        pytest.param(
+            1.89602,
+            0.01545,
+            0.009924,
+            305.09854,
+            9.752996,
+            12.51803,
+            1.174905,
+            1016.492676,
+            11.87963,
+        ),
+    ],
+)
+def test_compute_canopy_air_vapor_pressure_deficit(
+    slope, g_aero, g_surf, available_energy, da, ds, rho, cp, expected
+) -> None:
+    """
+    Test function for computing vapor pressure deficit at canopy/air height
+    """
+    res = functions.compute_canopy_air_vapor_pressure_deficit(
+        slope, g_aero, g_surf, available_energy, da, ds, rho, cp
+    )
+    np.testing.assert_almost_equal(res, expected, decimal=3)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    (
+        "slope",
+        "g_aero",
+        "g_surf",
+        "ta",
+        "t0",
+        "e0star",
+        "ea",
+        "m",
+        "expected",
+    ),
+    [
+        pytest.param(
+            1.89602,
+            0.01854,
+            0.01039,
+            25.0,
+            29.23084,
+            39.85269,
+            22.07793,
+            0.359166,
+            1.233953,
+        ),
+    ],
+)
+def test_compute_alpha_coefficient(
+    slope, g_aero, g_surf, ta, t0, e0star, ea, m, expected
+) -> None:
+    """
+    Test function for computing vapor pressure deficit at canopy/air height
+    """
+    res = functions.compute_alpha_coefficient(
+        slope, g_aero, g_surf, ta, t0, e0star, ea, m
+    )
+    np.testing.assert_almost_equal(res, expected, decimal=3)

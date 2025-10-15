@@ -8,9 +8,7 @@ from numba import float32 as f32  # to define f32
 from numba import njit
 from numba.types import Tuple
 
-# Psychrometric constant (hpa/K)
-PSYCHROMETRIC_CST = 0.67
-PT_CST = 1.26
+from evaspa.stic.constant import PSYCHROMETRIC_CST, PT_CST
 
 
 @njit(
@@ -18,7 +16,7 @@ PT_CST = 1.26
     nogil=True,
     cache=True,
 )
-def f_soilmoisture_initialize(
+def initialize_soil_moisture(
     slope: float,
     ts: float,
     ta: float,
@@ -60,7 +58,7 @@ def f_soilmoisture_initialize(
     rn: float
         Net radiation (W.m-2)
     ln: float
-        Longwavve net radiation (W.m-2)
+        Longwave net radiation (W.m-2)
     fc: float
         Fraction cover (0-1)
     da: float
@@ -92,46 +90,47 @@ def f_soilmoisture_initialize(
         Surface moisture availability for surface wetness (0-1)
     m_rz: float
         Surface moisture availability for rot zone wetness (0-1)
-    e_surf: float
+    es: float
         Vapor pressure at surface temperature (hPa)
-    t0d: float
-        Dewpoint temperature at source/sink height (celsius)
-    d_surf: float
-        vapor pressure deficit of the air at the surface (hPa)
+    tsd: float
+        Dewpoint temperature at the reference height (celsius)
+    ds: float
+        Vapor pressure deficit of the air at the surface (hPa)
     """
-    # Surface dewpoint temperature (degC)
+    epsilon = f32(1.0e-7)
+    # Compute the surface dewpoint temperature (degC)
     # Handle division by zero
-    t0d = (
+    tsd = (
         (esstar - ea - s3 * ts + s1 * td) / (s1 - s3)
-        if abs(s1 - s3) > f32(1.0e-7)
+        if abs(s1 - s3) > epsilon
         else ts
     )
 
-    # Surface moisture availability for surface wetness (0-1)
+    # Compute the surface moisture availability
+    # for surface wetness (0-1)
     # Handle division by zero
     m_surf = (
-        (s1 / s2) * ((t0d - td) / (ts - td))
-        if abs(ts - td) > f32(1.0e-7)
+        (s1 / s2) * ((tsd - td) / (ts - td))
+        if abs(ts - td) > epsilon
         else f32(1)
     )
     m_surf = min(max(m_surf, f32(0.0001)), f32(0.9999))
 
-    # Surface vapor pressure and deficit
-    e_surf = ea + m_surf * (esstar - ea)
-    d_surf = e_surf - ea
+    # Compute surface vapor pressure and deficit
+    es = ea + m_surf * (esstar - ea)
+    ds = es - ea
 
-    # Separating soil and canopy wetness to form a composite surface moisture
+    # Separate the soil and canopy wetness to form a
+    # composite surface moisture
     m_canopy = fc * m_surf
     m_soil = (f32(1) - fc) * m_surf
 
-    # Dewpoint temperature index
+    # Compute dewpoint temperature index
     # tdew_index > 1 signifies super dry condition
     # Handle division by zero
-    tdew_index = (
-        (ts - t0d) / (ta - td) if abs(ta - td) > f32(1.0e-7) else f32(0)
-    )
+    tdew_index = (ts - tsd) / (ta - td) if abs(ta - td) > epsilon else f32(0)
 
-    # Potential evaporation (Priestley-Taylor eqn.)
+    # Compute the ootential evaporation (Priestley-Taylor eqn.)
     ep_pt = (f32(PT_CST) * slope * rn) / (slope + f32(PSYCHROMETRIC_CST))
 
     # Temperature difference
@@ -143,24 +142,24 @@ def f_soilmoisture_initialize(
         m_canopy = f32(0)
     if (fc <= f32(0.25)) & (ta > f32(10)) & (td < f32(0)) & (ln < f32(-125)):
         m_surf = m_soil
-        m_canopy = 0
+        m_canopy = f32(0)
 
-    # Root zone moisture (Mrz)
-    m_rz = (f32(PSYCHROMETRIC_CST) * s1 * (t0d - td)) / (
+    # Compute root zone moisture (Mrz)
+    m_rz = (f32(PSYCHROMETRIC_CST) * s1 * (tsd - td)) / (
         slope * s3 * (ts - td)
         + f32(PSYCHROMETRIC_CST) * s4 * (ta - td)
-        - slope * s1 * (t0d - td)
+        - slope * s1 * (tsd - td)
     )
     m_rz = min(max(m_rz, f32(0.0001)), f32(0.9999))
 
-    # Combine M to account for Hysteresis and
-    # initial estimation of surface vapor pressure
+    # Combine soil moisture to account for hysteresis
+    # and initial estimation of surface vapor pressure
     m = m_surf
     if (ep_pt > rn) & (dts > f32(0)):
         m = m_rz
     if (ep_pt > rn) & (fc <= f32(0.25)):
         m = m_rz
-    if (ep_pt > rn) & (d_surf > da):
+    if (ep_pt > rn) & (ds > da):
         m = m_rz
 
     if (
@@ -176,18 +175,19 @@ def f_soilmoisture_initialize(
         & (dts > f32(0))
         & (ta > f32(10))
         & (td < f32(0))
-        & (d_surf > da)
+        & (ds > da)
     ):
         m = m_rz
-    if (ep_pt < rn) & (fc <= f32(0.25)) & (d_surf > da):
+    if (ep_pt < rn) & (fc <= f32(0.25)) & (ds > da):
         m = m_rz
 
+    # Update vapor pressure at surface
     es = ea + m * (esstar - ea)
 
-    # vapor pressure deficit at surface
+    # Update vapor pressure deficit at surface
     ds = esstar - es
 
-    return (m, m_canopy, m_soil, m_surf, m_rz, es, t0d, ds)
+    return (m, m_canopy, m_soil, m_surf, m_rz, es, tsd, ds)
 
 
 @njit(
@@ -195,7 +195,7 @@ def f_soilmoisture_initialize(
     nogil=True,
     cache=True,
 )
-def f_soilmoisture_iterate(
+def iterate_soil_moisture(
     slope: float,
     s1: float,
     s2: float,
@@ -224,50 +224,54 @@ def f_soilmoisture_iterate(
     wetness) (value 0 to 1) based on thermal IR and meteorological
     information. However, this M will be treated as initial M, which will be
     later on estimated through iteration in the actual ET estimation loop to
-    establish feedback between M and biophysical states
+    establish feedback between M and biophysical states.
 
     Parameters
     ----------
     slope: float
-        Slope of saturation vapor pressure versus air temperature
+        Slope of saturation vapor pressure versus air temperature (hPa/degC)
     s1: float
-        Slope of saturation vapor pressure versus temperature
+        Slope of saturation vapor pressure versus
+        temperature at surface temperature(hPa/degC)
     s2: float
-        Slope of saturation vapor pressure versus temperature
+        Slope of saturation vapor pressure versus
+        temperature (hPa/degC)
     s3: float
-        Slope of saturation vapor pressure versus temperature
+        Slope of saturation vapor pressure versus
+        temperature at dewpoint temperature (hPa/degC)
     s4: float
-        Slope of saturation vapor pressure versus temperature
+        Slope of saturation vapor pressure versus
+        temperature (hPa/degC)
     ts: float
-        Surface temperature
+        Surface temperature (degC)
     ta: float
-        Air temperature
+        Air temperature (degC)
     delta_t: float
         Difference between temperature at source/sink height and
-        air temperature
+        air temperature (degC)
     td: float
-        Dewpoint temperature
+        Dewpoint temperature (degC)
     t0d: float
-        Dewpoint temperature at source/sink height
+        Dewpoint temperature at reference height (degC)
     rn: float
-        Net radiation
+        Net radiation (W.m-2)
     ln: float
-        Longwavve net radiation
+        Longwavve net radiation (W.m-2)
     fc: float
-        Fraction cover
+        Fraction cover (0-1)
     da: float
         Atmosphere vapor pressure deficit (hPa)
     d0: float
         Vapor pressure deficit at source/sink height (hPa)
     eastar: float
-        Saturation vapor pressure at surface temperature
+        Saturation vapor pressure at air temperature (hPa)
     ea: float
         Atmosphere vapor pressure (hPa)
     e0star: float
         Saturation vapor pressure at surface temperature
-        at source/sink height
+        at reference height (hPa)
     esstar: float
-        Saturation vapor pressure at surface temperature
+        Saturation vapor pressure at surface temperature (hPa)
 
     Returns
     -------
@@ -280,11 +284,11 @@ def f_soilmoisture_iterate(
     m_soil: float
         Surface moisture availability for soil component (0-1)
     m_rz: float
-        Surface moisture availability for rot zone wetness (0-1)
+        Surface moisture availability for root zone wetness (0-1)
     """
     # Surface moisture (Msurf)
     m_surf = f32(1)
-    if abs(ts - td) > f32(1.0 - 7):
+    if abs(ts - td) > f32(1.0e-7):
         k = (e0star - ea) / (esstar - ea)
         m_surf = (s1 / (k * s2)) * ((t0d - td) / (ts - td))  # surface wetness
     m_surf = min(max(m_surf, f32(0.0001)), f32(0.9999))
