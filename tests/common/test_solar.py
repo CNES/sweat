@@ -129,15 +129,9 @@ def test_day_angle(date, expected):
 @pytest.mark.parametrize(
     ("date", "expected"),
     [
-        pytest.param(
-            dt.datetime(2025, 6, 25, 12, 0, 0, tzinfo=dt.UTC), 3.012
-        ),
-        pytest.param(
-            dt.datetime(2024, 6, 24, 12, 0, 0, tzinfo=dt.UTC), 3.004
-        ),
-        pytest.param(
-            dt.datetime(2024, 6, 24, 10, 0, 0, tzinfo=dt.UTC), 3.003
-        ),
+        pytest.param(dt.datetime(2025, 6, 25, 12, 0, 0, tzinfo=dt.UTC), 3.012),
+        pytest.param(dt.datetime(2024, 6, 24, 12, 0, 0, tzinfo=dt.UTC), 3.004),
+        pytest.param(dt.datetime(2024, 6, 24, 10, 0, 0, tzinfo=dt.UTC), 3.003),
     ],
 )
 def test_fractional_year_angle(date, expected):
@@ -154,9 +148,7 @@ def test_fractional_year_angle(date, expected):
     [
         pytest.param(dt.date(2025, 1, 8), -6.70),
         pytest.param(dt.date(2025, 6, 5), 1.72),
-        pytest.param(
-            dt.datetime(2025, 6, 25, 2, 50, 0, tzinfo=dt.UTC), -2.28
-        ),
+        pytest.param(dt.datetime(2025, 6, 25, 2, 50, 0, tzinfo=dt.UTC), -2.28),
     ],
 )
 def test_equation_of_time_milne(date, expected):
@@ -171,9 +163,7 @@ def test_equation_of_time_milne(date, expected):
 @pytest.mark.parametrize(
     ("date", "expected"),
     [
-        pytest.param(
-            dt.datetime(2025, 6, 25, 6, 50, 0, tzinfo=dt.UTC), -2.15
-        ),
+        pytest.param(dt.datetime(2025, 6, 25, 6, 50, 0, tzinfo=dt.UTC), -2.15),
     ],
 )
 def test_equation_of_time_noaa(date, expected):

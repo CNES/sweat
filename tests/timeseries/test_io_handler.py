@@ -299,9 +299,7 @@ def test_extract_date_from_filename(test_data_dir) -> None:
     et_ts_files, _, _, _ = get_list_files(str(test_data_dir))
     date = ioh.extract_date_from_filename(sorted(et_ts_files)[-1])
     today = pd.to_datetime(
-        (dt.datetime.now(tz=dt.UTC) - dt.timedelta(days=1)).strftime(
-            "%Y%m%d"
-        ),
+        (dt.datetime.now(tz=dt.UTC) - dt.timedelta(days=1)).strftime("%Y%m%d"),
         format="%Y%m%d",
     )
     assert date == today
