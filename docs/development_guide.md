@@ -4,18 +4,18 @@
 
 Installation for development
 ```console
-pip install -e .[dev,notebook]
+pip install -e .[dev,docs,notebook]
 ```
 Run static analysis
 ```console
-hatch fmt # for ruff
-hatch run types:check # for mypy
+make ruff
+make mypy
 ```
 
 Run tests
 ```console
-hatch test # for pytest
-hatch test --cover # for coverage
+make test # for pytest
+make test-cov # for coverage
 ```
 
 Install pre-commit scripts
@@ -25,7 +25,8 @@ pre-commit install
 
 Run pre-commit
 ```console
-pre-commit run --all-files
+make precommit # For staged files
+make precommit-all # For all files
 ```
 
 ## Documentation generation
