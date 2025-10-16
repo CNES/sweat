@@ -4,7 +4,7 @@
 
 Installation for development
 ```console
-pip install -e .[dev,docs,notebook]
+pixi install -e dev
 ```
 Run static analysis
 ```console
@@ -31,12 +31,12 @@ make precommit-all # For all files
 
 ## Documentation generation
 
-Installation for documentation
+Installation for documentation (not necessary for development environment)
 ```console
 pip install -e .[docs]
 ```
 
-Build the documenttaion
+Build the documentation
 ```console
 mkdocs build
 ```
