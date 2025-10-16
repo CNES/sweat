@@ -565,4 +565,3 @@ known-first-party = ["sweat"]
 [lint.flake8-pytest-style]
 fixture-parentheses = false
 mark-parentheses = false
-

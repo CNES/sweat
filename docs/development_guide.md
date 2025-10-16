@@ -39,14 +39,14 @@ pip install -e .[docs]
 Build the documenttaion
 ```console
 mkdocs build
-``` 
+```
 
 Clean the documenttaion
 ```console
 mkdocs build --clean
-``` 
+```
 
 Start the live-reloading docs server
 ```console
 mkdocs serve
-``` 
+```

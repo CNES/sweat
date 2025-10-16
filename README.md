@@ -1,10 +1,10 @@
 # Evapotranspiration for TRISHNA
 
 This contains contains several algorithms
-used in TRISHNA mission to compute evapotranspiration:  
-  
+used in TRISHNA mission to compute evapotranspiration:
+
 * [EVASPA][1]
-* [STIC][2] 
+* [STIC][2]
 * ET time series
 
 ## Installation
@@ -21,7 +21,7 @@ The prerequisites are installed by [pixi](https://pixi.sh/).
 ```console
 cd sweat/
 pixi install
-``` 
+```
 
 To activate the environment
 ```console
@@ -39,7 +39,7 @@ pip install .[notebook]
 
 #### EVASPA
 
-To run EVASPA 
+To run EVASPA
 ```console
 evaspa INPUT_FILE
 ```

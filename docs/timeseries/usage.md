@@ -2,7 +2,7 @@
 
 ## Command-line interface
 
-To run ET time series 
+To run ET time series
 ```console
 timeseries INPUT_FILE
 ```
@@ -50,7 +50,7 @@ An example of input file:
 
 STIC produces the following results:
 
- - files corresponding to ET time series **et_time_series_YYYYMMDD.tif** 
+ - files corresponding to ET time series **et_time_series_YYYYMMDD.tif**
  - a file **config.json** which contains the detailed configuration used
  - a directory **debug** if debug mode is activated
 
@@ -67,7 +67,7 @@ The **input** section is composed of:
 | dem | Path to the DEM | str | no | - |
 
 The path of input data must be a GeoTIF file.
-The code assumes that each band of the GeoTIF file 
+The code assumes that each band of the GeoTIF file
 has a band description in order to retrieve the name of the band to use.
 
 Example:
@@ -99,17 +99,17 @@ Example:
 
 #### Format of input data
 
-Input data must be supplied in the form of a single file. 
+Input data must be supplied in the form of a single file.
 Data must be supplied in GeoTIFF format.
 For each band, a *band description* option/tag must be used when writing the GeoTIFF file.
-The code uses this information to find out which band it is. 
-The table below lists the expected nomenclature for band names. 
+The code uses this information to find out which band it is.
+The table below lists the expected nomenclature for band names.
 
 | Band | Tag name |
 |------|----------|
 | Evapotranspiration | `et` |
 | ET Flags | `flags` |
-| Daily radiation | `daily_radiation` | 
+| Daily radiation | `daily_radiation` |
 | DEM elevation | `height` |
 | DEM slope | `slope` |
 | DEM aspect | `aspect` |
@@ -153,7 +153,7 @@ Example:
 
 ## Output directory description
 
-ET time series produces the following files in the output directory: 
+ET time series produces the following files in the output directory:
 
 ```bash
 output_dir/

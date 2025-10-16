@@ -1,11 +1,11 @@
 # EF model
 
-Evaporative fraction $EF$, that represents the ratio of latent heat flux to available energy is computed 
-from the position of the surface temperature value respectively to the dry edge and the wet edges. 
+Evaporative fraction $EF$, that represents the ratio of latent heat flux to available energy is computed
+from the position of the surface temperature value respectively to the dry edge and the wet edges.
 A EF model is defined by:
 
 * the space to consider: for instance, albedo vs. temperature or fcover vs. temperature
-* the method to compute the dry edge 
+* the method to compute the dry edge
 * the method to compute the wet edge
 
 By varying the characteristics of the EF model, we can create a wide range of models.
@@ -28,14 +28,14 @@ Different dry edge types: flat edge (orange line), linear edge (red line), linea
 ///
 
 
-For flat edges, the principle is to take the maximum for dry edge (or minimum for wet edge). The extremum of the edge can be computed considering all the data (*FlatEdge*)or data in a percentile interval (*FlatPercentileEdge*) or only selected points (*FlatRegressionEdge*).   
+For flat edges, the principle is to take the maximum for dry edge (or minimum for wet edge). The extremum of the edge can be computed considering all the data (*FlatEdge*)or data in a percentile interval (*FlatPercentileEdge*) or only selected points (*FlatRegressionEdge*).
 
-For other edges (based on piecewise polynomial regression), 
-the principle is to define selected points and then estimate the chosen regression. In these cases, each method divides the space (in relation to albedo or Fcover) into intervals. 
-It is possible to choose between intervals with same size or intervals with the same density of points.  
-The number of intervals can be modified according to the method being used or tile being processed. 
-For each interval, the objective is to define the point used to estimate the edge. Its x-axis coordinate is defined by taking the median of the points in the interval. 
-Its LST-axis coordinate is defined by considering a percentile of points in the interval and taking the maximum (or the minimum) or the median. 
+For other edges (based on piecewise polynomial regression),
+the principle is to define selected points and then estimate the chosen regression. In these cases, each method divides the space (in relation to albedo or Fcover) into intervals.
+It is possible to choose between intervals with same size or intervals with the same density of points.
+The number of intervals can be modified according to the method being used or tile being processed.
+For each interval, the objective is to define the point used to estimate the edge. Its x-axis coordinate is defined by taking the median of the points in the interval.
+Its LST-axis coordinate is defined by considering a percentile of points in the interval and taking the maximum (or the minimum) or the median.
 The Figure gives an example for a dry edge estimation.
 
 ![edge](images/dry_edge.png){ width="400" }
@@ -47,7 +47,7 @@ Example of dry edge
 
 Therefore, an edge is characterized by:
 
-* **type**: edge class to be chosen from the following classes:  
+* **type**: edge class to be chosen from the following classes:
     - *FlatEdge*
     - *FlatPercentileEdge*
     - *FlatRegressionEdge*
@@ -56,30 +56,30 @@ Therefore, an edge is characterized by:
     - *FlatLinearEdge*
     - *DoubleLinearEdge*
     - *ParabolicEdge*
-     
-* for edge based on a point selection for regression (inherited from *RegressionEdge*), a configuration **config**: 
+
+* for edge based on a point selection for regression (inherited from *RegressionEdge*), a configuration **config**:
     - **interval_type**: an interval type either fixed size *size* or fixed density *density*
     - **interval_nb**: a number of intervals (for density interval type or fixed size type) or **interval_size**: a size of intervals (for fixed size type only)
     - **interval_limits**: limits for interval to consider for point selecttion
-    - **nb_points**: number of points to considered for point selection 
-    - **percentile**: a percentile interval to considered for point selection 
-    - **percentile_limit** (*optional*): the maximum number of points to be considered in the percentile interval 
+    - **nb_points**: number of points to considered for point selection
+    - **percentile**: a percentile interval to considered for point selection
+    - **percentile_limit** (*optional*): the maximum number of points to be considered in the percentile interval
     - **selection**: a regression point selection criteria (*median*,*mean*,*max*,*min*)
     - **use_breakpoint**: Use the breakpoint to compute the edge (to be used only with albedo). The mean temperature increases when
      albedo increases for low albedo values (not necessarily linearly), and the mean temperature decreases when albedo increases
-     for high albedo values (linearly). The break point occurs around 0.25 and 0.3. Once the option is activated, the breakpoint 
-     is used to computed the edge. For *LinearEdge*, if the option use_break_point is activated, the regression occurs only on a 
+     for high albedo values (linearly). The break point occurs around 0.25 and 0.3. Once the option is activated, the breakpoint
+     is used to computed the edge. For *LinearEdge*, if the option use_break_point is activated, the regression occurs only on a
      part of the selected point: after the break point for top eadge and before the break point for bottom edge.
      For *ThresholdLinearEdge* and *FlatLinearEdge*, if the option use_break_point is activated, the breakpoint is used as guess
-     during the regression.  
+     during the regression.
 
-* for flat edge with percentile, a configuration **config**: 
-    - **percentile**: a percentile interval to considered for point selection 
+* for flat edge with percentile, a configuration **config**:
+    - **percentile**: a percentile interval to considered for point selection
     - **selection**: a regression point selection criteria (*median*,*mean*,*max*,*min*)
 
 ### Examples
 
-* Flat edge: 
+* Flat edge:
 
 ```json
 {
@@ -87,7 +87,7 @@ Therefore, an edge is characterized by:
 }
 ```
 
-* Flat edge with percentile: 
+* Flat edge with percentile:
 
 ```json
 {
@@ -99,7 +99,7 @@ Therefore, an edge is characterized by:
 }
 ```
 
-* Linear edge: 
+* Linear edge:
 
 ```json
 {
@@ -113,7 +113,7 @@ Therefore, an edge is characterized by:
 }
 ```
 
-or 
+or
 
 ```json
 {
@@ -127,7 +127,7 @@ or
 }
 ```
 
-* Linear edge with threshold: 
+* Linear edge with threshold:
 
 ```json
 {
@@ -141,7 +141,7 @@ or
 }
 ```
 
- * Linear edge with break point : 
+ * Linear edge with break point :
 
 ```json
 {
@@ -155,7 +155,7 @@ or
 }
 ```
 
-* Double regression edge: 
+* Double regression edge:
 
 ```json
 {
@@ -169,7 +169,7 @@ or
 }
 ```
 
-* Parabolic edge: 
+* Parabolic edge:
 
 ```json
 {
@@ -289,7 +289,7 @@ In the input file, the description of EF models can be provided as a list of EF 
 }
 ```
 
-See [EF model](#generic-ef-model) for detail to describe an EF model.  
+See [EF model](#generic-ef-model) for detail to describe an EF model.
 
 But, it is also possible to use pre-defined configuration:
 
@@ -298,11 +298,10 @@ But, it is also possible to use pre-defined configuration:
 - "avignon_evaspa"
 - "global_evaspa" (Merge of HSM and Avignon configurations)
 
-For instance 
+For instance
 
 ```json
 {
     "models": "default_evaspa"
 }
 ```
-

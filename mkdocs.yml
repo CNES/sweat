@@ -111,10 +111,10 @@ extra_css:
   - css/jupyter.css
 
 nav:
-  - Home: 
+  - Home:
     - Overview: index.md
     - Getting started: getting_started.md
-  - EVASPA: 
+  - EVASPA:
     - Algorithm: evaspa/algorithm.md
     - Usage: evaspa/usage.md
     - Configuration:
@@ -138,4 +138,3 @@ nav:
     - ET time series notebook: notebooks/run_timeseries.ipynb
   - API: api/
   - todo.md
-

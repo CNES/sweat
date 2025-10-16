@@ -8,7 +8,7 @@ a stack stack to create the stack for processing the time series.
 ### Filtering step
 
 The configuration describes how to find valid pixels. It is a dictionary.
-The key corresponds to the variable to look at. 
+The key corresponds to the variable to look at.
 The value is either a single condition or a combined conditionThe key correspond to the data variables.
 
 #### Simple condition
@@ -32,7 +32,7 @@ or
 
 #### Combined condition
 
-A combined condition offers the possibility to use **and** or **or** operator to combine a list of several simple conditions. 
+A combined condition offers the possibility to use **and** or **or** operator to combine a list of several simple conditions.
 
 Example
 ```json

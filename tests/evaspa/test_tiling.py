@@ -79,8 +79,8 @@ def test_intersection() -> None:
         decimal=0,
     )
 
-    gdf1 = gpd.read_file("/home/sarrazine/src/evaspa/tests/data/corsica.gpkg")
-    gdf2 = gpd.read_file("/home/sarrazine/src/evaspa/tests/data/land.gpkg")
+    gdf1 = gpd.read_file(os.path.join(data_path, "corsica.gpkg"))
+    gdf2 = gpd.read_file(os.path.join(data_path, "land.gpkg"))
     inter = tiling.intersection(gdf1, gdf2)
     assert len(inter) == 1
     assert len(list(inter.overlap_geometry.to_numpy()[0].geoms)) == 2
