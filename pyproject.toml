@@ -146,9 +146,7 @@ sweat = { path = ".", editable = true }
 
 [tool.pixi.environments]
 default = { solve-group = "default" }
-dev = { features = ["dev"], solve-group = "default" }
-notebook = { features = ["notebook"], solve-group = "default" }
-docs = { features = ["docs"], solve-group = "default" }
+dev = { features = ["dev","notebook","docs"], solve-group = "default" }
 
 [tool.pixi.tasks]
 

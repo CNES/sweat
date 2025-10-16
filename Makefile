@@ -1,4 +1,4 @@
-RUN = pixi run --locked -q --no-progress
+RUN = pixi run --locked -q --no-progress -e dev
 
 ruff:
 	$(RUN) ruff format .
@@ -22,7 +22,7 @@ test-unit:
 
 test-cov:
 	$(RUN) pytest --cov=sweat $(TESTARGS)
-    
+
 check: ruff mypy test
 
 precommit:

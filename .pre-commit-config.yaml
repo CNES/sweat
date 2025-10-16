@@ -14,7 +14,7 @@ repos:
     hooks:
     - id: ruff
       name: Run ruff
-      entry: pixi run ruff check
+      entry: pixi run -e dev ruff check
       language: system
       types_or: [python, pyi, jupyter]
       stages: [pre-commit]
@@ -22,8 +22,9 @@ repos:
 
     - id: mypy
       name: Run mypy
-      entry: pixi run mypy
+      entry: pixi run -e dev mypy
       language: system
+      args: ["--ignore-missing-imports", "--scripts-are-modules"]
       require_serial: true
       files: \.py$
       types: [python]
@@ -31,7 +32,7 @@ repos:
 
     - id: pytest-unit
       name: Run unit tests
-      entry: pixi run pytest --no-header -m unit -W ignore
+      entry: pixi run -e dev pytest --no-header -m unit -W ignore
       stages: [pre-commit]
       language: system
       types: [python]
@@ -43,7 +44,7 @@ repos:
       stages: [pre-commit]
       language: system
       types: [jupyter]
-      entry: pixi run jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace
+      entry: pixi run -e dev jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace
 
     - id: check-file-size
       name: Check file size
