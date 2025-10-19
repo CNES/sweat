@@ -31,6 +31,7 @@ def setup_data(
     dry_cut: float = 0.0,
     wet_cut: float = 0.0,
     size: int = 80,
+    law: str = "uniform",
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Generate data for tests
@@ -43,13 +44,22 @@ def setup_data(
     def wet_edge(v: float) -> float:
         return wet_c2 * v * v + wet_c1 * v + wet_c0
 
-    df = pd.DataFrame(
-        data={
-            "var": np.random.uniform(
-                low=var_min, high=var_max, size=size * size
-            )
-        }
-    )
+    if law == "nonuniform":
+        df = pd.DataFrame(
+            data={
+                "var": np.random.triangular(
+                    left=var_min, mode=var_min, right=var_max, size=size * size
+                )
+            }
+        )
+    else:
+        df = pd.DataFrame(
+            data={
+                "var": np.random.uniform(
+                    low=var_min, high=var_max, size=size * size
+                )
+            }
+        )
     df["lst"] = df.apply(
         lambda x: np.random.uniform(wet_edge(x["var"]), dry_edge(x["var"])),
         axis=1,
@@ -337,6 +347,35 @@ def test_linear_edge(config) -> None:
 @pytest.mark.parametrize(
     "config",
     [
+        '{"position":"top","interval_type":"size","interval_size":0.05,"percentile_bounds":[[50,100],[90,100]],"percentile_intervals":[100,1000],"selection":"median"}',
+    ],
+)
+def test_linear_edge_with_variable_percentile(config) -> None:
+    """
+    Test LinearEdge
+    """
+    # Generate data
+    var, lst = setup_data(
+        var_min=0.0,
+        var_max=0.6,
+        dry_c0=330.0,
+        dry_c1=-13.0,
+        wet_c0=300,
+        wet_c1=30,
+        size=80,
+        law="nonuniform",
+    )
+    edge = LinearEdge.model_validate_json(config)
+    edge.fit(var, lst)
+    np.testing.assert_allclose(edge.coeffs[1], 328, atol=1.0)
+    np.testing.assert_allclose(edge.coeffs[0], -13, atol=1.0)
+    np.testing.assert_allclose(edge.get(0.3), 328 - 13.0 * 0.3, atol=1.0)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "config",
+    [
         '{"position":"top","interval_type":"size","interval_size":0.01,"percentile":[98,100],"selection":"median","use_breakpoint":true}',
     ],
 )
@@ -444,6 +483,11 @@ def test_bottom_linear_edge_using_breakpoint(config) -> None:
         '{"position":"top","interval_type":"size","interval_size":0.05,"interval_limits":["percentile(-1)","percentile(99)"],"nb_points": 10, "selection":"median"}',
         '{"position":"top","interval_type":"size","interval_size":0.05,"interval_limits":[0,"percentile(99)"],"nb_points": 10, "selection":"median"}',
         '{"position":"top","percentile":[99,100],"nb_points":100,"selection":"median"}',
+        '{"position":"top","percentile":[99,100],"percentile_bounds":[[90,100],[99,100]],"selection":"median"}',
+        '{"position":"top","nb_points":100,"percentile_bounds":[[90,100],[99,100]],"selection":"median"}',
+        '{"position":"top","percentile_bounds":[[90,100],[99,100]],"selection":"median"}',
+        '{"position":"top","percentile_bounds":[[90,100],[99,100]],"percentile_intervals":[1000,100],"selection":"median"}',
+        '{"position":"top","percentile_bounds":[[100,100],[99,100]],"percentile_intervals":[100,1000],"selection":"median"}',
         '{"position":"top","interval_type":"size","interval_limits":[10,0],"nb_points":100,"selection":"median"}',
         '{"position":"top","percentile":[99,100],"percentile_limit":-1,"selection":"median"}',
     ],

@@ -1,5 +1,7 @@
 RUN = pixi run --locked -q --no-progress -e dev
 
+.PHONY: test list
+
 ruff:
 	$(RUN) ruff format .
 	$(RUN) ruff check . --fix
@@ -9,7 +11,6 @@ mypy:
 
 lint: ruff mypy
 
-.PHONY: test
 TESTARGS?=tests/  # default argument for the make test target
 test:
 	# you can use
@@ -23,6 +24,9 @@ test-unit:
 test-cov:
 	$(RUN) pytest --cov=sweat $(TESTARGS)
 
+test-slow:
+	$(RUN) pytest --runslow -m slow $(TESTARGS)
+
 check: ruff mypy test
 
 precommit:
@@ -33,3 +37,8 @@ precommit-all:
 
 docs:
 	$(RUN) mkdocs build
+
+list:
+	@LC_ALL=C $(MAKE) -pRrq -f $(firstword $(MAKEFILE_LIST)) : 2>/dev/null \
+	| awk -v RS= -F: '/(^|\n)# Files(\n|$$)/,/(^|\n)# Finished Make data base/ {if ($$1 !~ "^[#.]") {print $$1}}' \
+	| sort | grep -E -v -e '^[^[:alnum:]]' -e '^$@$$'

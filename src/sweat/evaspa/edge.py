@@ -16,6 +16,7 @@ import numpy as np
 import numpy.typing as npt
 import pandas as pd
 import pwlf
+import scipy as sp
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -201,31 +202,71 @@ class RegressionEdge(Edge, ABC):
         ser_json_inf_nan="strings",
         arbitrary_types_allowed=True,
     )
+    # Interval type either fixed size "size" or fixed density "density"
     interval_type: IntervalType
+    # Number of intervals
     interval_nb: int = 10
+    # Interval size
     interval_size: float = 0.1
+    # Limits for interval to consider for point selecttion
     interval_limits: (
         tuple[float, float] | tuple[PercentileValue, PercentileValue] | None
     ) = None
+    # Percentile interval to considered for point selection
     percentile: tuple[float, float] | None = None
+    # Maximum number of points to be considered in the percentile interval
     percentile_limit: int | None = None
+    # Percentiles used for sparse and dense intervals (logarithmic
+    # regression to compute percentile used between bounds)
+    percentile_bounds: (
+        tuple[tuple[float, float], tuple[float, float]] | None
+    ) = None
+    # Number of points to consider a sparse interval and dense intervals
+    percentile_intervals: tuple[int, int] | None = None
+    # Number of points to considered for point selection
     nb_points: int | None = None
+    # Regression point selection criteria (*median*,*mean*,*max*,*min*)
     selection: SelectionMethod = SelectionMethod.MEDIAN
+    # Use the breakpoint to compute the edge (to be used only with albedo).
+    # The mean temperature increases when
     use_breakpoint: bool = False
     breakpoint: float | None = None
 
     @model_validator(mode="before")
     @classmethod
-    def check_option(cls, data: Any) -> Any:
+    def check_options(cls, data: Any) -> Any:
         """
         Check options
         """
         if isinstance(data, dict):
             # Check option for points selection
-            if ("percentile" in data and "nb_points" in data) or (
-                "percentile" not in data and "nb_points" not in data
+            if (
+                ("percentile" in data and "nb_points" in data)
+                or ("percentile_bounds" in data and "nb_points" in data)
+                or ("percentile_bounds" in data and "percentile" in data)
+                or (
+                    "percentile" not in data
+                    and "nb_points" not in data
+                    and "percentile_bounds" not in data
+                )
             ):
-                msg = "Point selection must be either using a percentile or a number of points"
+                msg = (
+                    "Point selection must be either using a percentile or a "
+                    "variable percentile (percentile_bounds) or a number"
+                    " of points"
+                )
+                raise ValueError(msg)
+            if (
+                "percentile_bounds" in data
+                and "percentile_intervals" not in data
+            ) or (
+                "percentile_bounds" not in data
+                and "percentile_intervals" in data
+            ):
+                msg = (
+                    "In order to use variable percentiles, percentile_bounds and"
+                    " percentile_intervals must be set."
+                )
                 raise ValueError(msg)
             # Check option for interval creation
             if "interval_nb" in data and "interval_size" in data:
@@ -283,6 +324,71 @@ class RegressionEdge(Edge, ABC):
             msg = "Percentile limit must be greater than 0"
             raise ValueError(msg)
         return limit
+
+    @field_validator("percentile_bounds")
+    @classmethod
+    def check_percentile_bounds(
+        cls,
+        p: tuple[tuple[float, float], tuple[float, float]],
+    ) -> tuple[tuple[float, float], tuple[float, float]]:
+        """
+        Check percentile boundaries used for logarithmic
+        interpolation of percentiles.
+
+        Parameters
+        ----------
+        p: tuple[tuple[float, float], tuple[float, float]]
+            Variable percentile
+
+        Returns
+        -------
+        check_p: tuple[tuple[float, float], tuple[float, float]]
+            Validated variable percentile
+        """
+        if p is not None:
+            p_min = p[0]
+            p_max = p[1]
+            if (
+                (p_min[0] > p_min[1])
+                or (p_min[0] < PERCENTILE_MIN)
+                or (p_min[0] >= PERCENTILE_MAX)
+                or (p_min[1] <= PERCENTILE_MIN)
+                or (p_min[1] > PERCENTILE_MAX)
+            ):
+                msg = "Percentile must be an interval between [0,100]"
+                raise ValueError(msg)
+            if (
+                (p_max[0] > p_max[1])
+                or (p_max[0] < PERCENTILE_MIN)
+                or (p_max[0] >= PERCENTILE_MAX)
+                or (p_max[1] <= PERCENTILE_MIN)
+                or (p_max[1] > PERCENTILE_MAX)
+            ):
+                msg = "Percentile must be an interval between [0,100]"
+                raise ValueError(msg)
+        return p
+
+    @field_validator("percentile_intervals", mode="after")
+    @classmethod
+    def check_percentile_intervals(cls, nb: tuple[int, int]) -> tuple[int, int]:
+        """
+        Check the number of points in intervals to identify
+        sparse and dense intervals
+
+        Parameters
+        ----------
+        nb: tuple[int,int]
+            Number of points
+
+        Returns
+        -------
+        check_nb: int
+            Validated number of points
+        """
+        if nb is not None and ((nb[0] > nb[1]) or (nb[0] < 0) or (nb[0] < 0)):
+            msg = "percentile_intervals must be an interval strictly positive."
+            raise ValueError(msg)
+        return nb
 
     @classmethod
     def _convert(cls, v: Any) -> float | PercentileValue:
@@ -369,8 +475,6 @@ class RegressionEdge(Edge, ABC):
         ----------
         nb: int
             Interval number
-        info: ValidationInfo
-            Information
 
         Returns
         -------
@@ -483,6 +587,176 @@ class RegressionEdge(Edge, ABC):
             )
         return df.agg(self.selection.value)
 
+    def _select_percentile(
+        self,
+        df: pd.DataFrame,
+        intervals: pd.Series,
+        min_percentile: float,
+        max_percentile: float,
+    ) -> tuple[npt.NDArray, npt.NDArray]:
+        """
+        Select a point in the interval using percentiles
+
+        Parameters
+        ----------
+        df: pd.DataFrame
+           Data containing lst as a function of var
+        intervals: pd.Series
+           List of intervals
+        percentile_min: float
+           Minimum percentile value
+        percentile_max: float
+           Maximum percentile value
+
+        Returns
+        -------
+        lst_values: np.array
+            LST coordinates
+        var_values: np.array
+            Variable coordinates
+        """
+        var_values = []
+        lst_values = []
+        # Selection with percentile
+        for _, group in df.groupby(intervals):
+            value = group["lst"][
+                (group["lst"] >= np.percentile(group["lst"], min_percentile))
+                & (group["lst"] <= np.percentile(group["lst"], max_percentile))
+            ].pipe(self._select)
+            if not np.isnan(value):
+                var_values.append(group["var"].median())
+                lst_values.append(value)
+        return np.array(var_values), np.array(lst_values)
+
+    def _select_variable_percentile(
+        self,
+        df: pd.DataFrame,
+        intervals: pd.Series,
+        sparse_percentile: tuple[float, float],
+        dense_percentile: tuple[float, float],
+        sparse_interval: int,
+        dense_interval: int,
+    ) -> tuple[npt.NDArray, npt.NDArray]:
+        """
+        Select a point in the interval using percentiles
+
+        Parameters
+        ----------
+        df: pd.DataFrame
+           Data containing lst as a function of var
+        intervals: pd.Series
+           List of intervals
+        sparse_percentile: float
+           Percentile for sparse intervals (few points)
+        dense_percentile: float
+           Percentile for dense intervals (lot of points)
+        sparse_interval: int
+           Number of points to consider a sparse interval
+        dense_interval: int
+           Number of points to consider a dense interval
+
+        Returns
+        -------
+        lst_values: np.array
+            LST coordinates
+        var_values: np.array
+            Variable coordinates
+        """
+        var_values = []
+        lst_values = []
+        # Logarithmic interpolation for percentiles
+        min_percentile = [sparse_percentile[0], dense_percentile[0]]
+        max_percentile = [sparse_percentile[1], dense_percentile[1]]
+        f_min_percentile = lambda _: 0  # noqa: E731
+        f_max_percentile = lambda _: 100  # noqa: E731
+        if np.max(min_percentile) > 0.0:
+            lin_interp = sp.interpolate.interp1d(
+                np.log10([sparse_interval, dense_interval]),
+                np.log10(min_percentile),
+                kind="linear",
+            )
+            f_min_percentile = lambda p: np.power(  # noqa: E731
+                10.0,
+                lin_interp(
+                    np.log10(np.clip(p, sparse_interval, dense_interval))
+                ),
+            )
+        if np.min(max_percentile) < 100:  # noqa: PLR2004
+            lin_interp = sp.interpolate.interp1d(
+                np.log10([sparse_interval, dense_interval]),
+                np.log10(max_percentile),
+                kind="linear",
+            )
+            f_max_percentile = lambda p: np.power(  # noqa: E731
+                10.0,
+                lin_interp(
+                    np.log10(np.clip(p, sparse_interval, dense_interval))
+                ),
+            )
+        # Selection with variables percentiles
+        for _, group in df.groupby(intervals):
+            nb = len(group)
+            value = group["lst"][
+                (
+                    group["lst"]
+                    >= np.percentile(group["lst"], f_min_percentile(nb))
+                )
+                & (
+                    group["lst"]
+                    <= np.percentile(group["lst"], f_max_percentile(nb))
+                )
+            ].pipe(self._select)
+            if not np.isnan(value):
+                var_values.append(group["var"].median())
+                lst_values.append(value)
+        return np.array(var_values), np.array(lst_values)
+
+    def _select_nb_points(
+        self,
+        df: pd.DataFrame,
+        intervals: pd.Series,
+        nb_points: int,
+    ) -> tuple[npt.NDArray, npt.NDArray]:
+        """
+        Select a point in the interval using a number of points
+
+        Parameters
+        ----------
+        df: pd.DataFrame
+           Data containing lst as a function of var
+        intervals: pd.Series
+           List of intervals
+        nb_points: int
+           Number of points
+
+        Returns
+        -------
+        lst_values: np.array
+            LST coordinates
+        var_values: np.array
+            Variable coordinates
+        """
+        var_values = []
+        lst_values = []
+        # Selection with number of points
+        for _, group in df.groupby(intervals):
+            if self.position.name == EdgePosition.TOP.name:
+                value = (
+                    group["lst"]
+                    .nlargest(nb_points, keep="first")
+                    .agg(self.selection.value)
+                )
+            else:
+                value = (
+                    group["lst"]
+                    .nsmallest(nb_points, keep="first")
+                    .agg(self.selection.value)
+                )
+            if not np.isnan(value):
+                var_values.append(group["var"].median())
+                lst_values.append(value)
+        return np.array(var_values), np.array(lst_values)
+
     def get_points(
         self, var: npt.ArrayLike, lst: npt.ArrayLike
     ) -> tuple[npt.NDArray, npt.NDArray]:
@@ -510,47 +784,40 @@ class RegressionEdge(Edge, ABC):
         if np.array(var).shape != np.array(lst).shape:
             msg = "LST and variable do not have the same size"
             raise ValueError(msg)
-        var_values = []
-        lst_values = []
         df = self._prepare(np.array(var), np.array(lst))
         intervals = self._get_intervals(df["var"])
 
         # Compute point coordinates for regression
         if self.percentile is not None:
             # Selection with percentile
-            for _, group in df.groupby(intervals):
-                value = group["lst"][
-                    (
-                        group["lst"]
-                        >= np.percentile(group["lst"], self.percentile[0])
-                    )
-                    & (
-                        group["lst"]
-                        <= np.percentile(group["lst"], self.percentile[1])
-                    )
-                ].pipe(self._select)
-                if not np.isnan(value):
-                    var_values.append(group["var"].median())
-                    lst_values.append(value)
-        elif self.nb_points is not None:
+            return self._select_percentile(
+                df=df,
+                intervals=intervals,
+                min_percentile=self.percentile[0],
+                max_percentile=self.percentile[1],
+            )
+        if (
+            self.percentile_bounds is not None
+            and self.percentile_intervals is not None
+        ):
+            # Selection with percentile
+            return self._select_variable_percentile(
+                df=df,
+                intervals=intervals,
+                sparse_percentile=self.percentile_bounds[0],
+                dense_percentile=self.percentile_bounds[1],
+                sparse_interval=self.percentile_intervals[0],
+                dense_interval=self.percentile_intervals[1],
+            )
+        if self.nb_points is not None:
             # Selection with number of points
-            for _, group in df.groupby(intervals):
-                if self.position.name == EdgePosition.TOP.name:
-                    value = (
-                        group["lst"]
-                        .nlargest(self.nb_points, keep="first")
-                        .agg(self.selection.value)
-                    )
-                else:
-                    value = (
-                        group["lst"]
-                        .nsmallest(self.nb_points, keep="first")
-                        .agg(self.selection.value)
-                    )
-                if not np.isnan(value):
-                    var_values.append(group["var"].median())
-                    lst_values.append(value)
-        return np.array(var_values), np.array(lst_values)
+            return self._select_nb_points(
+                df=df,
+                intervals=intervals,
+                nb_points=self.nb_points,
+            )
+        # Return empty arrays
+        return np.array([]), np.array([])
 
     def _get_intervals(self, values: pd.Series) -> pd.Series:
         """
@@ -712,12 +979,18 @@ class RegressionEdge(Edge, ABC):
         )
         percentile_prop = (
             (
-                f"percentile={self.percentile}, percentile_limit={self.percentile_limit},"
-                if self.percentile_limit is not None
-                else f"percentile={self.percentile},"
+                f"percentile = {self.percentile},"
+                f" percentile_limit = {self.percentile_limit}"
             )
+            if self.percentile is not None and self.percentile_limit is not None
+            else f"percentile = {self.percentile},"
             if self.percentile is not None
-            else f"nb_points={self.nb_points}"
+            else (
+                f"percentile_bounds = {self.percentile_bounds},"
+                f"percentile_intervals = {self.percentile_intervals},"
+            )
+            if self.percentile_bounds is not None
+            else f"nb_points = {self.nb_points},"
         )
         break_prop = (
             f"breakpoint={self.breakpoint}," if self.use_breakpoint else ""
@@ -746,13 +1019,16 @@ class RegressionEdge(Edge, ABC):
             else f"  - interval_size={self.interval_size}\n"
         )
         percentile_prop = (
-            (
-                f"  - percentile={self.percentile} (limit={self.percentile_limit}\n"
-                if self.percentile_limit is not None
-                else f"  - percentile={self.percentile}\n"
-            )
+            f"  - percentile = {self.percentile} (limit = {self.percentile_limit}\n"
+            if self.percentile is not None and self.percentile_limit is not None
+            else f"  - percentile = {self.percentile}\n"
             if self.percentile is not None
-            else f"   - nb_points={self.nb_points}\n"
+            else (
+                f"  - percentile_bounds = {self.percentile_bounds}\n"
+                f"  - percentile_intervals = {self.percentile_intervals}\n"
+            )
+            if self.percentile_bounds is not None
+            else f"nb_points = {self.nb_points}\n"
         )
         break_prop = (
             f"\n  - breakpoint={self.breakpoint},"
@@ -792,14 +1068,27 @@ class RegressionEdge(Edge, ABC):
                 )
                 else self.interval_size
             ),
-            ("percentile" if self.percentile is not None else "nb_points"): (
+            (
+                "percentile"
+                if self.percentile is not None
+                else "percentile_bounds"
+                if self.percentile_bounds is not None
+                else "nb_points"
+            ): (
                 self.percentile
                 if self.percentile is not None
+                else self.percentile_bounds
+                if self.percentile_bounds is not None
                 else self.nb_points
             ),
             **(
                 {"percentile_limit": self.percentile_limit}
                 if self.percentile_limit is not None
+                else {}
+            ),
+            **(
+                {"percentile_intervals": self.percentile_intervals}
+                if self.percentile_intervals is not None
                 else {}
             ),
             "selection": self.selection.value,
@@ -1428,9 +1717,13 @@ class FlatPercentileEdge(Edge):
     """Class for flat edge"""
 
     model_config = ConfigDict(allow_inf_nan=True, ser_json_inf_nan="strings")
+    # Percentile interval to considered for point selection
     percentile: tuple[float, float] | None = None
+    # Maximum number of points to be considered in the percentile interval
     percentile_limit: int | None = None
+    # Number of points to considered for point selection
     nb_points: int | None = None
+    # Regression point selection criteria (*median*,*mean*,*max*,*min*)
     selection: SelectionMethod = SelectionMethod.MEDIAN
     value: float = float("inf")
 
@@ -1444,7 +1737,10 @@ class FlatPercentileEdge(Edge):
             ("percentile" in data and "nb_points" in data)
             or ("percentile" not in data and "nb_points" not in data)
         ):
-            msg = "Point selection must be either using a percentile or a number of points"
+            msg = (
+                "Point selection must be either using a percentile or "
+                "a number of points"
+            )
             raise ValueError(msg)
         return data
 

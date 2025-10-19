@@ -64,6 +64,8 @@ Therefore, an edge is characterized by:
     - **nb_points**: number of points to considered for point selection
     - **percentile**: a percentile interval to considered for point selection
     - **percentile_limit** (*optional*): the maximum number of points to be considered in the percentile interval
+    - **percentile_bounds**: Percentiles used for sparse and dense intervals (logarithmic regression to compute percentile used between bounds)
+    - **percentile_intervals**: Number of points to consider a sparse interval and dense intervals
     - **selection**: a regression point selection criteria (*median*,*mean*,*max*,*min*)
     - **use_breakpoint**: Use the breakpoint to compute the edge (to be used only with albedo). The mean temperature increases when
      albedo increases for low albedo values (not necessarily linearly), and the mean temperature decreases when albedo increases
@@ -75,6 +77,8 @@ Therefore, an edge is characterized by:
 
 * for flat edge with percentile, a configuration **config**:
     - **percentile**: a percentile interval to considered for point selection
+    - **percentile_limit** (*optional*): the maximum number of points to be considered in the percentile interval
+    - **nb_points**: number of points to considered for point selection
     - **selection**: a regression point selection criteria (*median*,*mean*,*max*,*min*)
 
 ### Examples
