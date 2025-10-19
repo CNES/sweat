@@ -192,7 +192,8 @@ def get_adjacent_tiles(
 
     # Take the orbit number into account
     if orbit_id is not None and orbit is not None:
-        # Keep tiles whose area is covered by more than 25% of the satellite swath
+        # Keep tiles whose area is covered by more than 25%
+        # of the satellite swath
         orbit_tiles = gpd.GeoDataFrame(
             gpd.overlay(
                 tiles[["id", "geometry"]],
@@ -469,7 +470,8 @@ def _join_group(
     adjs: DataFrame
         List of tiles with its adjacent tiles
     groups: DataFrame
-        List of groups with the percentage of valid pixels, the number of valid pixels and the valid zones
+        List of groups with the percentage of valid pixels, the number of valid
+        pixels and the valid zones
     threshold: int
         Threshold on minimum number of valid pixels
     """
@@ -491,7 +493,8 @@ def _join_group(
                 "nbvalid"
             ].idxmax()
             # The constraint is that a tile can only belong to one group.
-            # To avoid a tile ending up in two groups, the next column is used to update associations between groups.
+            # To avoid a tile ending up in two groups, the next column is used
+            # to update associations between groups.
             best_grp = str(
                 tiles.loc[tiles.group == best_candidate, "next"].values[0]
             )
@@ -531,7 +534,8 @@ def regroup(
     adjs: DataFrame
         List of tiles with its adjacent tiles
     groups: DataFrame
-        List of groups with the percentage of valid pixels, the number of valid pixels and the valid zones
+        List of groups with the percentage of valid pixels, the number of
+        valid pixels and the valid zones
     threshold: int
         Threshold on minimum number of valid pixels
     land: Optinal(GeoDataFrame)

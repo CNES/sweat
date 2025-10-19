@@ -91,11 +91,13 @@ def stack_time_series(
     updated: xr.Dataset
         Updated data
     """
-    # Reindex radiation time series to match the time dimension of ET time series
+    # Reindex radiation time series to match the time dimension
+    # of ET time series
     aligned_radiation_ts = radiation_time_series.reindex(
         {TSVar.TIME.value: et_time_series[TSVar.TIME.value]}, method=None
     )
-    # Iterate over the time dimension and fill missing values using the custom function
+    # Iterate over the time dimension and fill missing values
+    # using the custom function
     for time in aligned_radiation_ts[TSVar.TIME.value]:
         if (
             aligned_radiation_ts[TSVar.RADIATION.value]

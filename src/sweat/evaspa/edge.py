@@ -264,13 +264,16 @@ class RegressionEdge(Edge, ABC):
                 and "percentile_intervals" in data
             ):
                 msg = (
-                    "In order to use variable percentiles, percentile_bounds and"
-                    " percentile_intervals must be set."
+                    "In order to use variable percentiles, percentile_bounds"
+                    " and percentile_intervals must be set."
                 )
                 raise ValueError(msg)
             # Check option for interval creation
             if "interval_nb" in data and "interval_size" in data:
-                msg = "Interval selection must be either using a size or a number of intervals"
+                msg = (
+                    "Interval selection must be either using a size or"
+                    " a number of intervals"
+                )
                 raise ValueError(msg)
         return data
 
@@ -468,8 +471,8 @@ class RegressionEdge(Edge, ABC):
     @classmethod
     def check_interval_nb(cls, nb: int) -> int:
         """
-        Check the consistency of the interval number, if interval type is "density"
-        or "interval_size".
+        Check the consistency of the interval number,
+        if interval type is "density" or "interval_size".
 
         Parameters
         ----------
@@ -506,7 +509,10 @@ class RegressionEdge(Edge, ABC):
         """
         if info.data.get("interval_type") == IntervalType.SIZE:
             if (size <= 0) or (size > SIZE_INTERVAL_MAX):
-                msg = f"Number of intervals must be between 0 and {SIZE_INTERVAL_MAX}"
+                msg = (
+                    "Number of intervals must be between "
+                    f"0 and {SIZE_INTERVAL_MAX}"
+                )
                 raise ValueError(msg)
         else:
             msg = "Size of intervals does not work for interval type DENSITY"
@@ -761,7 +767,8 @@ class RegressionEdge(Edge, ABC):
         self, var: npt.ArrayLike, lst: npt.ArrayLike
     ) -> tuple[npt.NDArray, npt.NDArray]:
         """
-        For each interval, compute the point coordinates used for the regression:
+        For each interval, compute the point coordinates
+        used for the regression:
           - the abscissa value is obtained by taking the median.
           - the ordinate value is obtained by applying the
           selection method to the percentile interval.
@@ -982,7 +989,10 @@ class RegressionEdge(Edge, ABC):
                 f"percentile = {self.percentile},"
                 f" percentile_limit = {self.percentile_limit}"
             )
-            if self.percentile is not None and self.percentile_limit is not None
+            if (
+                self.percentile is not None
+                and self.percentile_limit is not None
+            )
             else f"percentile = {self.percentile},"
             if self.percentile is not None
             else (
@@ -1019,8 +1029,14 @@ class RegressionEdge(Edge, ABC):
             else f"  - interval_size={self.interval_size}\n"
         )
         percentile_prop = (
-            f"  - percentile = {self.percentile} (limit = {self.percentile_limit}\n"
-            if self.percentile is not None and self.percentile_limit is not None
+            (
+                f"  - percentile = {self.percentile} "
+                f"(limit = {self.percentile_limit}\n"
+            )
+            if (
+                self.percentile is not None
+                and self.percentile_limit is not None
+            )
             else f"  - percentile = {self.percentile}\n"
             if self.percentile is not None
             else (
@@ -1120,7 +1136,8 @@ class LinearEdge(RegressionEdge):
 
     def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
         """
-        For each interval, compute the point coordinates used for the regression:
+        For each interval, compute the point coordinates
+        used for the regression:
           - the abscissa value is obtained by taking the median.
           - the ordinate value is obtained by applying the
           selection method to the percentile interval.
@@ -1149,7 +1166,10 @@ class LinearEdge(RegressionEdge):
                 lst_values = lst_values[var_values <= break_var]
                 var_values = tmp
             if len(var_values) == 1:
-                msg = f"LinearEdge: breakpoint ({break_var}) at the edge of the domain"
+                msg = (
+                    f"LinearEdge: breakpoint ({break_var}) "
+                    "at the edge of the domain"
+                )
                 logger.warning(msg)
         # Linear regression
         self.coeffs = tuple(np.polyfit(var_values, lst_values, 1))
@@ -1199,7 +1219,8 @@ class ThresholdLinearEdge(RegressionEdge):
 
     def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
         """
-        For each interval, compute the point coordinates used for the regression:
+        For each interval, compute the point coordinates
+        used for the regression:
           - the abscissa value is obtained by taking the median.
           - the ordinate value is obtained by applying the
           selection method to the percentile interval.
@@ -1220,9 +1241,11 @@ class ThresholdLinearEdge(RegressionEdge):
         else:
             guess, _ = self.search_extremum_point(var_values, lst_values)
             if guess == var_values[-1]:
-                logger.warning(
-                    "ThresholdLinearEdge: Threshold not found, last interval selected"
+                msg = (
+                    "ThresholdLinearEdge: Threshold not found, "
+                    "last interval selected"
                 )
+                logger.warning(msg)
         # Initialize piecewise linear fit
         # Seed is fixed to garantee reproductible results
         pwlf_solver = pwlf.PiecewiseLinFit(
@@ -1305,7 +1328,8 @@ class DoubleLinearEdge(RegressionEdge):
 
     def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
         """
-        For each interval, compute the point coordinates used for the regression:
+        For each interval, compute the point coordinates
+        used for the regression:
           - the abscissa value is obtained by taking the median.
           - the ordinate value is obtained by applying the
           selection method to the percentile interval.
@@ -1421,7 +1445,8 @@ class FlatLinearEdge(RegressionEdge):
 
     def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
         """
-        For each interval, compute the point coordinates used for the regression:
+        For each interval, compute the point coordinates
+        used for the regression:
           - the abscissa value is obtained by taking the median.
           - the ordinate value is obtained by applying the
           selection method to the percentile interval.
@@ -1535,7 +1560,8 @@ class ParabolicEdge(RegressionEdge):
 
     def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
         """
-        For each interval, compute the point coordinates used for the regression:
+        For each interval, compute the point coordinates
+        used for the regression:
           - the abscissa value is obtained by taking the median.
           - the ordinate value is obtained by applying the
           selection method to the percentile interval.
@@ -1600,7 +1626,8 @@ class FlatRegressionEdge(RegressionEdge):
 
     def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
         """
-        For each interval, compute the point coordinates used for the regression:
+        For each interval, compute the point coordinates
+        used for the regression:
           - the abscissa value is obtained by taking the median.
           - the ordinate value is obtained by applying the
           selection method to the percentile interval.
@@ -1882,7 +1909,10 @@ class FlatPercentileEdge(Edge):
         """
         percentile_prop = (
             (
-                f"percentile={self.percentile}, percentile_limit={self.percentile_limit},"
+                (
+                    f"percentile={self.percentile}, "
+                    f"percentile_limit={self.percentile_limit},"
+                )
                 if self.percentile_limit is not None
                 else f"percentile={self.percentile},"
             )
@@ -1903,7 +1933,10 @@ class FlatPercentileEdge(Edge):
         """
         percentile_prop = (
             (
-                f"  - percentile={self.percentile} (limit={self.percentile_limit}\n"
+                (
+                    f"  - percentile={self.percentile} "
+                    f"(limit={self.percentile_limit}\n"
+                )
                 if self.percentile_limit is not None
                 else f"  - percentile={self.percentile}\n"
             )

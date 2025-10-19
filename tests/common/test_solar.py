@@ -400,7 +400,8 @@ def test_compute_toa_solar_radiation_from_hour_angle(
     date, x, y, crs, slope, aspect, expected
 ):
     """
-    Test function for computing toa solar radiation for a given position with hour angle
+    Test function for computing toa solar radiation for a given
+    position with hour angle
     """
     toa = solar.compute_toa_solar_radiation_from_hour_angle(
         date, x, y, crs, slope, aspect
@@ -475,7 +476,8 @@ def test_compute_daily_toa_solar_radiation_from_hour_angle(
     date, x, y, crs, slope, aspect, expected
 ):
     """
-    Test function for computing toa daily solar radiation for a given position (from hour angle)
+    Test function for computing toa daily solar radiation
+    for a given position (from hour angle)
     """
     toa = solar.compute_daily_toa_solar_radiation_from_hour_angle(
         date, x, y, crs, slope, aspect

@@ -110,9 +110,9 @@ def test_toa_daily_estimate_missing_dem_data(caplog):
     dem = data[["aspect"]]
     daily.toa_daily_estimate(data, date=data.attrs["date"], dem=dem)
     assert (
-        "No DEM information (aspect or slope) to compute topographic corrections. Topographic corrections are disabled."
-        in caplog.text
-    )
+        "No DEM information (aspect or slope) to compute topographic "
+        "corrections. Topographic corrections are disabled."
+    ) in caplog.text
 
 
 @pytest.mark.functional
@@ -132,7 +132,10 @@ def test_toa_daily_estimate_mising_crs():
     data.attrs["crs"] = None
     with pytest.raises(
         ValueError,
-        match="Impossible to compute TOA extrapolation because CRS is missing in the metadata",
+        match=(
+            "Impossible to compute TOA extrapolation "
+            "because CRS is missing in the metadata"
+        ),
     ):
         daily.toa_daily_estimate(data, date=data.attrs["date"])
 
@@ -196,7 +199,9 @@ def test_extrapolate_toa_missing_date():
     data.attrs["crs"] = None
     with pytest.raises(
         ValueError,
-        match="Impossible to extrapolate because the date is missing in metadata",
+        match=(
+            "Impossible to extrapolate because the date is missing in metadata"
+        ),
     ):
         daily.extrapolate_at_daily_scale(data, method="toa")
 
@@ -255,6 +260,6 @@ def test_extrapolate_at_daily_scale_without_dem(caplog):
         data, variables=None, method="toa", dem=None, use_topo=True
     )
     assert (
-        "No DEM information to compute topographic corrections. Topographic corrections are disabled."
-        in caplog.text
+        "No DEM information to compute topographic corrections. "
+        "Topographic corrections are disabled." in caplog.text
     )

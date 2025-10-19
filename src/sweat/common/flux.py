@@ -232,9 +232,11 @@ def create_net_radiation(
     if use_topo and (
         "aspect" not in data.data_vars or "slope" not in data.data_vars
     ):
-        logger.warning(
-            "No DEM information (aspect or slope) to compute topographic corrections. Topographic corrections are disabled."
+        msg = (
+            "No DEM information (aspect or slope) to compute topographic "
+            "corrections. Topographic corrections are disabled."
         )
+        logger.warning(msg)
         use_topo = False
 
     # Check if several rsd/rld are available
@@ -329,7 +331,10 @@ def compute_et_from_le(
     if temperature is None:
         latent_heat = LATENT_HEAT_VAPORIZATION
     else:
-        msg = "The variation of latent heat of vaporization of water with temperature is not implemented yet."
+        msg = (
+            "The variation of latent heat of vaporization of water "
+            "with temperature is not implemented yet."
+        )
         logger.warning(msg)
         latent_heat = LATENT_HEAT_VAPORIZATION
     return np.array(le) / latent_heat

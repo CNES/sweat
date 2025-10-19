@@ -50,9 +50,13 @@ def pytest_collection_modifyitems(
             in ["unit", "functional", "end_to_end", "notebooks", "skip", "docs"]
             for marker in item.iter_markers()
         ):
-            msg = f"Test {item.nodeid} is missing a required marker (unit, functional, end_to_end, notebooks, slow, skip)"
+            msg = (
+                f"Test {item.nodeid} is missing a required marker"
+                "(unit, functional, end_to_end, notebooks, slow, skip)"
+            )
             raise pytest.UsageError(msg)
-        # Check if EVASPA_TEST_DATA_PATH is set for tests with require_test_data marker
+        # Check if EVASPA_TEST_DATA_PATH is set for tests
+        # with require_test_data marker
         if "require_test_data" in item.keywords and not test_data_path:
             msg = (
                 f"Test {item.nodeid} is marked with @pytest.mark.require_data, "

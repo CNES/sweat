@@ -81,9 +81,11 @@ def create_net_radiation(
     if use_topo and (
         "aspect" not in data.data_vars or "slope" not in data.data_vars
     ):
-        logger.warning(
-            "No DEM information (aspect or slope) to compute topographic corrections. Topographic corrections are disabled."
+        msg = (
+            "No DEM information (aspect or slope) to compute topographic"
+            "corrections. Topographic corrections are disabled."
         )
+        logger.warning(msg)
         use_topo = False
 
     # Check if several rsd/rld are available

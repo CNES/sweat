@@ -242,8 +242,10 @@ def compute_psychrometrics(
     - eastar: saturation vapor pressure at air temperature (hPa)
     - ea: actual vapor pressure of air (hPa)
     - da: Vapor pressure deficit of air (hPa)
-    - slope: slope of saturation vapor pressure versus air temperature at Ta (hPa/degC)
-    - s1,s2,s3,s4 : slopes of saturation vapor pressure versus temperature (hPa/degC)
+    - slope: slope of saturation vapor pressure versus air temperature
+    at Ta (hPa/degC)
+    - s1,s2,s3,s4 : slopes of saturation vapor pressure versus temperature
+    (hPa/degC)
     - rho: air density (kg.m-3)
     - cp: specific heat of air at constant pressure (J.kg-1.K-1)
 

@@ -65,16 +65,21 @@ def toa_daily_estimate(
     aspect = None
     if dem is not None:
         if dem.get("slope", None) is None or dem.get("aspect", None) is None:
-            logger.warning(
-                "No DEM information (aspect or slope) to compute topographic corrections. Topographic corrections are disabled."
+            msg = (
+                "No DEM information (aspect or slope) to compute topographic "
+                "corrections. Topographic corrections are disabled."
             )
+            logger.warning(msg)
         else:
             slope = dem["slope"]
             aspect = dem["aspect"]
     # Get CRS
     crs = data.attrs.get("crs", None)
     if crs is None:
-        msg = "Impossible to compute TOA extrapolation because CRS is missing in the metadata"
+        msg = (
+            "Impossible to compute TOA extrapolation because "
+            "CRS is missing in the metadata"
+        )
         raise ValueError(msg)
     # Initiate dataset
     daily = data.copy(data=None)
@@ -145,9 +150,11 @@ def extrapolate_at_daily_scale(
         msg = "EF dataset empty"
         raise ValueError(msg)
     if use_topo and dem is None:
-        logger.warning(
-            "No DEM information to compute topographic corrections. Topographic corrections are disabled."
+        msg = (
+            "No DEM information to compute topographic corrections. "
+            "Topographic corrections are disabled."
         )
+        logger.warning(msg)
     if not use_topo:
         dem = None
     # Data selection
@@ -177,7 +184,10 @@ def extrapolate_at_daily_scale(
     # Extrapolation
     if method.lower() == "toa":
         if data.attrs.get("date", None) is None:
-            msg = "Impossible to extrapolate because the date is missing in metadata"
+            msg = (
+                "Impossible to extrapolate because the date "
+                "is missing in metadata"
+            )
             raise ValueError(msg)
         daily = toa_daily_estimate(
             data=data.drop_vars(

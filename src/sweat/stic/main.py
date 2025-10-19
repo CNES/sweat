@@ -138,7 +138,8 @@ def run_stic_model_pixel(
     # esstar: saturation vapor pressure at surface temperature (hPa)
     # ea: atmosphere vapour pressure (hPa) at air temperature
     # da: atmosphere vapour pressure deficit (hPa) at the reference height
-    # slope slope of saturation vapor pressure versus air temperature at TA (hPa/degC)
+    # slope slope of saturation vapor pressure versus air temperature
+    # at TA (hPa/degC)
     # s1,s2,s3,s4: slopes of saturation vapor pressure versus temperature
     # rho: air density (kg.m-3)
     # cp: specific heat of air at constant pressure (J.kg-1.K-1)

@@ -58,7 +58,10 @@ class _DebugDecorator:
         result = self.func(*args, **kwargs)
         end_time = time.perf_counter()
         if self.profile:
-            msg = f"Function {self.module}.{self.name} executed in {(end_time - start_time):.4f}s"
+            msg = (
+                f"Function {self.module}.{self.name} executed "
+                f"in {(end_time - start_time):.4f}s"
+            )
             logger.info(msg)
         if self.verbose and result is not None:
             msg = f"Write results from {self.module}.{self.name}"
@@ -133,7 +136,10 @@ def configure_debugging(profile: bool, verbose: bool, path: str | None = None):
     """
     if path is None:
         path = os.getcwd()
-    msg = f"Debugging configuration: profile={profile}, verbose={verbose}, path={path}"
+    msg = (
+        f"Debugging configuration: profile={profile}, "
+        f"verbose={verbose}, path={path}"
+    )
     logger.debug(msg)
     for func in REGISTERED_FUNCTIONS.values():
         func.configure(profile, verbose, path)
