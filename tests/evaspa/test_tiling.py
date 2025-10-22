@@ -181,12 +181,15 @@ def test_check_adjacents() -> None:
     pd.testing.assert_frame_equal(checked_df, ref)
 
 
-@pytest.mark.unit
+@pytest.mark.functional
+@pytest.mark.require_test_data
 def test_regroup() -> None:
     """
     Test methods for regroup tiles
     """
     data_path = get_data_path()
+    # Set MNT_PATH
+    os.environ["MNT_PATH"] = os.environ["SWEAT_TEST_DATA_PATH"]
     roi_tiles = gpd.read_file(os.path.join(data_path, "roi_tiles.gpkg"))
     land = gpd.read_file(os.path.join(data_path, "land_italy.gpkg"))
     adjs = tiling.generate_adjacents(roi_tiles, land)

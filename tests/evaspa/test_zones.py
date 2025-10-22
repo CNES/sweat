@@ -17,8 +17,13 @@ def get_test_data_path() -> str:
     Get test data path for DEM tiles
     """
     return os.path.join(
-        os.environ["EVASPA_TEST_DATA_PATH"], "DEM_Copercinus_30m"
+        os.environ["SWEAT_TEST_DATA_PATH"], "DEM_Copercinus_30m"
     )
+
+
+@pytest.fixture(autouse=True)
+def setup_before_each_test():
+    os.environ["MNT_PATH"] = os.environ.get("SWEAT_TEST_DATA_PATH", None)
 
 
 @pytest.mark.functional
@@ -82,6 +87,7 @@ def test_polygonize_mask() -> None:
 
 
 @pytest.mark.functional
+@pytest.mark.require_test_data
 def test_define_valid_zones() -> None:
     """
     Test define_valid_zones() method
