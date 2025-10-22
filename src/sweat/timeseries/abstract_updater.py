@@ -566,8 +566,8 @@ class Updater(ABC):
         # Get cdimensions with order
         original_dims = list(data.sizes.keys())
         spatial_dims = [x for x in original_dims if x != TSVar.TIME.value]
-        x1 = spatial_dims[0]
-        x2 = spatial_dims[1]
+        x1 = spatial_dims[1]
+        x2 = spatial_dims[0]
 
         def apply_update_time_series(data_ts: xr.Dataset) -> xr.Dataset:
             x1_val = data_ts[x1].values.item()
