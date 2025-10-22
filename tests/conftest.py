@@ -16,12 +16,11 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "slow: mark test as slow")
 
 
+@pytest.hookimpl(tryfirst=True)  # type: ignore[no-redef]
 def pytest_collection_modifyitems(
     config: pytest.Config, items: list[pytest.Item]
 ):
     """
-    Description
-    -----------
     Hook to modify collected test items.
 
     Parameters
@@ -33,8 +32,6 @@ def pytest_collection_modifyitems(
     """
     selected_items = []
     deselected_items = []
-    # Get test path directory
-    test_data_path = os.getenv("EVASPA_TEST_DATA_PATH")
     # Always run test if it's a single test invoked from vscode
     if len(items) == 1 and "vscode_pytest" in config.invocation_params.args:
         return
@@ -43,6 +40,7 @@ def pytest_collection_modifyitems(
         for item in items:
             if "slow" in item.keywords:
                 item.add_marker(skip_slow)
+
     for item in items:
         # Check if all tests have a marker
         if not any(
@@ -55,14 +53,7 @@ def pytest_collection_modifyitems(
                 "(unit, functional, end_to_end, notebooks, slow, skip)"
             )
             raise pytest.UsageError(msg)
-        # Check if EVASPA_TEST_DATA_PATH is set for tests
-        # with require_test_data marker
-        if "require_test_data" in item.keywords and not test_data_path:
-            msg = (
-                f"Test {item.nodeid} is marked with @pytest.mark.require_data, "
-                "but the HAS_DATA environment variable is not set."
-            )
-            raise pytest.UsageError(msg)
+
         # Skip slow in VSCode
         if (
             "slow" in item.keywords
@@ -76,3 +67,30 @@ def pytest_collection_modifyitems(
 
     # Inform pytest of deselected items
     config.hook.pytest_deselected(items=deselected_items)
+
+
+@pytest.hookimpl(trylast=True)  # type: ignore[no-redef]
+def pytest_collection_modifyitems(items: list[pytest.Item]):  # noqa
+    """
+    Hook to check if SWEAT_TEST_DATA_PATH variable is set
+    if test with require_test_data is selected.
+
+    Parameters
+    ----------
+    config: pytest.Config
+        pytest configuration
+    items: list[pyest.Item]
+        list of pytest.Item objects (i.e., collected tests)
+    """
+    # Get test path directory
+    test_data_path = os.getenv("SWEAT_TEST_DATA_PATH")
+
+    for item in items:
+        # Check if SWEAT_TEST_DATA_PATH is set for tests
+        # with require_test_data marker
+        if "require_test_data" in item.keywords and not test_data_path:
+            msg = (
+                f"Test {item.nodeid} is marked with @pytest.mark.require_data, "
+                "but the SWEAT_TEST_DATA environment variable is not set."
+            )
+            raise pytest.UsageError(msg)
