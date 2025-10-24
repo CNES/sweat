@@ -70,7 +70,9 @@ def pytest_collection_modifyitems(
 
 
 @pytest.hookimpl(trylast=True)  # type: ignore[no-redef]
-def pytest_collection_modifyitems(items: list[pytest.Item]):  # noqa
+def pytest_collection_modifyitems(  # noqa
+    config: pytest.Config, items: list[pytest.Item]
+):
     """
     Hook to check if SWEAT_TEST_DATA_PATH variable is set
     if test with require_test_data is selected.
@@ -85,6 +87,14 @@ def pytest_collection_modifyitems(items: list[pytest.Item]):  # noqa
     # Get test path directory
     test_data_path = os.getenv("SWEAT_TEST_DATA_PATH")
 
+    selected_items = []
+    deselected_items = []
+    if not config.getoption("--runslow"):
+        skip_slow = pytest.mark.skip(reason="need --runslow option to run")
+        for item in items:
+            if "slow" in item.keywords:
+                item.add_marker(skip_slow)
+
     for item in items:
         # Check if SWEAT_TEST_DATA_PATH is set for tests
         # with require_test_data marker
@@ -94,3 +104,17 @@ def pytest_collection_modifyitems(items: list[pytest.Item]):  # noqa
                 "but the SWEAT_TEST_DATA environment variable is not set."
             )
             raise pytest.UsageError(msg)
+
+        # Skip slow in VSCode
+        if (
+            "slow" in item.keywords
+            and "vscode_pytest" in config.invocation_params.args
+        ):
+            deselected_items.append(item)
+            continue
+        selected_items.append(item)
+    # Modify items in-place
+    items[:] = selected_items
+
+    # Inform pytest of deselected items
+    config.hook.pytest_deselected(items=deselected_items)

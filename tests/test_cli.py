@@ -33,10 +33,16 @@ def test_command_evaspa(filename, tmp_path):
 
 
 @pytest.mark.end_to_end
+@pytest.mark.require_test_data
 def test_command_evaspa_tiling(tmp_path):
     """
     Test evaspa-tiling CLI
     """
+    if os.environ.get("SWEAT_TEST_DATA_PATH", None) is None:
+        msg = "Variable SWEAT_TEST_DATA_PATH must be set"
+        raise ValueError(msg)
+    if os.environ.get("MNT_PATH", None) is None:
+        os.environ["MNT_PATH"] = os.environ["SWEAT_TEST_DATA_PATH"]
     output_dir = tmp_path / "tmp_out"
     output_dir.mkdir()
     filename = output_dir / "group.shp"
