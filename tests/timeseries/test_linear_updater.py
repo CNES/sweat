@@ -359,13 +359,14 @@ def test_update_with_new_acquisitions() -> None:
     linear_updater = LinearUpdater(
         strict_mode=True, radiation_mode=RadiationMode.THEORITICAL
     )
-    linear_updater.update_with_new_acquisitions(ts, feed)
-    # np.testing.assert_almost_equal(
-    #    ts[TSVar.ET.value].data, np.array([1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 2.2])
-    # )
-    # np.testing.assert_almost_equal(
-    #    ts[TSVar.FLAGS.value].data, np.array([0, 2, 2, 0, 3, 1, 16])
-    # )
+    update_ts = linear_updater.update_with_new_acquisitions(ts, feed)
+    np.testing.assert_almost_equal(
+        update_ts[TSVar.ET.value].data,
+        np.array([1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 2.2]),
+    )
+    np.testing.assert_almost_equal(
+        update_ts[TSVar.FLAGS.value].data, np.array([0, 2, 2, 0, 3, 1, 16])
+    )
 
 
 @pytest.mark.unit

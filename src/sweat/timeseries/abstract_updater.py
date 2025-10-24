@@ -577,7 +577,6 @@ class Updater(ABC):
             if feed is not None:
                 # Extract corresponding feed
                 feed_ts = feed.sel({x1: x1_val, x2: x2_val})
-
                 # Update new acquisition
                 updated_ts = self.update_with_new_acquisitions(
                     updated_ts, feed_ts

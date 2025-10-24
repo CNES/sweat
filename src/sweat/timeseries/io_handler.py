@@ -12,7 +12,13 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import xarray as xr
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 import sweat.timeseries.status_handler as sh
 from sweat.common.io import read_data_from_file, write_dataset
@@ -26,7 +32,7 @@ class TimeSeriesInputConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
-    et_time_series: list[str]
+    et_time_series: list[str] = Field(default=[])
     dates: list[pd.Timestamp] | None = Field(default=None)
     et_single_date: list[str] = Field(default=[])
     radiation: list[str] = Field(default=[])
@@ -66,16 +72,21 @@ class TimeSeriesInputConfig(BaseModel):
             raise OSError(msg)
         return file
 
-    @field_validator("et_time_series")
+    @model_validator(mode="before")
     @classmethod
-    def test_timeseries(cls, files: list[str]) -> list[str]:
+    def check_files(cls, data: Any) -> Any:
         """
-        Check that the ET time series is not empty
+        Check that all file lists are not empty
         """
-        if len(files) == 0:
-            msg = "No files to read for ET time series"
+        if (
+            isinstance(data, dict)
+            and len(data["et_time_series"]) == 0
+            and len(data["radiation"]) == 0
+            and len(data["et_single_date"]) == 0
+        ):
+            msg = "Not all file lists must be empty"
             raise ValueError(msg)
-        return files
+        return data
 
 
 def write_timeseries(
@@ -300,13 +311,51 @@ def read_input(
     # Configuration
     input_cfg = TimeSeriesInputConfig.model_validate(config)
     # Read
-    et_ts = read_et_time_series(input_cfg.et_time_series, input_cfg.dates)
+    et_ts = None
+    if len(input_cfg.et_time_series) > 0:
+        et_ts = read_et_time_series(input_cfg.et_time_series, input_cfg.dates)
     radiation_ts = None
     if len(input_cfg.radiation) > 0:
         radiation_ts = read_radiation_time_series(input_cfg.radiation)
     et_sd = None
     if len(input_cfg.et_single_date) > 0:
         et_sd = read_et_single_date(input_cfg.et_single_date)
+    if et_ts is None:
+        base = radiation_ts if radiation_ts is not None else et_sd
+        if base is None:
+            msg = "Not all file lists must be empty"
+            raise ValueError(msg)
+        if input_cfg.dates is not None:
+            dates = input_cfg.dates
+        else:
+            msg = "No dates provided"
+            raise ValueError(msg)
+        original_dims = list(base.sizes.keys())
+        spatial_dims = [x for x in original_dims if x != TSVar.TIME.value]
+        x1 = spatial_dims[0]  # y
+        x2 = spatial_dims[1]  # x
+        # Create NaN-filled and invalid status data arrays
+        nan_data = np.full((len(dates), base.sizes[x1], base.sizes[x2]), np.nan)
+        invalid_data = np.full(
+            (len(dates), base.sizes[x1], base.sizes[x2]),
+            sh.INIT_STATUS,
+            dtype=sh.STATUS_TYPE,
+        )
+        # Create tthe dataset
+        et_ts = xr.Dataset(
+            {
+                TSVar.ET.value: ((TSVar.TIME.value, x1, x2), nan_data.copy()),
+                TSVar.FLAGS.value: (
+                    (TSVar.TIME.value, x1, x2),
+                    invalid_data.copy(),
+                ),
+            },
+            coords={
+                x2: base.coords[x2],
+                x1: base.coords[x1],
+                TSVar.TIME.value: dates,
+            },
+        )
     dem = None
     if input_cfg.dem is not None:
         dem = read_data_from_file(input_cfg.dem)
