@@ -5,6 +5,9 @@ Module containing the API
 
 from __future__ import annotations
 
+import datetime as dt
+import os
+
 import geopandas as gpd
 import pandas as pd
 import xarray as xr
@@ -24,8 +27,11 @@ from sweat.timeseries import updater_handler as uh
 from sweat.timeseries.config import (
     TimeSeriesInputConfig,
     TimeSeriesParamsConfig,
+    check_config_timeseries,
 )
 from sweat.timeseries.io_handler import read_input as read_ts_input
+from sweat.timeseries.io_handler import write_timeseries
+from sweat.timeseries.timeseries_handler import create_config, window_generator
 
 logger = LoggerManager.get_logger(__name__)
 
@@ -407,3 +413,82 @@ def run_timeseries(
     updated_ts = uh.run(ts, feed, params_config.update.model_dump())
     logger.debug("Upadte time series: OK")
     return updated_ts
+
+
+def create_file_et_time_series(
+    et_time_series_dir: str, config_dict: dict
+) -> None:
+    """
+    Run time series for a given configuration
+    and store the dataset as a et_time_series .tif file
+
+    Parameters
+    ----------
+    et_time_series_dir: str
+        Directory to store the file
+    config_dict: dict
+        Configuration
+    """
+    os.makedirs(et_time_series_dir, exist_ok=True)
+    # Run time series
+    config = check_config_timeseries(config_dict)
+    et_ts, radiation_ts, et_sd, dem = read_ts_input_data(config_dict["input"])
+    updated_ts = run_timeseries(
+        et_ts, radiation_ts, et_sd, dem, config["params"]
+    )
+    # Write et_time_series file
+    write_timeseries(
+        updated_ts, root_name="et_time_series", directory=et_time_series_dir
+    )
+
+
+def run_window_time_series(
+    period_start: str,
+    period_end: str,
+    et_single_date_dir: str,
+    radiation_dir: str,
+    et_time_series_dir: str,
+    window: int,
+    shift: int,
+    json_dir: str | None = None,
+    verbose: bool | None = False,
+) -> None:
+    """
+    Move a sliding window over a given period and for each shift, run the time series.
+
+    Parameters
+    ----------
+    period_start: dt.datetime
+        Period start date
+    period_end: dt.datetime
+        Period end date
+    et_single_date_dir: str
+        Directory where et_single_date .tif files are downloaded
+    radiation_dir: str
+        Directory where radiation .tif files are downloaded
+    et_time_series_dir: str
+        Directory where et_time_series .tif files are downloaded
+    window: int
+        Size of the sliding window (in days)
+    shift: int
+        Shift between two consecutive windows (in days)
+    json_dir: str
+        Directory to store the json configuration file if verbose True
+        (default: current directory)
+    verbose: bool
+        If true, the configuration dictionary will be stored as a .json file
+    """
+    t1 = dt.datetime.strptime(period_start, "%Y-%m-%d")  # noqa: DTZ007
+    t2 = dt.datetime.strptime(period_end, "%Y-%m-%d")  # noqa: DTZ007
+    for i in window_generator(t1, t2, window, shift):
+        window_start, window_end = i
+        config_dict = create_config(
+            window_start,
+            window_end,
+            et_single_date_dir,
+            radiation_dir,
+            et_time_series_dir,
+            json_dir,
+            verbose,
+        )
+        create_file_et_time_series(et_time_series_dir, config_dict)
