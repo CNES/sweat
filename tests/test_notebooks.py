@@ -21,6 +21,7 @@ def get_main_notebooks():
 
 @pytest.mark.notebooks
 @pytest.mark.slow
+@pytest.mark.require_test_data
 @pytest.mark.parametrize("notebook_path", get_notebooks())
 def test_notebook_execution(notebook_path):
     with open(notebook_path, encoding="utf-8") as f:

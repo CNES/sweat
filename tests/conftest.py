@@ -1,6 +1,7 @@
 import os
 
 import pytest
+from _pytest.mark.expression import Expression
 
 
 def pytest_addoption(parser):
@@ -16,7 +17,6 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "slow: mark test as slow")
 
 
-@pytest.hookimpl(tryfirst=True)  # type: ignore[no-redef]
 def pytest_collection_modifyitems(
     config: pytest.Config, items: list[pytest.Item]
 ):
@@ -40,6 +40,29 @@ def pytest_collection_modifyitems(
         for item in items:
             if "slow" in item.keywords:
                 item.add_marker(skip_slow)
+    # markexpr = config.option.markexpr  # <-- This is what was passed with -m
+    markexpr = config.getoption("-m")  # <-- This is what was passed with -m
+    if markexpr is not None:
+        if markexpr == "not skip or not slow":
+            marker_list = ["unit", "functional", "end-to-end"]
+        else:
+            # Compile the mark expression
+            compiled_markexpr = Expression.compile(markexpr)
+            # Return a sequence of markers that match
+            marker_list = [
+                mark
+                for mark in [
+                    "unit",
+                    "functional",
+                    "end_to_end",
+                    "notebooks",
+                    "docs",
+                    "slow",
+                ]
+                if compiled_markexpr.evaluate(
+                    lambda c: c == mark  # type: ignore # noqa
+                )
+            ]
 
     for item in items:
         # Check if all tests have a marker
@@ -54,65 +77,33 @@ def pytest_collection_modifyitems(
             )
             raise pytest.UsageError(msg)
 
-        # Skip slow in VSCode
+        # Skip slow in VSCode or skip test marked as skip
         if (
-            "slow" in item.keywords
+            item.get_closest_marker("slow") is not None
             and "vscode_pytest" in config.invocation_params.args
-        ):
+        ) or item.get_closest_marker("skip") is not None:
             deselected_items.append(item)
             continue
+
         selected_items.append(item)
-    # Modify items in-place
-    items[:] = selected_items
 
-    # Inform pytest of deselected items
-    config.hook.pytest_deselected(items=deselected_items)
-
-
-@pytest.hookimpl(trylast=True)  # type: ignore[no-redef]
-def pytest_collection_modifyitems(  # noqa
-    config: pytest.Config, items: list[pytest.Item]
-):
-    """
-    Hook to check if SWEAT_TEST_DATA_PATH variable is set
-    if test with require_test_data is selected.
-
-    Parameters
-    ----------
-    config: pytest.Config
-        pytest configuration
-    items: list[pyest.Item]
-        list of pytest.Item objects (i.e., collected tests)
-    """
     # Get test path directory
     test_data_path = os.getenv("SWEAT_TEST_DATA_PATH")
-
-    selected_items = []
-    deselected_items = []
-    if not config.getoption("--runslow"):
-        skip_slow = pytest.mark.skip(reason="need --runslow option to run")
-        for item in items:
-            if "slow" in item.keywords:
-                item.add_marker(skip_slow)
-
-    for item in items:
+    for item in selected_items:
         # Check if SWEAT_TEST_DATA_PATH is set for tests
         # with require_test_data marker
-        if "require_test_data" in item.keywords and not test_data_path:
+        item_markers = [m.name for m in item.iter_markers()]
+        if (
+            (set(item_markers) & set(marker_list))
+            and ("require_test_data" in item_markers)
+            and test_data_path is None
+        ):
             msg = (
                 f"Test {item.nodeid} is marked with @pytest.mark.require_data, "
                 "but the SWEAT_TEST_DATA environment variable is not set."
             )
             raise pytest.UsageError(msg)
 
-        # Skip slow in VSCode
-        if (
-            "slow" in item.keywords
-            and "vscode_pytest" in config.invocation_params.args
-        ):
-            deselected_items.append(item)
-            continue
-        selected_items.append(item)
     # Modify items in-place
     items[:] = selected_items
 
