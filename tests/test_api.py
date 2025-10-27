@@ -1,12 +1,24 @@
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
 import os
+import shutil
 
 import geopandas as gpd
 import pytest
 
 from sweat import api
 from sweat.evaspa import tiling
+
+
+@pytest.fixture(scope="module")
+def test_data_dir(tmp_path_factory: pytest.TempPathFactory):
+    """
+    Create temperory directory for all the tests in the module
+    """
+    dir_path = tmp_path_factory.mktemp("test_data")
+    yield dir_path
+    # Cleanup after all tests in the module
+    shutil.rmtree(dir_path)
 
 
 def get_data_path() -> str:
@@ -77,7 +89,7 @@ def test_regroup() -> None:
         },
     ],
 )
-def test_read_input_data(entry) -> None:
+def test_read_input_data(entry: dict[str, str]) -> None:
     """
     Test read input data
     """
@@ -624,3 +636,78 @@ def test_run_timeseries(entry, params, debug) -> None:
     et_ts, radiation_ts, et_sd, dem = api.read_ts_input_data(entry)
     res = api.run_timeseries(et_ts, radiation_ts, et_sd, dem, params, debug)
     assert res
+
+
+@pytest.mark.functional
+def test_create_file_et_time_series(test_data_dir) -> None:
+    """
+    Test create_file_et_time_series
+    """
+    data_dir = os.path.join(get_data_path(), "timeseries")
+    config_dict = {
+        "input": {
+            "dates": [
+                "2025-08-23",
+                "2025-08-24",
+                "2025-08-25",
+                "2025-08-26",
+            ],
+            "et_time_series": [
+                os.path.join(data_dir, "et_time_series_20250823.tif"),
+                os.path.join(data_dir, "et_time_series_20250824.tif"),
+                os.path.join(data_dir, "et_time_series_20250825.tif"),
+            ],
+            "radiation": [
+                os.path.join(data_dir, "radiation_20250823.tif"),
+                os.path.join(data_dir, "radiation_20250824.tif"),
+                os.path.join(data_dir, "radiation_20250825.tif"),
+                os.path.join(data_dir, "radiation_20250826.tif"),
+            ],
+            "et_single_date": [
+                os.path.join(data_dir, "et_single_date_20250824.tif"),
+                os.path.join(data_dir, "et_single_date_20250826.tif"),
+            ],
+            "dem": os.path.join(data_dir, "dem.tif"),
+        },
+        "output": {"path": str(test_data_dir)},
+        "params": {},
+    }
+    api.create_file_et_time_series(test_data_dir, config_dict)
+    et_time_series_path = os.path.join(
+        test_data_dir, "et_time_series_20250826.tif"
+    )
+    assert os.path.isfile(et_time_series_path)
+
+
+@pytest.mark.functional
+def test_run_window_time_series(test_data_dir) -> None:
+    """
+    Test run_window_time_series
+    """
+    # Copy only radiation et_single_date .tif files in the test directory
+    data_dir = os.path.join(get_data_path(), "timeseries")
+    for filename in os.listdir(data_dir):
+        if filename.startswith(("radiation", "et_single_date")):
+            shutil.copy(os.path.join(data_dir, filename), test_data_dir)
+    # Run window time series
+    api.run_window_time_series(
+        "2025-08-23",
+        "2025-08-29",
+        test_data_dir,
+        test_data_dir,
+        test_data_dir,
+        7,
+        1,
+    )
+    # Check if all the et_time_series .tif files have been created
+    expected_files = [
+        "et_time_series_20250823.tif",
+        "et_time_series_20250824.tif",
+        "et_time_series_20250825.tif",
+        "et_time_series_20250826.tif",
+        "et_time_series_20250827.tif",
+        "et_time_series_20250828.tif",
+        "et_time_series_20250829.tif",
+    ]
+    for et_time_series_file in expected_files:
+        assert et_time_series_file in os.listdir(test_data_dir)

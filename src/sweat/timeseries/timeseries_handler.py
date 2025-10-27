@@ -97,7 +97,7 @@ def create_config(
             "radiation": [],
             "et_single_date": [],
         },
-        "output": {"path": et_time_series_dir},
+        "output": {"path": str(et_time_series_dir)},
         "params": {},
     }
     for date in time:
