@@ -13,6 +13,7 @@ dist/
 .ipynb_checkpoints/
 Untitled*.ipynb
 notebooks/evaspa/groups.*
+!notebooks/data_validation/*
 
 # Data
 *.tif
