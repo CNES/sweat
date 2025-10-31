@@ -69,6 +69,7 @@ evaspa = "sweat.cli:evaspa"
 evaspa-tiling = "sweat.cli:evaspa_tiling"
 stic = "sweat.cli:stic"
 timeseries = "sweat.cli:timeseries"
+window-timeseries = "sweat.cli:window_timeseries"
 
 [build-system]
 requires = ["hatchling"]

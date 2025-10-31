@@ -14,6 +14,7 @@ from sweat.api import (
     run_evaspa,
     run_stic,
     run_timeseries,
+    run_window_time_series,
 )
 from sweat.common.config import read_config, write_config
 from sweat.common.io import write_dataset
@@ -232,3 +233,85 @@ def timeseries(verbose, input_file):
     if res is not None:
         write_timeseries(res, root_name="et_timeseries", directory=output_dir)
         logger.info("Writing results: OK")
+
+
+@click.command(context_settings={"help_option_names": ["-h", "--help"]})
+@click.option(
+    "--verbose/--no-verbose",
+    default=False,
+    help="Debug logging mode",
+)
+@click.argument("period_start", type=click.DateTime(formats=["%Y-%m-%d"]))
+@click.argument("period_end", type=click.DateTime(formats=["%Y-%m-%d"]))
+@click.argument(
+    "et_single_date_dir",
+    type=click.Path(exists=True, dir_okay=True, readable=True),
+)
+@click.argument(
+    "radiation_dir",
+    type=click.Path(exists=True, dir_okay=True, readable=True),
+)
+@click.argument(
+    "et_time_series_dir",
+    type=click.Path(dir_okay=True, readable=True, exists=False),
+)
+@click.argument(
+    "window",
+    type=click.IntRange(1, 30),
+)
+@click.argument(
+    "shift",
+    type=click.IntRange(1, 30),
+)
+@click.option(
+    "--json_dir",
+    required=False,
+    type=click.Path(dir_okay=True, readable=True, exists=False),
+    default=None,
+    help="Directory to store the json file if json_verbose option selected",
+)
+@click.option(
+    "--json_verbose/--no-json_verbose",
+    default=False,
+    help="If selected, configuration will be stored as a .json file",
+)
+@click.version_option(version=__version__, prog_name="timeseries")
+def window_timeseries(
+    verbose,
+    period_start,
+    period_end,
+    et_single_date_dir,
+    radiation_dir,
+    et_time_series_dir,
+    window,
+    shift,
+    json_dir,
+    json_verbose,
+):
+    # Configure logging
+    log_level = logging.INFO
+    if verbose:
+        log_level = logging.DEBUG
+    LoggerManager.set_level(log_level)
+    # Check
+    if period_start > period_end:
+        msg_dates = "End date must be more recent than start date"
+        raise click.BadParameter(msg_dates)
+    if window < shift:
+        msg_window = "Window size can not be inferior to shift."
+        raise click.BadParameter(msg_window)
+    # Converting dates from datetime to str
+    period_start_str = period_start.strftime("%Y-%m-%d")
+    period_end_str = period_end.strftime("%Y-%m-%d")
+    # Run
+    run_window_time_series(
+        period_start_str,
+        period_end_str,
+        et_single_date_dir,
+        radiation_dir,
+        et_time_series_dir,
+        window,
+        shift,
+        json_dir,
+        json_verbose,
+    )
