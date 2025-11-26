@@ -97,7 +97,7 @@ def test_create_config(test_data_dir) -> None:
         "2025-08-27",
         "2025-08-28",
     ]
-    radiation_dir = "/home/prohel/Bureau/trishna/sweat/tests/data/timeseries"
+    radiation_dir = os.path.join("tests", "data", "timeseries")
     et_time_series_dir = radiation_dir
     et_single_date_dir = radiation_dir
     config_dict = create_config(
@@ -109,7 +109,7 @@ def test_create_config(test_data_dir) -> None:
         test_data_dir,
         True,
     )
-    # Check if the dictionary containins the configuration parameters
+    # Check if the dictionary contains the configuration parameters
     check_config_timeseries(config_dict)
     # Check if dictionary contains the expected dates
     assert expected_dates == config_dict["input"]["dates"]
