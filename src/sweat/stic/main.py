@@ -1,4 +1,4 @@
-# Copyright: (c) 2025 LIST / CESBIO / Centre National d'Etudes Spatiales
+# Copyright: (c) 2025 CESBIO / Centre National d'Etudes Spatiales
 """
 Module containing the API for STIC
 """
