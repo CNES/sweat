@@ -5,9 +5,10 @@ Module for managing IO for time series
 - write time series
 """
 
+import datetime as dt
 import os
 import re
-from typing import Any
+from typing import Any, Self
 
 import numpy as np
 import pandas as pd
@@ -16,6 +17,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    field_serializer,
     field_validator,
     model_validator,
 )
@@ -87,6 +89,117 @@ class TimeSeriesInputConfig(BaseModel):
             msg = "Not all file lists must be empty"
             raise ValueError(msg)
         return data
+
+    @field_serializer("dates")
+    def serialize_dates(self, dates):
+        return [date.date().isoformat() for date in dates]
+
+
+class WindowTimeSeriesInputConfig(BaseModel):
+    """
+    Configuration for parameters for time series computation
+    """
+
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+
+    period_start: dt.datetime
+    period_end: dt.datetime
+    window: int = Field(default=7)
+    shift: int = Field(default=1)
+    et_single_date_dir: str
+    radiation_dir: str | None = Field(default=None)
+    # TODO: to be confirmed
+    et_time_series_dir: str | None = Field(default=None)
+    dem: str | None = Field(default=None)
+
+    @field_validator("period_start", "period_end", mode="before")
+    @classmethod
+    def check_date_format(cls, v: Any) -> dt.datetime:
+        """
+        Check date format
+        """
+        if isinstance(v, str):
+            # Attempt to parse the date in the specified format
+            try:
+                return dt.datetime.strptime(v, "%Y-%m-%d").replace(
+                    tzinfo=dt.UTC
+                )
+            except ValueError as exc:
+                msg = "Date must be in YYYY-MM-DD format"
+                raise ValueError(msg) from exc
+        if isinstance(v, dt.datetime):
+            return v  # If it's already a datetime object, return it as is
+        msg = "Date must be in YYYY-MM-DD format"
+        raise ValueError(msg)
+
+    @field_validator("window", "shift")
+    @classmethod
+    def check_params(cls, v: int) -> int:
+        """
+        Check parameters
+        """
+        if v <= 0:
+            msg = "Value must be greater than 0."
+            raise ValueError(msg)
+        return v
+
+    @field_validator("et_single_date_dir")
+    @classmethod
+    def test_et_single_date_dir(cls, path: str) -> str:
+        """
+        Check directory for ET single date
+        """
+        if not os.path.isdir(path):
+            msg = f"Path not found: {path}"
+            raise OSError(msg)
+        return path
+
+    @field_validator("radiation_dir")
+    @classmethod
+    def test_radiation_dir(cls, path: str | None) -> str | None:
+        """
+        Check directory for radiation data
+        """
+        if path is not None and not os.path.isdir(path):
+            msg = f"Path not found: {path}"
+            raise OSError(msg)
+        return path
+
+    @field_validator("et_time_series_dir")
+    @classmethod
+    def test_et_timeseries_dir(cls, path: str) -> str:
+        """
+        Check directory paths
+        """
+        if path is not None and not os.path.isdir(path):
+            os.makedirs(path, exist_ok=True)
+        return path
+
+    @field_validator("dem")
+    @classmethod
+    def test_dem(cls, file: str) -> str:
+        """
+        Check DEM path
+        """
+        if file is not None and not os.path.isfile(file):
+            msg = f"Path to DEM not found: {file}"
+            raise OSError(msg)
+        return file
+
+    @model_validator(mode="after")
+    def check(self) -> Self:
+        """
+        Check consistency in all variables:
+        - The end date must be after the start date.
+        - Window size can not be inferior to shift.
+        """
+        if self.period_start >= self.period_end:
+            msg = "The end date must be after the start date."
+            raise ValueError(msg)
+        if self.window < self.shift:
+            msg = "Window size can not be inferior to shift."
+            raise ValueError(msg)
+        return self
 
 
 def write_timeseries(
@@ -341,7 +454,13 @@ def read_input(
             sh.INIT_STATUS,
             dtype=sh.STATUS_TYPE,
         )
-        # Create tthe dataset
+        # Get projection
+        crs = base.attrs.get("crs", None)
+        transform = base.attrs.get("transform", None)
+        if hasattr(base, "rio"):
+            crs = base.rio.crs
+            transform = base.rio.transform()
+        # Create the dataset
         et_ts = xr.Dataset(
             {
                 TSVar.ET.value: ((TSVar.TIME.value, x1, x2), nan_data.copy()),
@@ -355,6 +474,7 @@ def read_input(
                 x1: base.coords[x1],
                 TSVar.TIME.value: dates,
             },
+            attrs={"crs": crs, "transform": transform},
         )
     dem = None
     if input_cfg.dem is not None:

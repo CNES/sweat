@@ -6,13 +6,20 @@ Module for managing sliding windows for time series
 import datetime as dt
 import json
 import os
+from collections.abc import Generator
 
 import xarray as xr
+
+import sweat.timeseries.config as cfg
+from sweat.common.config import json_serial
+from sweat.logging import LoggerManager
+
+logger = LoggerManager.get_logger(__name__)
 
 
 def window_generator(
     period_start: dt.datetime, period_end: dt.datetime, window: int, shift: int
-):
+) -> Generator[tuple[dt.datetime, dt.datetime], None]:
     """
     Generate start and end dates for each sliding window shift within
     a given period
@@ -28,9 +35,9 @@ def window_generator(
     shift: int
         Shift between two consecutive windows (in days)
 
-    Yield
-    -------
-    Tuple[dt.datetime, dt.datetime]
+    Yields
+    ------
+    window_start, window_end: tuple[dt.datetime, dt.datetime]
         Start and end dates of each sliding window.
     """
     window_start = period_start
@@ -38,7 +45,7 @@ def window_generator(
     k = 1
     stop = False
     while not stop:
-        # Inital window must contains only the period start date
+        # Initial window must contains only the period start date
         if k == 1:
             pass
         else:
@@ -60,17 +67,20 @@ def create_config(
     et_single_date_dir: str,
     radiation_dir: str,
     et_time_series_dir: str,
-    json_dir: str | None = None,
-    verbose: bool | None = False,
-):
+    dem: str | None = None,
+    params: dict | None = None,
+    debug: dict | None = None,
+    verbose: bool = False,
+    config_dir: str | None = None,
+) -> cfg.TimeSeriesInputFile:
     """
-    Create configuration for a given window
+    Create configuration to run timeseries for a given window
 
     Parameters
     ----------
-    wdw_start: dt.datetime
+    window_start: dt.datetime
         Window start date
-    wdw_end: dt.datetime
+    window_end: dt.datetime
         Window end date
     et_single_date_dir: str
         Directory where et_single_date .tif files are downloaded
@@ -78,58 +88,79 @@ def create_config(
         Directory where radiation .tif files are downloaded
     et_time_series_dir: str
         Directory where et_time_series .tif files are downloaded
-    json_dir: str
-        Directory to store the json configuration file if verbose True
-        (default: current directory)
+    dem: str
+        Path to DEM file
+    params: dict
+        Parameters configuration to use
+    debug: dict
+        Debugging configuration to use
     verbose: bool
         If true, the configuration dictionary will be stored as a .json file
+    config_dir: str
+        Directory to store the json configuration file if verbose is True
+        (default: current directory)
 
     Return
     -------
     config_dict: dict
         Configuration dictionary
     """
-    time = xr.date_range(window_start, freq="1D", end=window_end)
-    config_dict: dict = {
-        "input": {
-            "dates": [],
-            "et_time_series": [],
-            "radiation": [],
-            "et_single_date": [],
-        },
-        "output": {"path": str(et_time_series_dir)},
-        "params": {},
-    }
-    for date in time:
-        date_str = date.strftime("%Y-%m-%d")
-        config_dict["input"]["dates"].append(date_str)
+    # Define parameters
+    dates = xr.date_range(window_start, freq="1D", end=window_end)
+    et_time_series: list[str] = []
+    radiation: list[str] = []
+    et_single_date: list[str] = []
+    for date in dates:
         radiation_path = os.path.join(
             radiation_dir, f"radiation_{date.strftime('%Y%m%d')}.tif"
         )
         if os.path.isfile(radiation_path):  # Check if the radiation file exists
-            config_dict["input"]["radiation"].append(radiation_path)
+            radiation.append(radiation_path)
         et_single_date_path = os.path.join(
             et_single_date_dir, f"et_single_date_{date.strftime('%Y%m%d')}.tif"
         )
         if os.path.isfile(
             et_single_date_path
         ):  # Check if the et_single_date file exists
-            config_dict["input"]["et_single_date"].append(et_single_date_path)
+            et_single_date.append(et_single_date_path)
         et_time_series_path = os.path.join(
             et_time_series_dir, f"et_time_series_{date.strftime('%Y%m%d')}.tif"
         )
         if os.path.isfile(
             et_time_series_path
         ):  # Check if the et_time_series file exists
-            config_dict["input"]["et_time_series"].append(et_time_series_path)
+            et_time_series.append(et_time_series_path)
+    if params is None:
+        params = {}
+    if debug is None:
+        debug = {}
+    # Instantiate configuration
+    msg = (
+        f"Dates: {dates}, ET dates: {et_single_date}"
+        f"Radiation: {radiation}, ET timeseries: {et_time_series}"
+    )
+    logger.debug(msg)
+    config = cfg.TimeSeriesInputFile(
+        input=cfg.TimeSeriesInputConfig(
+            dates=dates,
+            et_single_date=et_single_date,
+            radiation=radiation,
+            et_time_series=et_time_series,
+            dem=dem,
+        ),
+        output=cfg.OutputConfig(path=et_time_series_dir),
+        params=cfg.TimeSeriesParamsConfig.model_validate(params),
+        debug=cfg.DebuggingConfig.model_validate(debug),
+    )
+    # Write configuration file if verbose mode is activated
     if verbose:
-        if json_dir is None:
-            json_dir = os.getcwd()
-        os.makedirs(json_dir, exist_ok=True)
-        date_min = time[0].strftime("%Y%m%d")
-        date_max = time[-1].strftime("%Y%m%d")
-        filename = f"config_{date_min}-{date_max}.json"
-        file_path = os.path.join(json_dir, filename)
+        if config_dir is None:
+            config_dir = os.getcwd()
+        os.makedirs(config_dir, exist_ok=True)
+        date_min = dates[0].strftime("%Y%m%d")
+        date_max = dates[-1].strftime("%Y%m%d")
+        filename = f"config_{date_min}_{date_max}.json"
+        file_path = os.path.join(config_dir, filename)
         with open(file_path, "w") as f:
-            json.dump(config_dict, f, indent=4)
-    return config_dict
+            json.dump(config.model_dump(), f, indent=4, default=json_serial)
+    return config

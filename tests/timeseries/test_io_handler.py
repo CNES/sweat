@@ -25,7 +25,7 @@ from sweat.timeseries.constant import TimeSeriesVar as TSVar
 @pytest.fixture(scope="module")
 def test_data_dir(tmp_path_factory):
     """
-    Create temperory directory for all the tests in the module
+    Create temporary directory for all the tests in the module
     """
     dir_path = tmp_path_factory.mktemp("test_data")
     yield dir_path
@@ -289,6 +289,130 @@ def test_timeseries_input_config_error(config, error) -> None:
     """
     with pytest.raises(error):
         ioh.TimeSeriesInputConfig.model_validate(config)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "config",
+    [
+        {
+            "period_start": "2025-08-24",
+            "period_end": "2025-08-29",
+            "window": 5,
+            "shift": 2,
+            "radiation_dir": os.path.join("tests", "data", "timeseries"),
+            "et_single_date_dir": os.path.join("tests", "data", "timeseries"),
+            "et_time_series_dir": "out",
+            "dem": os.path.join("tests", "data", "timeseries", "dem.tif"),
+        },
+        {
+            "period_start": "2025-08-24",
+            "period_end": "2025-08-29",
+            "et_single_date_dir": os.path.join("tests", "data", "timeseries"),
+        },
+    ],
+)
+def test_window_timeseries_input_config(config) -> None:
+    """
+    Test WindowTimeSeriesInputConfig
+    """
+    assert ioh.WindowTimeSeriesInputConfig.model_validate(config)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("config", "error"),
+    [
+        pytest.param(
+            {
+                "period_start": "20250824",
+                "period_end": "2025-08-29",
+                "window": 5,
+                "shift": 2,
+                "et_time_series_dir": "out",
+                "radiation_dir": os.path.join("tests", "data", "timeseries"),
+                "et_single_date_dir": os.path.join(
+                    "tests", "data", "timeseries"
+                ),
+            },
+            ValueError,
+        ),
+        pytest.param(
+            {
+                "period_start": "2025-08-24",
+                "period_end": "2025-08-21",
+                "window": 5,
+                "shift": 2,
+                "et_time_series_dir": "out",
+                "radiation_dir": os.path.join("tests", "data", "timeseries"),
+                "et_single_date_dir": os.path.join(
+                    "tests", "data", "timeseries"
+                ),
+            },
+            ValueError,
+        ),
+        pytest.param(
+            {
+                "period_start": "2025-08-24",
+                "period_end": "2025-08-29",
+                "window": 0,
+                "shift": 2,
+                "et_time_series_dir": "out",
+                "radiation_dir": os.path.join("tests", "data", "timeseries"),
+                "et_single_date_dir": os.path.join(
+                    "tests", "data", "timeseries"
+                ),
+            },
+            ValueError,
+        ),
+        pytest.param(
+            {
+                "period_start": "2025-08-24",
+                "period_end": "2025-08-29",
+                "window": 7,
+                "shift": -1,
+                "et_time_series_dir": "out",
+                "radiation_dir": os.path.join("tests", "data", "timeseries"),
+                "et_single_date_dir": os.path.join(
+                    "tests", "data", "timeseries"
+                ),
+            },
+            ValueError,
+        ),
+        pytest.param(
+            {
+                "period_start": "2025-08-24",
+                "period_end": "2025-08-29",
+                "window": 7,
+                "shift": 1,
+                "et_time_series_dir": "out",
+                "et_single_date_dir": "foo",
+            },
+            OSError,
+        ),
+        pytest.param(
+            {
+                "period_start": "2025-08-24",
+                "period_end": "2025-08-29",
+                "window": 5,
+                "shift": 2,
+                "et_time_series_dir": "out",
+                "radiation_dir": os.path.join("tests", "data", "timeseries"),
+                "et_single_date_dir": os.path.join(
+                    "tests", "data", "timeseries"
+                ),
+                "dem": "foo",
+            },
+            OSError,
+        ),
+    ],
+)
+def test_window_timeseries_input_config_error(config, error) -> None:
+    """
+    Test TimeSeriesInputConfig with error
+    """
+    with pytest.raises(error):
+        ioh.WindowTimeSeriesInputConfig.model_validate(config)
 
 
 @pytest.mark.unit

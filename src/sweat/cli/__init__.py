@@ -22,7 +22,10 @@ from sweat.evaspa.config import EVASPAInputFile
 from sweat.evaspa.tiling import write_regroup
 from sweat.logging import LoggerManager
 from sweat.stic.config import STICInputFile
-from sweat.timeseries.config import TimeSeriesInputFile
+from sweat.timeseries.config import (
+    TimeSeriesInputFile,
+    WindowTimeSeriesInputFile,
+)
 from sweat.timeseries.io_handler import write_timeseries
 
 logger = LoggerManager.get_logger(__name__)
@@ -220,7 +223,7 @@ def timeseries(verbose, input_file):
     et_ts, radiation_ts, et_sd, dem = read_ts_input_data(config.input)
     logger.info("Read input data: OK")
     # Run
-    logger.debug("Run stic...")
+    logger.debug("Run timeseries...")
     res = run_timeseries(
         et_ts, radiation_ts, et_sd, dem, config.params, config.debug
     )
@@ -241,77 +244,37 @@ def timeseries(verbose, input_file):
     default=False,
     help="Debug logging mode",
 )
-@click.argument("period_start", type=click.DateTime(formats=["%Y-%m-%d"]))
-@click.argument("period_end", type=click.DateTime(formats=["%Y-%m-%d"]))
 @click.argument(
-    "et_single_date_dir",
-    type=click.Path(exists=True, dir_okay=True, readable=True),
+    "input_file", type=click.Path(exists=True, file_okay=True, readable=True)
 )
-@click.argument(
-    "radiation_dir",
-    type=click.Path(exists=True, dir_okay=True, readable=True),
-)
-@click.argument(
-    "et_time_series_dir",
-    type=click.Path(dir_okay=True, readable=True, exists=False),
-)
-@click.argument(
-    "window",
-    type=click.IntRange(1, 30),
-)
-@click.argument(
-    "shift",
-    type=click.IntRange(1, 30),
-)
-@click.option(
-    "--json_dir",
-    required=False,
-    type=click.Path(dir_okay=True, readable=True, exists=False),
-    default=None,
-    help="Directory to store the json file if json_verbose option selected",
-)
-@click.option(
-    "--json_verbose/--no-json_verbose",
-    default=False,
-    help="If selected, configuration will be stored as a .json file",
-)
-@click.version_option(version=__version__, prog_name="timeseries")
+@click.version_option(version=__version__, prog_name="window_timeseries")
 def window_timeseries(
     verbose,
-    period_start,
-    period_end,
-    et_single_date_dir,
-    radiation_dir,
-    et_time_series_dir,
-    window,
-    shift,
-    json_dir,
-    json_verbose,
+    input_file,
 ):
     # Configure logging
     log_level = logging.INFO
     if verbose:
         log_level = logging.DEBUG
     LoggerManager.set_level(log_level)
-    # Check
-    if period_start > period_end:
-        msg_dates = "End date must be more recent than start date"
-        raise click.BadParameter(msg_dates)
-    if window < shift:
-        msg_window = "Window size can not be inferior to shift."
-        raise click.BadParameter(msg_window)
-    # Converting dates from datetime to str
-    period_start_str = period_start.strftime("%Y-%m-%d")
-    period_end_str = period_end.strftime("%Y-%m-%d")
+    # Set configuration
+    msg = f"Configuration file: {input_file}"
+    logger.debug(msg)
+    dict_config = read_config(input_file)
+    # Verify config and manage default parameters
+    config = WindowTimeSeriesInputFile.model_validate(dict_config)
     # Run
+    logger.debug("Run timeseries over a period...")
     run_window_time_series(
-        period_start_str,
-        period_end_str,
-        et_single_date_dir,
-        radiation_dir,
-        et_time_series_dir,
-        window,
-        shift,
-        json_dir,
-        json_verbose,
+        period_start=config.input.period_start,
+        period_end=config.input.period_end,
+        et_single_date_dir=config.input.et_single_date_dir,
+        radiation_dir=config.input.radiation_dir,
+        et_time_series_dir=config.output.path,
+        window=config.input.window,
+        shift=config.input.shift,
+        params=config.params,
+        debug=config.debug.get_debug_config(),
+        **config.debug.get_timeseries_config(),
     )
+    logger.debug("Run timeseries over a period: OK")

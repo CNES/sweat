@@ -6,7 +6,6 @@ Module containing the API
 from __future__ import annotations
 
 import datetime as dt
-import os
 
 import geopandas as gpd
 import pandas as pd
@@ -27,7 +26,6 @@ from sweat.timeseries import updater_handler as uh
 from sweat.timeseries.config import (
     TimeSeriesInputConfig,
     TimeSeriesParamsConfig,
-    check_config_timeseries,
 )
 from sweat.timeseries.io_handler import read_input as read_ts_input
 from sweat.timeseries.io_handler import write_timeseries
@@ -52,11 +50,11 @@ def generate_tiles(
     ----------
     roi: optional(str)
         ROI file path
-    orbit_id:i optinal(int)
+    orbit_id:i optional(int)
         Orbit relative number
-    land_percentage:optinal(float), default=10
+    land_percentage:optional(float), default=10
         Minimum land percentage
-    orbit_percentage:optinal(float) default=25
+    orbit_percentage:optional(float) default=25
         Minimum orbit coverage
 
     Returns
@@ -115,7 +113,7 @@ def regroup_tiles(
         List of tiles
     adjs: DataFrame
         List of adjacent tiles
-    threshold:optinal(float), default=300000
+    threshold:optional(float), default=300000
         Threshold on minimum number of valid pixels
 
     Returns
@@ -240,7 +238,7 @@ def run_evaspa(
     data[ETVar.VALID.value] = valid_mask
     data[ETVar.FLAGS.value] = flags_mask
     logger.debug("Filter data: OK")
-    # Check variablity
+    # Check variability
     if not ef.check_variability(
         lst=data[ETVar.LST.value],
         mask=data[ETVar.VALID.value],
@@ -248,7 +246,7 @@ def run_evaspa(
     ):
         logger.error("Variability criteria not respected")
         return None
-    logger.debug("Check variablity: OK")
+    logger.debug("Check variability: OK")
     # Compute EF
     ef_xr, inst_xr = ef.run(models, data, **options)
     logger.debug("Compute EF: OK")
@@ -259,7 +257,7 @@ def run_evaspa(
     )
     logger.debug("Compute LE: OK")
     # Extrapolate at daily scale
-    # Extract DEM datamask
+    # Extract DEM data mask
     dem = None
     dem_data = [
         d
@@ -411,50 +409,26 @@ def run_timeseries(
     logger.debug("Prepare time series stack: OK")
     # Update
     updated_ts = uh.run(ts, feed, params_config.update.model_dump())
-    logger.debug("Upadte time series: OK")
+    logger.debug("Update time series: OK")
     return updated_ts
 
 
-def create_file_et_time_series(
-    et_time_series_dir: str, config_dict: dict
-) -> None:
-    """
-    Run time series for a given configuration
-    and store the dataset as a et_time_series .tif file
-
-    Parameters
-    ----------
-    et_time_series_dir: str
-        Directory to store the file
-    config_dict: dict
-        Configuration
-    """
-    os.makedirs(et_time_series_dir, exist_ok=True)
-    # Run time series
-    config = check_config_timeseries(config_dict)
-    et_ts, radiation_ts, et_sd, dem = read_ts_input_data(config_dict["input"])
-    updated_ts = run_timeseries(
-        et_ts, radiation_ts, et_sd, dem, config["params"]
-    )
-    # Write et_time_series file
-    write_timeseries(
-        updated_ts, root_name="et_time_series", directory=et_time_series_dir
-    )
-
-
 def run_window_time_series(
-    period_start: str,
-    period_end: str,
+    period_start: dt.datetime,
+    period_end: dt.datetime,
     et_single_date_dir: str,
     radiation_dir: str,
     et_time_series_dir: str,
     window: int,
     shift: int,
-    json_dir: str | None = None,
-    verbose: bool | None = False,
+    params: dict | None = None,
+    debug: dict | None = None,
+    verbose: bool = False,
+    config_dir: str | None = None,
 ) -> None:
     """
-    Move a sliding window over a given period and for each shift, run the time series.
+    Move a sliding window over a given period and for each shift,
+    run the time series.
 
     Parameters
     ----------
@@ -472,23 +446,57 @@ def run_window_time_series(
         Size of the sliding window (in days)
     shift: int
         Shift between two consecutive windows (in days)
-    json_dir: str
-        Directory to store the json configuration file if verbose True
-        (default: current directory)
+    params: dict
+        Configuration parameters to run one step for timeseries
     verbose: bool
         If true, the configuration dictionary will be stored as a .json file
+    config_dir: str
+        Directory to store the json configuration file if verbose True
+        (default: current directory)
     """
-    t1 = dt.datetime.strptime(period_start, "%Y-%m-%d")  # noqa: DTZ007
-    t2 = dt.datetime.strptime(period_end, "%Y-%m-%d")  # noqa: DTZ007
-    for i in window_generator(t1, t2, window, shift):
-        window_start, window_end = i
-        config_dict = create_config(
-            window_start,
-            window_end,
-            et_single_date_dir,
-            radiation_dir,
-            et_time_series_dir,
-            json_dir,
-            verbose,
+    for window_start, window_end in window_generator(
+        period_start, period_end, window, shift
+    ):
+        msg = (
+            "Start process timeseries between "
+            f"{window_start.strftime('%Y%m%d')}"
+            f" and {window_end.strftime('%Y%m%d')}..."
         )
-        create_file_et_time_series(et_time_series_dir, config_dict)
+        logger.debug(msg)
+        # Create configuration to run one step
+        config = create_config(
+            window_start=window_start,
+            window_end=window_end,
+            et_single_date_dir=et_single_date_dir,
+            radiation_dir=radiation_dir,
+            et_time_series_dir=et_time_series_dir,
+            params=params,
+            debug=debug,
+            verbose=verbose,
+            config_dir=config_dir,
+        )
+        logger.debug("Create timeseries configuration: OK")
+        # Read timeseries input
+        et_ts, radiation_ts, et_sd, dem = read_ts_input_data(
+            config.input.model_dump()
+        )
+        logger.debug("Read timeseries input data: OK")
+        # Run timeseries
+        updated_ts = run_timeseries(
+            et_ts=et_ts,
+            radiation_ts=radiation_ts,
+            et_sd=et_sd,
+            dem=dem,
+            params=config.params.model_dump(),
+            debug=config.debug.model_dump(),
+        )
+        # Write et_time_series file
+        write_timeseries(
+            updated_ts, root_name="et_time_series", directory=et_time_series_dir
+        )
+        logger.debug("Write timeseries: OK")
+        msg = (
+            f"Process timeseries between {window_start.strftime('%Y%m%d')}"
+            f" and {window_end.strftime('%Y%m%d')}: OK"
+        )
+        logger.info(msg)
