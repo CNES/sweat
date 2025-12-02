@@ -27,6 +27,9 @@ test-cov:
 test-slow:
 	$(RUN) pytest --runslow -m slow $(TESTARGS)
 
+test-notebook:
+	$(RUN) pytest --runslow -m slow  tests/test_notebooks.py
+
 check: ruff mypy test
 
 precommit:
