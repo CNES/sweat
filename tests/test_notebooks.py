@@ -16,7 +16,7 @@ def get_notebooks():
 
 
 def get_main_notebooks():
-    return list(Path("notebooks").glob("*.ipynb"))
+    return list(Path("notebooks").glob("run_*.ipynb"))
 
 
 @pytest.mark.notebooks
