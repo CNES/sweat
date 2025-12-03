@@ -102,8 +102,8 @@ class WindowTimeSeriesInputConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
-    period_start: dt.datetime
-    period_end: dt.datetime
+    period_start: dt.date
+    period_end: dt.date
     window: int = Field(default=7)
     shift: int = Field(default=1)
     et_single_date_dir: str
@@ -114,21 +114,21 @@ class WindowTimeSeriesInputConfig(BaseModel):
 
     @field_validator("period_start", "period_end", mode="before")
     @classmethod
-    def check_date_format(cls, v: Any) -> dt.datetime:
+    def check_date_format(cls, v: Any) -> dt.date:
         """
         Check date format
         """
         if isinstance(v, str):
             # Attempt to parse the date in the specified format
             try:
-                return dt.datetime.strptime(v, "%Y-%m-%d").replace(
-                    tzinfo=dt.UTC
-                )
+                return dt.datetime.strptime(v, "%Y-%m-%d").date()  # noqa DTZ007
             except ValueError as exc:
                 msg = "Date must be in YYYY-MM-DD format"
                 raise ValueError(msg) from exc
         if isinstance(v, dt.datetime):
-            return v  # If it's already a datetime object, return it as is
+            return v.date()
+        if isinstance(v, dt.date):
+            return v
         msg = "Date must be in YYYY-MM-DD format"
         raise ValueError(msg)
 
@@ -443,8 +443,8 @@ def read_input(
         else:
             msg = "No dates provided"
             raise ValueError(msg)
-        original_dims = list(base.sizes.keys())
-        spatial_dims = [x for x in original_dims if x != TSVar.TIME.value]
+        da = next(iter(base.data_vars.values()))
+        spatial_dims = [x for x in da.dims if x != TSVar.TIME.value]
         x1 = spatial_dims[0]  # y
         x2 = spatial_dims[1]  # x
         # Create NaN-filled and invalid status data arrays

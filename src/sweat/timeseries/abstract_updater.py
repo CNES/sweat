@@ -563,9 +563,10 @@ class Updater(ABC):
         updated: xr.Dataset
             Updated data
         """
-        # Get cdimensions with order
-        original_dims = list(data.sizes.keys())
-        spatial_dims = [x for x in original_dims if x != TSVar.TIME.value]
+        # Get dimensions with order
+        da = next(iter(data.data_vars.values()))
+        original_dims = da.dims
+        spatial_dims = [x for x in da.dims if x != TSVar.TIME.value]
         x1 = spatial_dims[0]
         x2 = spatial_dims[1]
 
@@ -585,4 +586,5 @@ class Updater(ABC):
             return self.update_time_series(updated_ts)
 
         # Apply update to each (x, y) time series
-        return data.groupby([x1, x2]).map(apply_update_time_series)
+        updated = data.groupby([x1, x2]).map(apply_update_time_series)
+        return updated.transpose(*original_dims)
