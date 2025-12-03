@@ -114,6 +114,7 @@ nav:
   - Home:
     - Overview: index.md
     - Getting started: getting_started.md
+    - Troubleshooting: troubleshooting.md
   - EVASPA:
     - Algorithm: evaspa/algorithm.md
     - Usage: evaspa/usage.md
@@ -130,11 +131,14 @@ nav:
     - Usage: timeseries/usage.md
     - Configuration:
       - Processing steps: timeseries/configuration.md
-  - Dev: development_guide.md
+  - Dev:
+    - Development guide: development_guide.md
+    - Contributing guide: contributing.md
   - Tutorials:
     - Overview: tutorials.md
     - EVASPA notebook: notebooks/run_evaspa.ipynb
     - STIC notebook: notebooks/run_stic.ipynb
     - ET time series notebook: notebooks/run_timeseries.ipynb
+    - ET time series over a period notebook: notebooks/run_window_timeseries.ipynb
   - API: api/
   - todo.md
