@@ -33,6 +33,8 @@ pixi shell
 pip install .[notebook]
 ```
 
+If you encounter any problems during installation, see [troubleshooting page](docs/troubleshooting.md).
+
 ## Usage
 
 ### Command-line interface
@@ -118,6 +120,28 @@ An example of configuration file:
         "path": "out"
     },
     "params": {}
+}
+```
+
+#### ET time series over a period
+
+To run timeseries
+```console
+window-timeseries INPUT_FILE
+```
+
+An example of configuration file:
+```json
+{
+    "input": {
+        "period_start": "2025-08-23",
+        "period_end": "2025-08-29",
+        "et_single_date_dir": "tests/data/timeseries/",
+        "radiation_dir": "tests/data/timeseries/"
+    },
+    "output": {
+        "path": "out"
+    }
 }
 ```
 
