@@ -1,0 +1,21 @@
+{
+    "input": {
+        "period_start": "2025-08-23",
+        "period_end": "2025-08-29",
+        "shift": 2,
+        "window": 4,
+        "et_single_date_dir": "tests/data/timeseries/",
+        "radiation_dir": "tests/data/timeseries/"
+    },
+    "output": {
+        "path": "out"
+    },
+    "params": {
+        "update": {
+            "method": "linear"
+        }
+    },
+    "debug": {
+        "config_verbose": true
+    }
+}
