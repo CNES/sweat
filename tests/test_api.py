@@ -630,11 +630,14 @@ def test_run_timeseries(entry, params, debug) -> None:
 
 @pytest.mark.functional
 @pytest.mark.parametrize(
-    ("window", "shift", "params", "debug", "verbose"),
-    [pytest.param(7, 1, {}, {}, True)],
+    ("window", "shift", "params", "debug", "config_verbose"),
+    [
+        pytest.param(7, 1, {}, {}, True),
+        pytest.param(4, 2, {}, {}, False),
+    ],
 )
 def test_run_window_time_series(
-    window, shift, params, debug, verbose, tmp_path
+    window, shift, params, debug, config_verbose, tmp_path
 ) -> None:
     """
     Test run_window_time_series
@@ -660,7 +663,7 @@ def test_run_window_time_series(
         shift=shift,
         params=params,
         debug=debug,
-        verbose=verbose,
+        config_verbose=config_verbose,
         config_dir=test_data_dir,
     )
     # Check if all the et_time_series .tif files have been created

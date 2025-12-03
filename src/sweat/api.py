@@ -423,7 +423,7 @@ def run_window_time_series(
     shift: int,
     params: dict | None = None,
     debug: dict | None = None,
-    verbose: bool = False,
+    config_verbose: bool = False,
     config_dir: str | None = None,
 ) -> None:
     """
@@ -448,7 +448,7 @@ def run_window_time_series(
         Shift between two consecutive windows (in days)
     params: dict
         Configuration parameters to run one step for timeseries
-    verbose: bool
+    config_verbose: bool
         If true, the configuration dictionary will be stored as a .json file
     config_dir: str
         Directory to store the json configuration file if verbose True
@@ -472,7 +472,7 @@ def run_window_time_series(
             et_time_series_dir=et_time_series_dir,
             params=params,
             debug=debug,
-            verbose=verbose,
+            verbose=config_verbose,
             config_dir=config_dir,
         )
         logger.debug("Create timeseries configuration: OK")
