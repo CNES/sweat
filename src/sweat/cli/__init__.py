@@ -263,6 +263,8 @@ def window_timeseries(
     dict_config = read_config(input_file)
     # Verify config and manage default parameters
     config = WindowTimeSeriesInputFile.model_validate(dict_config)
+    # Write config
+    write_config(config.model_dump(), config.output.path, fmt="json")
     # Run
     logger.debug("Run timeseries over a period...")
     run_window_time_series(
