@@ -1,13 +1,15 @@
 # Usage
 
-## Command-line interface
+## Run timeseries
+
+### Command-line interface
 
 To run ET time series
 ```console
 timeseries INPUT_FILE
 ```
 
-## Input file description
+### Input file description
 
 The input file is composed of 4 sections:
 
@@ -48,13 +50,7 @@ An example of input file:
 }
 ```
 
-STIC produces the following results:
-
- - files corresponding to ET time series **et_time_series_YYYYMMDD.tif**
- - a file **config.json** which contains the detailed configuration used
- - a directory **debug** if debug mode is activated
-
-### Input section
+#### Input section
 
 The **input** section is composed of:
 
@@ -62,7 +58,7 @@ The **input** section is composed of:
 |------|-------------|------|-----------|--------------|
 | et_time_series | List of file paths of previous ET time series | list[str] | yes | - |
 | dates | List of dates to compute the new ET time series. If not provided, the dates correspond to ET time series | list[str] | non | - |
-| radiation | List of file paths of daily radiation. If not provided, theoritical radiation is computed. | list[str] | no | - |
+| radiation | List of file paths of daily radiation. If not provided, theoretical radiation is computed. | list[str] | no | - |
 | et_single_date | List of file paths of new ET products used to update the tET time series. | list[str] | no | - |
 | dem | Path to the DEM | str | no | - |
 
@@ -97,7 +93,7 @@ Example:
 },
 ```
 
-#### Format of input data
+##### Format of input data
 
 Input data must be supplied in the form of a single file.
 Data must be supplied in GeoTIFF format.
@@ -114,7 +110,7 @@ The table below lists the expected nomenclature for band names.
 | DEM slope | `slope` |
 | DEM aspect | `aspect` |
 
-### Output section
+#### Output section
 
 The **output** section is composed of:
 
@@ -128,18 +124,18 @@ Example:
     "path":"out"
 }
 ```
-### Params section
+#### Params section
 
 The **params** section describe the parameters used for the processing. See [detailed parameters configuration](configuration.md)
 
-### Debug section
+#### Debug section
 
 The **debug** section is composed of:
 
 | Name | Description | Type | Mandatory | Default value |
 |------|-------------|------|-----------|---------------|
 | profile | Activate profiling | bool | no | false |
-| verbose | Activate intermediate result wrinting | bool | no | false |
+| verbose | Activate intermediate result writing | bool | no | false |
 | path | Path to write intermediate results | str | no | debug |
 
 Example:
@@ -151,9 +147,15 @@ Example:
 }
 ```
 
-## Output directory description
+### Output directory description
 
-ET time series produces the following files in the output directory:
+**timeseries** produces the following results:
+
+ - files corresponding to ET time series **et_time_series_YYYYMMDD.tif**
+ - a file **config.json** which contains the detailed configuration used
+ - a directory **debug** if debug mode is activated
+
+Here is the directory tree for the results:
 
 ```bash
 output_dir/
@@ -163,6 +165,123 @@ out/
 └── et_timeseries_YYYYMMDD.tif
 ```
 
-* `config.json` corresponds to the exact configurtaion used to run STIC.
-* `et_time_series_YYYYMMDD.tif` corresponding to all files of the new ET time series
-* `debug` (optional) contains intermediary results if verbose mode is active in debug section
+## Run timeseries over period
+
+### Command-line interface
+
+To run ET time series
+```console
+window-timeseries INPUT_FILE
+```
+
+### Input file description
+
+The input file is composed of 4 sections:
+
+  * **input**: provide information for input data
+  * **output**: provide information to write results
+  * **params** (optional): provide parameters to processing steps
+  * **debug** (optional): provide information for debug mode
+
+An example of input file:
+```json
+{
+    "input": {
+        "period_start": "2025-08-23",
+        "period_end": "2025-08-29",
+        "et_single_date_dir": "tests/data/timeseries/",
+        "radiation_dir": "tests/data/timeseries/"
+    },
+    "output": {
+        "path": "out"
+    }
+}
+```
+
+#### Input section
+
+The **input** section is composed of:
+
+
+| Name | Description | Type | Mandatory | Default value |
+|------|-------------|------|-----------|--------------|
+| period_start | Date for period start (YYYY-MM-DD) | str | yes | - |
+| period_end | Date for period end (YYYY-MM-DD) | str | yes | - |
+| et_single_date | Directory with ET products. | str | yes | - |
+| radiation_dir | Directory with daily radiation. If not provided, theoretical radiation is computed. | str | no | - |
+| window | Size of the window to compute the time series at each step | int | no | 7 |
+| shift | Shift used for the window at each step | int | no | 1 |
+| dem | Path to the DEM | str | no | - |
+
+Example:
+```json
+"input": {
+    "period_end": "2025-08-29",
+    "period_start": "2025-08-23",
+    "et_single_date_dir": "tests/data/timeseries",
+    "radiation_dir": "tests/data/timeseries",
+    "shift": 1,
+    "window": 7,
+    "dem": "tests/data/timeseries/dem.tif"
+}
+```
+
+#### Output section
+
+The **output** section is composed of:
+
+| Name | Description | Type | Mandatory | Default value |
+|------|-------------|------|-----------|---------------|
+| path | Path to write results | str | yes | - |
+
+Example:
+```json
+"output":{
+    "path":"out"
+}
+```
+#### Params section
+
+The **params** section describe the parameters used for the processing. See [detailed parameters configuration](configuration.md)
+
+#### Debug section
+
+The **debug** section is composed of:
+
+| Name | Description | Type | Mandatory | Default value |
+|------|-------------|------|-----------|---------------|
+| profile | Activate profiling | bool | no | false |
+| verbose | Activate intermediate result writing | bool | no | false |
+| path | Path to write intermediate results | str | no | debug |
+| config_verbose | Activate time series configuration writing at each step | bool | no | false |
+| config_dir | Path to write time series configuration files | str | no | config_dir |
+
+Example:
+```json
+"debug": {
+    "config_dir": "out/timeseries/config_dir",
+    "config_verbose": true,
+    "path": "out/timeseries/debug",
+    "profile": false,
+    "verbose": false
+}
+```
+
+### Output directory description
+
+**window-timeseries** produces the following results:
+
+ - files corresponding to ET time series **et_time_series_YYYYMMDD.tif**
+ - a file **config.json** which contains the detailed configuration used
+ - a directory **debug** containing intermediary results if debug mode is activated
+
+Here is the directory tree for the results:
+
+```bash
+output_dir/
+├── config_dir
+│   └── config_YYYYMMDD_YYYYMMDD.json
+├── config.json
+├── debug
+└── et_timeseries_YYYYMMDD.tif
+```

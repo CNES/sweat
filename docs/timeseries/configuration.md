@@ -82,7 +82,7 @@ This configuration describes the parameters for update processing step
 | Name | Description | Type | Mandatory | Default value | Possible value |
 |------|-------------|------|-----------|---------------|----------------|
 | strict_mode | Only use acquisition to interpolate/extrapolate | bool | no | true | true or false |
-| radiation_mode | Radiation mode to use | str | no | "EXTERNAL" | "THEORITICAL", "EXTERNAL" |
+| radiation_mode | Radiation mode to use | str | no | "EXTERNAL" | "THEORETICAL", "EXTERNAL" |
 
 
 ```json
