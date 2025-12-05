@@ -108,7 +108,7 @@ def test_get_processing_mode(status, expected) -> None:
         ),
         pytest.param(
             0b0000001011110000,
-            sh.RadiationMode.THEORITICAL,
+            sh.RadiationMode.THEORETICAL,
         ),
     ],
 )
@@ -193,7 +193,7 @@ def test_check_processing_mode(status, test, expected) -> None:
     ("status", "test", "expected"),
     [
         pytest.param(0b0000001011000010, sh.RadiationMode.EXTERNAL, True),
-        pytest.param(0b0000001011000010, sh.RadiationMode.THEORITICAL, False),
+        pytest.param(0b0000001011000010, sh.RadiationMode.THEORETICAL, False),
     ],
 )
 def test_check_radiation_mode(status, test, expected) -> None:

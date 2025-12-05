@@ -103,7 +103,7 @@ def test_linear_updater() -> None:
     Test Linear Updater
     """
     assert LinearUpdater(
-        strict_mode=True, radiation_mode=RadiationMode.THEORITICAL
+        strict_mode=True, radiation_mode=RadiationMode.THEORETICAL
     )
 
 
@@ -113,7 +113,7 @@ def test_requested_variables() -> None:
     Test requested variables function
     """
     linear_updater = LinearUpdater(
-        strict_mode=True, radiation_mode=RadiationMode.THEORITICAL
+        strict_mode=True, radiation_mode=RadiationMode.THEORETICAL
     )
     assert linear_updater.get_requested_variables() == [TSVar.RADIATION.value]
 
@@ -147,7 +147,7 @@ def test_find_previous(index, strict_mode, expected) -> None:
         dtype=STATUS_TYPE,
     )
     linear_updater = LinearUpdater(
-        strict_mode=strict_mode, radiation_mode=RadiationMode.THEORITICAL
+        strict_mode=strict_mode, radiation_mode=RadiationMode.THEORETICAL
     )
     prev_index = linear_updater.find_previous(status_arr, index)
     assert prev_index == expected
@@ -184,7 +184,7 @@ def test_find_next(index, strict_mode, expected) -> None:
         dtype=STATUS_TYPE,
     )
     linear_updater = LinearUpdater(
-        strict_mode=strict_mode, radiation_mode=RadiationMode.THEORITICAL
+        strict_mode=strict_mode, radiation_mode=RadiationMode.THEORETICAL
     )
     prev_index = linear_updater.find_next(status_arr, index)
     assert prev_index == expected
@@ -237,7 +237,7 @@ def test_extrapolate(index, prev_index, expected_value, expected_mode) -> None:
         status=np.array([32, 32, 32, 32, 0, 0, 32], dtype=STATUS_TYPE),
     )
     linear_updater = LinearUpdater(
-        strict_mode=True, radiation_mode=RadiationMode.THEORITICAL
+        strict_mode=True, radiation_mode=RadiationMode.THEORETICAL
     )
     value, mode = linear_updater.extrapolate(index, prev_index, ts)
     np.testing.assert_almost_equal(value, expected_value)
@@ -309,7 +309,7 @@ def test_update_new_acquisition() -> None:
         },
     )
     linear_updater = LinearUpdater(
-        strict_mode=True, radiation_mode=RadiationMode.THEORITICAL
+        strict_mode=True, radiation_mode=RadiationMode.THEORETICAL
     )
     linear_updater.update_new_acquisition(ts, feed)
     np.testing.assert_almost_equal(
@@ -357,7 +357,7 @@ def test_update_with_new_acquisitions() -> None:
         },
     )
     linear_updater = LinearUpdater(
-        strict_mode=True, radiation_mode=RadiationMode.THEORITICAL
+        strict_mode=True, radiation_mode=RadiationMode.THEORETICAL
     )
     update_ts = linear_updater.update_with_new_acquisitions(ts, feed)
     np.testing.assert_almost_equal(

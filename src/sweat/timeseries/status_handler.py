@@ -6,7 +6,7 @@ A pixel is characterized by
 - Bit 3 "PROCESSING": a mode for processing: normal or degraded,
 backward extrapolated, invalid
 - Bit 4 "UPDATED": a flag to indicate is the pixel has been updated
-- Bit 5 "RADIATION": a mode for radiation product: external or theoritical
+- Bit 5 "RADIATION": a mode for radiation product: external or theoretical
 - Bit 6 "AUX_DATA": a status for auxilliary data: complete, missing
 - Bit 7 to 10 "DISTANCE": the difference between the two dates used for
 interpolation or the difference with the date used for extrapolation
@@ -54,7 +54,7 @@ UPDATED_POSITION = 4
 # Bit 5: Radiation mode
 class RadiationMode(Enum):
     EXTERNAL = 0
-    THEORITICAL = 1
+    THEORETICAL = 1
 
 
 # Radiation status position
