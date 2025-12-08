@@ -8,6 +8,6 @@ To get started with the toolbox, go [here](getting_started.md).
 
 To get a more detailed description of each tool:
 
-- [EVASPA](evaspa/usage.md).
-- [STIC](stic/usage.md).
+- [EVASPA](evaspa/usage.md)
+- [STIC](stic/usage.md)
 - [ET time series](timeseries/usage.md)
