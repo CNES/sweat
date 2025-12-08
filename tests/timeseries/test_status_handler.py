@@ -87,7 +87,7 @@ def test_get_state(status, expected) -> None:
         ),
         pytest.param(
             0b0000001011011000,
-            sh.ProcessingMode.DEGRADATED,
+            sh.ProcessingMode.DEGRADED,
         ),
     ],
 )
@@ -178,7 +178,7 @@ def test_check_state(status, test, expected) -> None:
     ("status", "test", "expected"),
     [
         pytest.param(0b0000001011000010, sh.ProcessingMode.NOMINAL, True),
-        pytest.param(0b0000001011000010, sh.ProcessingMode.DEGRADATED, False),
+        pytest.param(0b0000001011000010, sh.ProcessingMode.DEGRADED, False),
     ],
 )
 def test_check_processing_mode(status, test, expected) -> None:

@@ -40,7 +40,7 @@ MSK_STATE = STATUS_TYPE(0b111)
 # Bit 3: Processing mode
 class ProcessingMode(Enum):
     NOMINAL = 0
-    DEGRADATED = 1
+    DEGRADED = 1
 
 
 # Processing mode position

@@ -114,7 +114,7 @@ class LinearUpdater(Updater):
             data[TSVar.FLAGS.value].isel({TSVar.TIME.value: index}).item(),
             self.radiation_mode,
         ):
-            mode = sh.ProcessingMode.DEGRADATED
+            mode = sh.ProcessingMode.DEGRADED
         return ratio * radiation, mode
 
     def extrapolate(
@@ -161,7 +161,7 @@ class LinearUpdater(Updater):
             data[TSVar.FLAGS.value].isel({TSVar.TIME.value: index}).item(),
             self.radiation_mode,
         ):
-            mode = sh.ProcessingMode.DEGRADATED
+            mode = sh.ProcessingMode.DEGRADED
         return prev_et + prev_ratio * (radiation - prev_radiation), mode
 
     def backward_extrapolate(
@@ -208,5 +208,5 @@ class LinearUpdater(Updater):
             data[TSVar.FLAGS.value].isel({TSVar.TIME.value: index}).item(),
             self.radiation_mode,
         ):
-            mode = sh.ProcessingMode.DEGRADATED
+            mode = sh.ProcessingMode.DEGRADED
         return next_et + next_ratio * (radiation - next_radiation), mode

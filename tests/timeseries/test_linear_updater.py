@@ -195,7 +195,7 @@ def test_find_next(index, strict_mode, expected) -> None:
     ("index", "prev_index", "next_index", "expected_value", "expected_mode"),
     [
         pytest.param(2, 0, 3, 1.736, ProcessingMode.NOMINAL),
-        pytest.param(5, 4, 6, 3.2, ProcessingMode.DEGRADATED),
+        pytest.param(5, 4, 6, 3.2, ProcessingMode.DEGRADED),
     ],
 )
 def test_interpolate(
@@ -223,7 +223,7 @@ def test_interpolate(
     ("index", "prev_index", "expected_value", "expected_mode"),
     [
         pytest.param(2, 1, 1.488, ProcessingMode.NOMINAL),
-        pytest.param(5, 4, 2.88, ProcessingMode.DEGRADATED),
+        pytest.param(5, 4, 2.88, ProcessingMode.DEGRADED),
     ],
 )
 def test_extrapolate(index, prev_index, expected_value, expected_mode) -> None:
@@ -249,7 +249,7 @@ def test_extrapolate(index, prev_index, expected_value, expected_mode) -> None:
     ("index", "next_index", "expected_value", "expected_mode"),
     [
         pytest.param(1, 2, 1.568, ProcessingMode.NOMINAL),
-        pytest.param(5, 6, 3.52, ProcessingMode.DEGRADATED),
+        pytest.param(5, 6, 3.52, ProcessingMode.DEGRADED),
     ],
 )
 def test_backward_extrapolate(

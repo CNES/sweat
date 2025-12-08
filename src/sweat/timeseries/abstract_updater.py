@@ -334,7 +334,7 @@ class Updater(ABC):
         status = sh.update_status(
             status,
             state=sh.State.INVALID,
-            processing=sh.ProcessingMode.DEGRADATED,
+            processing=sh.ProcessingMode.DEGRADED,
             updated=True,
             distance=0,
         )
@@ -368,7 +368,7 @@ class Updater(ABC):
         # If previous value was obtained with a degraded mode or
         # if the previous distance between interpolated points was greater
         if (prev_index != -1 and next_index != -1) and (
-            sh.check_processing_mode(status, sh.ProcessingMode.DEGRADATED)
+            sh.check_processing_mode(status, sh.ProcessingMode.DEGRADED)
             or (next_index - prev_index) < sh.get_distance(status)
         ):
             # Interpolate
@@ -425,7 +425,7 @@ class Updater(ABC):
         # If previous value was obtained with a degraded mode or
         # the previous distance between interpolated points was greater
         if (prev_index != -1 and next_index == -1) and (
-            sh.check_processing_mode(status, sh.ProcessingMode.DEGRADATED)
+            sh.check_processing_mode(status, sh.ProcessingMode.DEGRADED)
             or (index - prev_index) < sh.get_distance(status)
         ):
             # Extrapolate
@@ -442,7 +442,7 @@ class Updater(ABC):
         # If previous value was obtained with a degraded mode or
         # the previous distance between interpolated points was greater
         if (prev_index == -1 and next_index != -1) and (
-            sh.check_processing_mode(status, sh.ProcessingMode.DEGRADATED)
+            sh.check_processing_mode(status, sh.ProcessingMode.DEGRADED)
             or (next_index - index) < sh.get_distance(status)
         ):
             # Extrapolate
