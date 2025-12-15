@@ -1,0 +1,19 @@
+# Custom Dictionary Words
+
+# variables
+coeff
+coeffs
+ndvi
+
+# Python package
+numpy
+pwlf
+xarray
+
+# numpy
+nanargmax
+nanargmin
+nanmax
+nanmin
+np.polyfit
+numver

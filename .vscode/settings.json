@@ -38,5 +38,13 @@
     "cSpell.ignoreWords": [
       "adjacents",
       "adjs"
-    ]
+    ],
+    "cSpell.customDictionaries": {
+      "custom-dictionary-workspace": {
+        "name": "custom-dictionary-workspace",
+        "path": "${workspaceFolder:sweat}/.cspell/custom-dictionary-workspace.txt",
+        "addWords": true,
+        "scope": "workspace"
+      }
+    }
 }
