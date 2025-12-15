@@ -1,19 +1,20 @@
 # Custom Dictionary Words
 
-# variables
-coeff
-coeffs
+cesbio
+centre
+national
+etudes
+spatiales
+modis
+trishna
+evaspa
+merra
+stic
+fcover
+dewpoint
+longwave
 ndvi
-
-# Python package
-numpy
-pwlf
-xarray
-
-# numpy
-nanargmax
-nanargmin
-nanmax
-nanmin
-np.polyfit
-numver
+lulc
+kustas
+choudhury
+use_topo
