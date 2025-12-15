@@ -16,7 +16,6 @@ import numpy as np
 import numpy.typing as npt
 import pandas as pd
 import pwlf
-import scipy as sp
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -75,7 +74,7 @@ class EdgePosition(Enum):
 
 class PercentileValue:
     """
-    Class to manange percentile
+    Class to manage percentile
     """
 
     def __init__(self, percentile: float):
@@ -92,6 +91,47 @@ class PercentileValue:
 
     def __ge__(self, other: PercentileValue) -> bool:
         return self.percentile >= other.percentile
+
+
+def compute_variable_percentile(
+    n: int, n_sparse: int, q_sparse: float, n_dense: int, q_dense: float
+) -> float:
+    """
+    Compute a percentile q between q_sparse and q_dense
+    as n goes from n_sparse to n_dense linearly in log-space
+
+    Parameters
+    ----------
+    n: int
+        Number of points
+    n_sparse: int
+        Number of points to consider a sparse interval
+    q_sparse: float
+        Percentile for sparse intervals (few points)
+    q_dense: float
+        Percentile for dense intervals (lot of points)
+    n_dense: int
+        Number of points to consider a dense interval
+
+    Returns
+    -------
+    q: float
+        Computed percentile
+    """
+    if n <= n_sparse:
+        q = q_sparse
+    elif n >= n_dense:
+        q = q_dense
+    else:
+        log_q_sparse = np.log10(q_sparse)
+        log_q_dense = np.log10(q_dense)
+        log_n_sparse = np.log10(n_sparse)
+        log_n_dense = np.log10(n_dense)
+        log_q = log_q_sparse + (log_q_dense - log_q_sparse) * (
+            np.log10(n) - log_n_sparse
+        ) / (log_n_dense - log_n_sparse)
+        q = np.power(10, log_q)
+    return q
 
 
 class Edge(BaseModel, ABC):
@@ -208,7 +248,7 @@ class RegressionEdge(Edge, ABC):
     interval_nb: int = 10
     # Interval size
     interval_size: float = 0.1
-    # Limits for interval to consider for point selecttion
+    # Limits for interval to consider for point selection
     interval_limits: (
         tuple[float, float] | tuple[PercentileValue, PercentileValue] | None
     ) = None
@@ -534,7 +574,7 @@ class RegressionEdge(Edge, ABC):
 
         Returns
         -------
-        use_bp_ckecked: bool
+        use_bp_checked: bool
             Check use breakpoint
         """
         if info.data.get("breakpoint") is not None:
@@ -673,48 +713,30 @@ class RegressionEdge(Edge, ABC):
         # Logarithmic interpolation for percentiles
         min_percentile = [sparse_percentile[0], dense_percentile[0]]
         max_percentile = [sparse_percentile[1], dense_percentile[1]]
-        f_min_percentile = lambda _: 0  # noqa: E731
-        f_max_percentile = lambda _: 100  # noqa: E731
-        if np.max(min_percentile) > 0.0:
-            lin_interp = sp.interpolate.interp1d(
-                np.log10([sparse_interval, dense_interval]),
-                np.log10(min_percentile),
-                kind="linear",
-            )
-            f_min_percentile = lambda p: np.power(  # noqa: E731
-                10.0,
-                lin_interp(
-                    np.log10(np.clip(p, sparse_interval, dense_interval))
-                ),
-            )
-        if np.min(max_percentile) < 100:  # noqa: PLR2004
-            lin_interp = sp.interpolate.interp1d(
-                np.log10([sparse_interval, dense_interval]),
-                np.log10(max_percentile),
-                kind="linear",
-            )
-            f_max_percentile = lambda p: np.power(  # noqa: E731
-                10.0,
-                lin_interp(
-                    np.log10(np.clip(p, sparse_interval, dense_interval))
-                ),
-            )
         # Selection with variables percentiles
         for _, group in df.groupby(intervals):
             nb = len(group)
-            value = group["lst"][
-                (
-                    group["lst"]
-                    >= np.percentile(group["lst"], f_min_percentile(nb))
+            if nb > 0:
+                q = compute_variable_percentile(
+                    n=nb,
+                    n_sparse=sparse_interval,
+                    q_sparse=sparse_percentile[1] - sparse_percentile[0],
+                    n_dense=dense_interval,
+                    q_dense=dense_percentile[1] - dense_percentile[0],
                 )
-                & (
-                    group["lst"]
-                    <= np.percentile(group["lst"], f_max_percentile(nb))
-                )
-            ].pipe(self._select)
-            if not np.isnan(value):
-                var_values.append(group["var"].median())
-                lst_values.append(value)
+                if np.max(min_percentile) > 0.0:
+                    q_min = float(100 - q)
+                    q_max = float(100)
+                if np.min(max_percentile) < 100:  # noqa: PLR2004
+                    q_min = float(0)
+                    q_max = float(q)
+                value = group["lst"][
+                    (group["lst"] >= np.percentile(group["lst"], q_min))
+                    & (group["lst"] <= np.percentile(group["lst"], q_max))
+                ].pipe(self._select)
+                if not np.isnan(value):
+                    var_values.append(group["var"].median())
+                    lst_values.append(value)
         return np.array(var_values), np.array(lst_values)
 
     def _select_nb_points(
@@ -903,13 +925,13 @@ class RegressionEdge(Edge, ABC):
             if not np.isnan(value):
                 var_values.append(group["var"].median())
                 lst_values.append(value)
-        break_indice = np.nanargmax(lst_values[::-1])
-        break_indice = len(lst_values) - break_indice - 1
-        if break_indice == len(lst_values) - 1:
-            break_indice = break_indice - 1
-        elif break_indice == 0:
-            break_indice = break_indice + 1
-        return var_values[break_indice], lst_values[break_indice]
+        break_index = np.nanargmax(lst_values[::-1])
+        break_index = len(lst_values) - break_index - 1
+        if break_index == len(lst_values) - 1:
+            break_index = break_index - 1
+        elif break_index == 0:
+            break_index = break_index + 1
+        return var_values[break_index], lst_values[break_index]
 
     def search_extremum_point(
         self,
@@ -932,15 +954,15 @@ class RegressionEdge(Edge, ABC):
             Coordinates of extremum point
         """
         if self.position.name == EdgePosition.TOP.name:
-            extremum_indice = np.nanargmax(lst[::-1])
+            extremum_index = np.nanargmax(lst[::-1])
         else:
-            extremum_indice = np.nanargmin(lst[::-1])
-        extremum_indice = len(lst) - extremum_indice - 1
-        if extremum_indice == len(lst) - 1:
-            extremum_indice = extremum_indice - 1
-        elif extremum_indice == 0:
-            extremum_indice = extremum_indice + 1
-        return var[extremum_indice], lst[extremum_indice]
+            extremum_index = np.nanargmin(lst[::-1])
+        extremum_index = len(lst) - extremum_index - 1
+        if extremum_index == len(lst) - 1:
+            extremum_index = extremum_index - 1
+        elif extremum_index == 0:
+            extremum_index = extremum_index + 1
+        return var[extremum_index], lst[extremum_index]
 
     @abstractmethod
     def fit(self, var: npt.ArrayLike, lst: npt.ArrayLike) -> None:
@@ -1247,7 +1269,7 @@ class ThresholdLinearEdge(RegressionEdge):
                 )
                 logger.warning(msg)
         # Initialize piecewise linear fit
-        # Seed is fixed to garantee reproductible results
+        # Seed is fixed to ensure reproducible results
         pwlf_solver = pwlf.PiecewiseLinFit(
             var_values, lst_values, degree=1, seed=123
         )

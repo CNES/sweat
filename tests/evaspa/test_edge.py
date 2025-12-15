@@ -16,6 +16,7 @@ from sweat.evaspa.edge import (
     LinearEdge,
     ParabolicEdge,
     ThresholdLinearEdge,
+    compute_variable_percentile,
 )
 
 
@@ -1489,3 +1490,25 @@ def test_create_edge_error(name, config) -> None:
     """
     with pytest.raises(EdgeError):
         Edge.create(name, config)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("n", "n_sparse", "q_sparse", "n_dense", "q_dense", "expected"),
+    [
+        pytest.param(10, 100, 0.10, 1000000, 0.0001, 0.1),
+        pytest.param(2000000, 100, 0.10, 1000000, 0.0001, 0.0001),
+        pytest.param(1000, 100, 0.10, 1000000, 0.0001, 0.0178),
+        pytest.param(10000, 100, 0.10, 1000000, 0.0001, 0.0032),
+        pytest.param(1000, 500, 5, 100000, 0.1, 2.997),
+        pytest.param(10000, 500, 5, 100000, 0.1, 0.547),
+    ],
+)
+def test_compute_variable_percentile(
+    n, n_sparse, q_sparse, n_dense, q_dense, expected
+) -> None:
+    """
+    Test compute variable percentile
+    """
+    res = compute_variable_percentile(n, n_sparse, q_sparse, n_dense, q_dense)
+    np.testing.assert_almost_equal(res, expected, decimal=3)
