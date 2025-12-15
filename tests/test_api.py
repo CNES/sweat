@@ -120,7 +120,7 @@ def test_read_input_data(entry: dict[str, str]) -> None:
                                 "config": {
                                     "interval_type": "density",
                                     "interval_nb": 20,
-                                    "percentile": [98, 100],
+                                    "percentile": 2,
                                     "selection": "median",
                                 },
                             },
@@ -129,7 +129,7 @@ def test_read_input_data(entry: dict[str, str]) -> None:
                                 "config": {
                                     "interval_type": "density",
                                     "interval_nb": 20,
-                                    "percentile": [0, 2],
+                                    "percentile": 2,
                                     "selection": "median",
                                 },
                             },
@@ -142,7 +142,7 @@ def test_read_input_data(entry: dict[str, str]) -> None:
                                 "config": {
                                     "interval_type": "density",
                                     "interval_nb": 20,
-                                    "percentile": [95, 100],
+                                    "percentile": 5,
                                     "selection": "median",
                                 },
                             },
@@ -180,7 +180,7 @@ def test_read_input_data(entry: dict[str, str]) -> None:
                                 "config": {
                                     "interval_type": "density",
                                     "interval_nb": 20,
-                                    "percentile": [98, 100],
+                                    "percentile": 2,
                                     "selection": "median",
                                 },
                             },
@@ -189,7 +189,7 @@ def test_read_input_data(entry: dict[str, str]) -> None:
                                 "config": {
                                     "interval_type": "density",
                                     "interval_nb": 20,
-                                    "percentile": [0, 2],
+                                    "percentile": 2,
                                     "selection": "median",
                                 },
                             },
@@ -202,7 +202,7 @@ def test_read_input_data(entry: dict[str, str]) -> None:
                                 "config": {
                                     "interval_type": "density",
                                     "interval_nb": 20,
-                                    "percentile": [95, 100],
+                                    "percentile": 5,
                                     "selection": "median",
                                 },
                             },

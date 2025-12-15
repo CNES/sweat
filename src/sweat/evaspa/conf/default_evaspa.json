@@ -1,42 +1,42 @@
 {
     "models": [
-            {
-                "name": "EF1",
-                "dry_edge": {
-                    "type": "LinearEdge",
-                    "config": {
-                        "interval_type": "density",
-                        "interval_nb": 20,
-                        "percentile": [98, 100],
-                        "selection": "median"
-                    }
-                },
-                "wet_edge": {
-                    "type": "LinearEdge",
-                    "config": {
-                        "interval_type": "density",
-                        "interval_nb": 20,
-                        "percentile": [0, 2],
-                        "selection": "median"
-                    }
-                },
-                "var": "albedo"
+        {
+            "name": "EF1",
+            "dry_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "density",
+                    "interval_nb": 20,
+                    "percentile": 2,
+                    "selection": "median"
+                }
             },
-            {
-                "name": "EF8",
-                "dry_edge": {
-                    "type": "LinearEdge",
-                    "config": {
-                        "interval_type": "density",
-                        "interval_nb": 20,
-                        "percentile": [95, 100],
-                        "selection": "median"
-                    }
-                },
-                "wet_edge": {
-                    "type": "FlatEdge"
-                },
-                "var": "albedo"
-            }
+            "wet_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "density",
+                    "interval_nb": 20,
+                    "percentile": 2,
+                    "selection": "median"
+                }
+            },
+            "var": "albedo"
+        },
+        {
+            "name": "EF8",
+            "dry_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "density",
+                    "interval_nb": 20,
+                    "percentile": 5,
+                    "selection": "median"
+                }
+            },
+            "wet_edge": {
+                "type": "FlatEdge"
+            },
+            "var": "albedo"
+        }
     ]
 }

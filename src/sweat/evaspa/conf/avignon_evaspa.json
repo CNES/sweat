@@ -1,224 +1,224 @@
 {
     "models": [
-            {
-                "name": "EF1a",
-                "dry_edge": {
-                    "type": "LinearEdge",
-                    "config": {
-                        "interval_type": "density",
-                        "interval_nb": 20,
-                        "percentile": [95, 100],
-                        "selection": "median",
-                        "use_breakpoint": true
-                    }
-                },
-                "wet_edge": {
-                    "type": "LinearEdge",
-                    "config": {
-                        "interval_type": "density",
-                        "interval_nb": 20,
-                        "percentile": [0, 5],
-                        "selection": "median",
-                        "use_breakpoint": true
-                    }
-                },
-                "var": "albedo"
+        {
+            "name": "EF1a",
+            "dry_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "density",
+                    "interval_nb": 20,
+                    "percentile": 5,
+                    "selection": "median",
+                    "use_breakpoint": true
+                }
             },
-            {
-                "name": "EF2a",
-                "dry_edge": {
-                    "type": "LinearEdge",
-                    "config": {
-                        "interval_type": "density",
-                        "interval_nb": 20,
-                        "percentile": [95, 100],
-                        "selection": "mean",
-                        "use_breakpoint": true
-                    }
-                },
-                "wet_edge": {
-                    "type": "LinearEdge",
-                    "config": {
-                        "interval_type": "density",
-                        "interval_nb": 20,
-                        "percentile": [0, 5],
-                        "selection": "mean",
-                        "use_breakpoint": true
-                    }
-                },
-                "var": "albedo"
+            "wet_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "density",
+                    "interval_nb": 20,
+                    "percentile": 5,
+                    "selection": "median",
+                    "use_breakpoint": true
+                }
             },
-            {
-                "name": "EF3a",
-                "dry_edge": {
-                    "type": "FlatPercentileEdge",
-                    "config": {
-                        "percentile": [99.9, 100],
-                        "selection": "median"
-                    }
-                },
-                "wet_edge": {
-                    "type": "FlatPercentileEdge",
-                    "config": {
-                        "percentile": [0, 0.1],
-                        "selection": "median"
-                    }
-                },
-                "var": "albedo"
+            "var": "albedo"
+        },
+        {
+            "name": "EF2a",
+            "dry_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "density",
+                    "interval_nb": 20,
+                    "percentile": 5,
+                    "selection": "mean",
+                    "use_breakpoint": true
+                }
             },
-            {
-                "name": "EF4a",
-                "dry_edge": {
-                    "type": "LinearEdge",
-                    "config": {
-                        "interval_type": "size",
-                        "interval_size": 0.01,
-                        "percentile": [95, 100],
-                        "selection": "median",
-                        "use_breakpoint": true
-                    }
-                },
-                "wet_edge": {
-                    "type": "LinearEdge",
-                    "config": {
-                        "interval_type": "size",
-                        "interval_size": 0.01,
-                        "percentile": [0, 5],
-                        "selection": "median",
-                        "use_breakpoint": true
-                    }
-                },
-                "var": "albedo"
+            "wet_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "density",
+                    "interval_nb": 20,
+                    "percentile": 5,
+                    "selection": "mean",
+                    "use_breakpoint": true
+                }
             },
-            {
-                "name": "EF6a",
-                "dry_edge": {
-                    "type": "LinearEdge",
-                    "config": {
-                        "interval_type": "density",
-                        "interval_nb": 20,
-                        "percentile": [95, 100],
-                        "selection": "mean",
-                        "use_breakpoint": true
-                    }
-                },
-                "wet_edge": {
-                    "type": "LinearEdge",
-                    "config": {
-                        "interval_type": "density",
-                        "interval_nb": 20,
-                        "percentile": [0, 5],
-                        "selection": "mean",
-                        "use_breakpoint": true
-                    }
-                },
-                "var": "albedo"
+            "var": "albedo"
+        },
+        {
+            "name": "EF3a",
+            "dry_edge": {
+                "type": "FlatPercentileEdge",
+                "config": {
+                    "percentile": 0.1,
+                    "selection": "median"
+                }
             },
-            {
-                "name": "EF1v",
-                "dry_edge": {
-                    "type": "LinearEdge",
-                    "config": {
-                        "interval_type": "density",
-                        "interval_nb": 20,
-                        "percentile": [95, 100],
-                        "selection": "median"
-                    }
-                },
-                "wet_edge": {
-                    "type": "LinearEdge",
-                    "config": {
-                        "interval_type": "density",
-                        "interval_nb": 20,
-                        "percentile": [0, 5],
-                        "selection": "median"
-                    }
-                },
-                "var": "ndvi"
+            "wet_edge": {
+                "type": "FlatPercentileEdge",
+                "config": {
+                    "percentile": 0.1,
+                    "selection": "median"
+                }
             },
-            {
-                "name": "EF2v",
-                "dry_edge": {
-                    "type": "LinearEdge",
-                    "config": {
-                        "interval_type": "density",
-                        "interval_nb": 20,
-                        "percentile": [95, 100],
-                        "selection": "mean"
-                    }
-                },
-                "wet_edge": {
-                    "type": "LinearEdge",
-                    "config": {
-                        "interval_type": "density",
-                        "interval_nb": 20,
-                        "percentile": [0, 5],
-                        "selection": "mean"
-                    }
-                },
-                "var": "ndvi"
+            "var": "albedo"
+        },
+        {
+            "name": "EF4a",
+            "dry_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_size": 0.01,
+                    "percentile": 5,
+                    "selection": "median",
+                    "use_breakpoint": true
+                }
             },
-            {
-                "name": "EF3v",
-                "dry_edge": {
-                    "type": "FlatPercentileEdge",
-                    "config": {
-                        "percentile": [99.9, 100],
-                         "selection": "median"
-                    }
-                },
-                "wet_edge": {
-                    "type": "FlatPercentileEdge",
-                    "config": {
-                        "percentile": [0, 0.1],
-                        "selection": "median"
-                    }
-                },
-                "var": "ndvi"
+            "wet_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_size": 0.01,
+                    "percentile": 5,
+                    "selection": "median",
+                    "use_breakpoint": true
+                }
             },
-            {
-                "name": "EF4v",
-                "dry_edge": {
-                    "type": "LinearEdge",
-                    "config": {
-                        "interval_type": "size",
-                        "interval_size": 0.01,
-                        "percentile": [95, 100],
-                        "selection": "median"
-                    }
-                },
-                "wet_edge": {
-                    "type": "LinearEdge",
-                    "config": {
-                        "interval_type": "size",
-                        "interval_size": 0.01,
-                        "percentile": [0, 5],
-                        "selection": "median"
-                    }
-                },
-                "var": "ndvi"
+            "var": "albedo"
+        },
+        {
+            "name": "EF6a",
+            "dry_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "density",
+                    "interval_nb": 20,
+                    "percentile": 5,
+                    "selection": "mean",
+                    "use_breakpoint": true
+                }
             },
-            {
-                "name": "EF6v",
-                "dry_edge": {
-                    "type": "LinearEdge",
-                    "config": {
-                        "interval_type": "density",
-                        "interval_nb": 20,
-                        "percentile": [95, 100],
-                        "selection": "mean"
-                    }
-                },
-                "wet_edge": {
-                    "type": "LinearEdge",
-                    "config": {
-                        "interval_type": "density",
-                        "interval_nb": 20,
-                        "percentile": [0, 5],
-                        "selection": "mean"
-                    }
-                },
-                "var": "ndvi"
-            }
+            "wet_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "density",
+                    "interval_nb": 20,
+                    "percentile": 5,
+                    "selection": "mean",
+                    "use_breakpoint": true
+                }
+            },
+            "var": "albedo"
+        },
+        {
+            "name": "EF1v",
+            "dry_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "density",
+                    "interval_nb": 20,
+                    "percentile": 5,
+                    "selection": "median"
+                }
+            },
+            "wet_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "density",
+                    "interval_nb": 20,
+                    "percentile": 5,
+                    "selection": "median"
+                }
+            },
+            "var": "ndvi"
+        },
+        {
+            "name": "EF2v",
+            "dry_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "density",
+                    "interval_nb": 20,
+                    "percentile": 5,
+                    "selection": "mean"
+                }
+            },
+            "wet_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "density",
+                    "interval_nb": 20,
+                    "percentile": 5,
+                    "selection": "mean"
+                }
+            },
+            "var": "ndvi"
+        },
+        {
+            "name": "EF3v",
+            "dry_edge": {
+                "type": "FlatPercentileEdge",
+                "config": {
+                    "percentile": 0.1,
+                    "selection": "median"
+                }
+            },
+            "wet_edge": {
+                "type": "FlatPercentileEdge",
+                "config": {
+                    "percentile": 0.1,
+                    "selection": "median"
+                }
+            },
+            "var": "ndvi"
+        },
+        {
+            "name": "EF4v",
+            "dry_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_size": 0.01,
+                    "percentile": 5,
+                    "selection": "median"
+                }
+            },
+            "wet_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_size": 0.01,
+                    "percentile": 5,
+                    "selection": "median"
+                }
+            },
+            "var": "ndvi"
+        },
+        {
+            "name": "EF6v",
+            "dry_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "density",
+                    "interval_nb": 20,
+                    "percentile": 5,
+                    "selection": "mean"
+                }
+            },
+            "wet_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "density",
+                    "interval_nb": 20,
+                    "percentile": 5,
+                    "selection": "mean"
+                }
+            },
+            "var": "ndvi"
+        }
     ]
 }

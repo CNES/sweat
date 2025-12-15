@@ -60,7 +60,7 @@ This configuration describes the parameters for EF processing step.
 | models | EF model description. See [EF models](ef_model.md#ef-models-configuration) | str or list[dict] | yes | - | - |
 | options.selection | Activate model selection (Not implemented yet) | bool | no | false | true or false |
 | options.merging | Method used to merge EF data | str | no | "mean" | "median","mean" |
-| check.threshold | Threshold used to check land surface temperature varaibility | float | no | 0.02 | - |
+| check.threshold | Threshold used to check land surface temperature variability | float | no | 0.02 | - |
 
 ```json
 {

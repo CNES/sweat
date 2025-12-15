@@ -45,7 +45,7 @@ EVASPA produces the following results:
 
 The **input** section is composed of:
 
-| Name | Description | Type | Mandatory | Defult value |
+| Name | Description | Type | Mandatory | Default value |
 |------|-------------|------|-----------|--------------|
 | path | Path of input data (file or directory) | str | yes | - |
 | date | Date of the acquisition | str | non | - |
@@ -115,7 +115,7 @@ The **debug** section is composed of:
 | Name | Description | Type | Mandatory | Default value |
 |------|-------------|------|-----------|---------------|
 | profile | Activate profiling | bool | no | false |
-| verbose | Activate intermediate result wrinting | bool | no | false |
+| verbose | Activate intermediate result writing | bool | no | false |
 | path | Path to write intermediate results | str | no | debug |
 
 Example:
@@ -151,7 +151,7 @@ out/
 │   └── evaspa_inst_valid.tif
 ```
 
-* `config.json` corresponds to the exact configurtaion used to run EVASPA.
-* `evasa_inst` contains instantaneous products
-* `evasa_daily` contains daily products
+* `config.json` corresponds to the exact configuration used to run EVASPA.
+* `evaspa_inst` contains instantaneous products
+* `evaspa_daily` contains daily products
 * `debug` (optional) contains intermediary results if verbose mode is active in debug section

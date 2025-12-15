@@ -1,0 +1,532 @@
+{
+    "models": [
+        {
+            "name": "EF1",
+            "dry_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 10,
+                    "interval_limits": [
+                        "percentile(0.01)",
+                        "percentile(99.99)"
+                    ],
+                    "percentile_bounds": [
+                        10,
+                        0.01
+                    ],
+                    "percentile_intervals": [
+                        100,
+                        1000000
+                    ],
+                    "selection": "median"
+                }
+            },
+            "wet_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 10,
+                    "interval_limits": [
+                        "percentile(0.01)",
+                        "percentile(99.99)"
+                    ],
+                    "percentile_bounds": [
+                        10,
+                        0.01
+                    ],
+                    "percentile_intervals": [
+                        100,
+                        1000000
+                    ],
+                    "selection": "median"
+                }
+            },
+            "var": "albedo"
+        },
+        {
+            "name": "EF2",
+            "dry_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 10,
+                    "interval_limits": [
+                        "percentile(0.01)",
+                        "percentile(99.99)"
+                    ],
+                    "percentile_bounds": [
+                        10,
+                        0.01
+                    ],
+                    "percentile_intervals": [
+                        100,
+                        1000000
+                    ],
+                    "selection": "median"
+                }
+            },
+            "wet_edge": {
+                "type": "FlatRegressionEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 10,
+                    "interval_limits": [
+                        "percentile(0.01)",
+                        "percentile(99.99)"
+                    ],
+                    "percentile_bounds": [
+                        10,
+                        0.01
+                    ],
+                    "percentile_intervals": [
+                        100,
+                        1000000
+                    ],
+                    "selection": "median"
+                }
+            },
+            "var": "albedo"
+        },
+        {
+            "name": "EF3",
+            "dry_edge": {
+                "type": "FlatRegressionEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 10,
+                    "interval_limits": [
+                        "percentile(0.01)",
+                        "percentile(99.99)"
+                    ],
+                    "percentile_bounds": [
+                        10,
+                        0.01
+                    ],
+                    "percentile_intervals": [
+                        100,
+                        1000000
+                    ],
+                    "selection": "median"
+                }
+            },
+            "wet_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 10,
+                    "interval_limits": [
+                        "percentile(0.01)",
+                        "percentile(99.99)"
+                    ],
+                    "percentile_bounds": [
+                        10,
+                        0.01
+                    ],
+                    "percentile_intervals": [
+                        100,
+                        1000000
+                    ],
+                    "selection": "median"
+                }
+            },
+            "var": "albedo"
+        },
+        {
+            "name": "EF4",
+            "dry_edge": {
+                "type": "FlatRegressionEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 10,
+                    "interval_limits": [
+                        "percentile(0.01)",
+                        "percentile(99.99)"
+                    ],
+                    "percentile_bounds": [
+                        10,
+                        0.01
+                    ],
+                    "percentile_intervals": [
+                        100,
+                        1000000
+                    ],
+                    "selection": "median"
+                }
+            },
+            "wet_edge": {
+                "type": "FlatRegressionEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 10,
+                    "interval_limits": [
+                        "percentile(0.01)",
+                        "percentile(99.99)"
+                    ],
+                    "percentile_bounds": [
+                        10,
+                        0.01
+                    ],
+                    "percentile_intervals": [
+                        100,
+                        1000000
+                    ],
+                    "selection": "median"
+                }
+            },
+            "var": "albedo"
+        },
+        {
+            "name": "EF5",
+            "dry_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 10,
+                    "interval_limits": [
+                        "percentile(0.01)",
+                        "percentile(99.99)"
+                    ],
+                    "percentile_bounds": [
+                        10,
+                        0.01
+                    ],
+                    "percentile_intervals": [
+                        100,
+                        1000000
+                    ],
+                    "selection": "median"
+                }
+            },
+            "wet_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 10,
+                    "interval_limits": [
+                        "percentile(0.01)",
+                        "percentile(99.99)"
+                    ],
+                    "percentile_bounds": [
+                        10,
+                        0.01
+                    ],
+                    "percentile_intervals": [
+                        100,
+                        1000000
+                    ],
+                    "selection": "median"
+                }
+            },
+            "var": "fcover"
+        },
+        {
+            "name": "EF6",
+            "dry_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 10,
+                    "interval_limits": [
+                        "percentile(0.01)",
+                        "percentile(99.99)"
+                    ],
+                    "percentile_bounds": [
+                        10,
+                        0.01
+                    ],
+                    "percentile_intervals": [
+                        100,
+                        1000000
+                    ],
+                    "selection": "median"
+                }
+            },
+            "wet_edge": {
+                "type": "FlatRegressionEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 10,
+                    "interval_limits": [
+                        "percentile(0.01)",
+                        "percentile(99.99)"
+                    ],
+                    "percentile_bounds": [
+                        10,
+                        0.01
+                    ],
+                    "percentile_intervals": [
+                        100,
+                        1000000
+                    ],
+                    "selection": "median"
+                }
+            },
+            "var": "fcover"
+        },
+        {
+            "name": "EF7",
+            "dry_edge": {
+                "type": "FlatRegressionEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 10,
+                    "interval_limits": [
+                        "percentile(0.01)",
+                        "percentile(99.99)"
+                    ],
+                    "percentile_bounds": [
+                        10,
+                        0.01
+                    ],
+                    "percentile_intervals": [
+                        100,
+                        1000000
+                    ],
+                    "selection": "median"
+                }
+            },
+            "wet_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 10,
+                    "interval_limits": [
+                        "percentile(0.01)",
+                        "percentile(99.99)"
+                    ],
+                    "percentile_bounds": [
+                        10,
+                        0.01
+                    ],
+                    "percentile_intervals": [
+                        100,
+                        1000000
+                    ],
+                    "selection": "median"
+                }
+            },
+            "var": "fcover"
+        },
+        {
+            "name": "EF8",
+            "dry_edge": {
+                "type": "FlatRegressionEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 10,
+                    "interval_limits": [
+                        "percentile(0.01)",
+                        "percentile(99.99)"
+                    ],
+                    "percentile_bounds": [
+                        10,
+                        0.01
+                    ],
+                    "percentile_intervals": [
+                        100,
+                        1000000
+                    ],
+                    "selection": "median"
+                }
+            },
+            "wet_edge": {
+                "type": "FlatRegressionEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 10,
+                    "interval_limits": [
+                        "percentile(0.01)",
+                        "percentile(99.99)"
+                    ],
+                    "percentile_bounds": [
+                        10,
+                        0.01
+                    ],
+                    "percentile_intervals": [
+                        100,
+                        1000000
+                    ],
+                    "selection": "median"
+                }
+            },
+            "var": "fcover"
+        },
+        {
+            "name": "EF9",
+            "dry_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 10,
+                    "interval_limits": [
+                        "percentile(0.01)",
+                        "percentile(99.99)"
+                    ],
+                    "percentile_bounds": [
+                        10,
+                        0.01
+                    ],
+                    "percentile_intervals": [
+                        100,
+                        1000000
+                    ],
+                    "selection": "median"
+                }
+            },
+            "wet_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 10,
+                    "interval_limits": [
+                        "percentile(0.01)",
+                        "percentile(99.99)"
+                    ],
+                    "percentile_bounds": [
+                        10,
+                        0.01
+                    ],
+                    "percentile_intervals": [
+                        100,
+                        1000000
+                    ],
+                    "selection": "median"
+                }
+            },
+            "var": "ndvi"
+        },
+        {
+            "name": "EF10",
+            "dry_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 10,
+                    "interval_limits": [
+                        "percentile(0.01)",
+                        "percentile(99.99)"
+                    ],
+                    "percentile_bounds": [
+                        10,
+                        0.01
+                    ],
+                    "percentile_intervals": [
+                        100,
+                        1000000
+                    ],
+                    "selection": "median"
+                }
+            },
+            "wet_edge": {
+                "type": "FlatRegressionEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 10,
+                    "interval_limits": [
+                        "percentile(0.01)",
+                        "percentile(99.99)"
+                    ],
+                    "percentile_bounds": [
+                        10,
+                        0.01
+                    ],
+                    "percentile_intervals": [
+                        100,
+                        1000000
+                    ],
+                    "selection": "median"
+                }
+            },
+            "var": "ndvi"
+        },
+        {
+            "name": "EF11",
+            "dry_edge": {
+                "type": "FlatRegressionEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 10,
+                    "interval_limits": [
+                        "percentile(0.01)",
+                        "percentile(99.99)"
+                    ],
+                    "percentile_bounds": [
+                        10,
+                        0.01
+                    ],
+                    "percentile_intervals": [
+                        100,
+                        1000000
+                    ],
+                    "selection": "median"
+                }
+            },
+            "wet_edge": {
+                "type": "LinearEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 10,
+                    "interval_limits": [
+                        "percentile(0.01)",
+                        "percentile(99.99)"
+                    ],
+                    "percentile_bounds": [
+                        10,
+                        0.01
+                    ],
+                    "percentile_intervals": [
+                        100,
+                        1000000
+                    ],
+                    "selection": "median"
+                }
+            },
+            "var": "ndvi"
+        },
+        {
+            "name": "EF12",
+            "dry_edge": {
+                "type": "FlatRegressionEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 10,
+                    "interval_limits": [
+                        "percentile(0.01)",
+                        "percentile(99.99)"
+                    ],
+                    "percentile_bounds": [
+                        10,
+                        0.01
+                    ],
+                    "percentile_intervals": [
+                        100,
+                        1000000
+                    ],
+                    "selection": "median"
+                }
+            },
+            "wet_edge": {
+                "type": "FlatRegressionEdge",
+                "config": {
+                    "interval_type": "size",
+                    "interval_nb": 10,
+                    "interval_limits": [
+                        "percentile(0.01)",
+                        "percentile(99.99)"
+                    ],
+                    "percentile_bounds": [
+                        10,
+                        0.01
+                    ],
+                    "percentile_intervals": [
+                        100,
+                        1000000
+                    ],
+                    "selection": "median"
+                }
+            },
+            "var": "ndvi"
+        }
+    ]
+}

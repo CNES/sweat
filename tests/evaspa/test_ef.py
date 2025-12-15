@@ -108,7 +108,7 @@ def setup_models() -> list[EFModel]:
             "dry_edge": {
                 "type": "LinearEdge",
                 "config": {
-                    "percentile": (98, 100),
+                    "percentile": 2,
                     "interval_type": "size",
                     "interval_nb": 20,
                     "selection": "median",
@@ -118,7 +118,7 @@ def setup_models() -> list[EFModel]:
             "wet_edge": {
                 "type": "LinearEdge",
                 "config": {
-                    "percentile": (0, 2),
+                    "percentile": 2,
                     "interval_type": "size",
                     "interval_nb": 20,
                     "selection": "median",
@@ -132,7 +132,7 @@ def setup_models() -> list[EFModel]:
             "dry_edge": {
                 "type": "LinearEdge",
                 "config": {
-                    "percentile": (95, 100),
+                    "percentile": 5,
                     "interval_type": "density",
                     "interval_nb": 20,
                     "selection": "median",
@@ -161,7 +161,7 @@ def setup_models() -> list[EFModel]:
                     "config": {
                         "interval_type": "size",
                         "interval_nb": 20,
-                        "percentile": [98, 100],
+                        "percentile": 2,
                         "selection": "median",
                     },
                 },
@@ -170,7 +170,7 @@ def setup_models() -> list[EFModel]:
                     "config": {
                         "interval_type": "size",
                         "interval_nb": 20,
-                        "percentile": [0, 2],
+                        "percentile": 2,
                         "selection": "median",
                     },
                 },
@@ -189,7 +189,7 @@ def setup_models() -> list[EFModel]:
                     "config": {
                         "interval_type": "size",
                         "interval_nb": 20,
-                        "percentile": [0, 2],
+                        "percentile": 2,
                         "selection": "median",
                     },
                 },
@@ -205,7 +205,7 @@ def setup_models() -> list[EFModel]:
                     "config": {
                         "interval_type": "size",
                         "interval_nb": 20,
-                        "percentile": [98, 100],
+                        "percentile": 2,
                         "selection": "median",
                     },
                 },
@@ -272,7 +272,7 @@ def test_create_model(config, check_ef) -> None:
                 "config": {
                     "interval_type": "size",
                     "interval_nb": 20,
-                    "percentile": [0, 2],
+                    "percentile": 2,
                     "selection": "median",
                 },
             },
@@ -290,7 +290,7 @@ def test_create_model(config, check_ef) -> None:
                 "config": {
                     "interval_type": "size",
                     "interval_nb": 20,
-                    "percentile": [0, 2],
+                    "percentile": 2,
                     "selection": "median",
                 },
             },
@@ -303,7 +303,7 @@ def test_create_model(config, check_ef) -> None:
                 "config": {
                     "interval_type": "foo",
                     "interval_nb": 20,
-                    "percentile": [98, 100],
+                    "percentile": 2,
                     "selection": "median",
                 },
             },
@@ -351,7 +351,7 @@ def test_create_model_error(config) -> None:
                 "config": {
                     "interval_type": "size",
                     "interval_nb": 20,
-                    "percentile": [98, 100],
+                    "percentile": 2,
                     "selection": "median",
                 },
             },
@@ -360,7 +360,7 @@ def test_create_model_error(config) -> None:
                 "config": {
                     "interval_type": "size",
                     "interval_nb": 20,
-                    "percentile": [0, 2],
+                    "percentile": 2,
                     "selection": "median",
                 },
             },
@@ -376,7 +376,7 @@ def test_create_model_error(config) -> None:
                 "config": {
                     "interval_type": "size",
                     "interval_nb": 20,
-                    "percentile": [0, 2],
+                    "percentile": 2,
                     "selection": "median",
                 },
             },
@@ -389,7 +389,7 @@ def test_create_model_error(config) -> None:
                 "config": {
                     "interval_type": "size",
                     "interval_nb": 20,
-                    "percentile": [98, 100],
+                    "percentile": 2,
                     "selection": "median",
                 },
             },
@@ -439,7 +439,7 @@ def test_check_model_config(config) -> None:
                 "config": {
                     "interval_type": "size",
                     "interval_nb": 20,
-                    "percentile": [0, 2],
+                    "percentile": 2,
                     "selection": "median",
                 },
             },
@@ -449,7 +449,7 @@ def test_check_model_config(config) -> None:
                 "config": {
                     "interval_type": "size",
                     "interval_nb": 20,
-                    "percentile": [98, 100],
+                    "percentile": 2,
                     "selection": "median",
                 },
             },
@@ -517,7 +517,7 @@ def test_check_variability(lst, mask, expected) -> None:
                             "config": {
                                 "interval_type": "size",
                                 "interval_size": 0.05,
-                                "percentile": [98, 100],
+                                "percentile": 2,
                                 "selection": "median",
                             },
                         },
@@ -526,7 +526,7 @@ def test_check_variability(lst, mask, expected) -> None:
                             "config": {
                                 "interval_type": "size",
                                 "interval_size": 0.05,
-                                "percentile": [0, 2],
+                                "percentile": 2,
                                 "selection": "median",
                             },
                         },
@@ -539,7 +539,7 @@ def test_check_variability(lst, mask, expected) -> None:
                             "config": {
                                 "interval_type": "density",
                                 "interval_nb": 20,
-                                "percentile": [95, 100],
+                                "percentile": 5,
                                 "selection": "median",
                             },
                         },
@@ -690,7 +690,7 @@ def test_all() -> None:
                     "config": {
                         "interval_type": "size",
                         "interval_nb": 20,
-                        "percentile": [98, 100],
+                        "percentile": 2,
                         "selection": "median",
                     },
                 },
@@ -699,7 +699,7 @@ def test_all() -> None:
                     "config": {
                         "interval_type": "size",
                         "interval_nb": 20,
-                        "percentile": [0, 2],
+                        "percentile": 2,
                         "selection": "median",
                     },
                 },
@@ -712,7 +712,7 @@ def test_all() -> None:
                     "config": {
                         "interval_type": "density",
                         "interval_nb": 20,
-                        "percentile": [95, 100],
+                        "percentile": 5,
                         "selection": "median",
                     },
                 },
@@ -790,7 +790,7 @@ def test_efcheckconfig(config, expected) -> None:
                         "config": {
                             "interval_type": "size",
                             "interval_nb": 20,
-                            "percentile": [98, 100],
+                            "percentile": 2,
                             "selection": "median",
                         },
                     },
@@ -799,7 +799,7 @@ def test_efcheckconfig(config, expected) -> None:
                         "config": {
                             "interval_type": "size",
                             "interval_nb": 20,
-                            "percentile": [0, 2],
+                            "percentile": 2,
                             "selection": "median",
                         },
                     },
@@ -808,6 +808,9 @@ def test_efcheckconfig(config, expected) -> None:
             ]
         },
         {"models": "default_evaspa"},
+        {"models": "trishna_evaspa"},
+        {"models": "avignon_evaspa"},
+        {"models": "hsm_evaspa"},
         {"check": {"threshold": 10}, "models": "default_evaspa"},
         {
             "check": {"threshold": 10},
@@ -886,6 +889,8 @@ def test_get_available_configuration() -> None:
     [
         pytest.param("hsm_evaspa", ["lst", "albedo"]),
         pytest.param("avignon_evaspa", ["lst", "albedo", "ndvi"]),
+        pytest.param("global_evaspa", ["lst", "albedo", "ndvi"]),
+        pytest.param("trishna_evaspa", ["lst", "albedo", "fcover", "ndvi"]),
     ],
 )
 def test_get_variables_from_models(config_name, expected):

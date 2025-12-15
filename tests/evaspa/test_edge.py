@@ -128,12 +128,12 @@ def test_flat_edge_error(config) -> None:
 @pytest.mark.parametrize(
     "config",
     [
-        '{"position":"top","percentile":[99,100],"selection":"max"}',
-        '{"position":"top","percentile":[99.99,100],"selection":"median"}',
-        '{"position":"top","percentile":[99.99,100],"selection":"min"}',
-        '{"position":"top","percentile":[99.99,100],"selection":"mean"}',
+        '{"position":"top","percentile":1,"selection":"max"}',
+        '{"position":"top","percentile":0.01,"selection":"median"}',
+        '{"position":"top","percentile":0.01,"selection":"min"}',
+        '{"position":"top","percentile":0.01,"selection":"mean"}',
         (
-            '{"position":"top","percentile":[99.99,100],"percentile_limit":100,'
+            '{"position":"top","percentile":0.01,"percentile_limit":100,'
             '"selection":"mean"}'
         ),
         '{"position":"top","nb_points":10, "selection":"median"}',
@@ -163,12 +163,11 @@ def test_flat_percentile_edge(config) -> None:
 @pytest.mark.parametrize(
     "config",
     [
-        '{"position":"top","percentile":[90,100],"selection":"foo"}',
-        '{"position":"top","percentile":[46,12],"selection":"median"}',
-        '{"position":"bottom","percentile":[-1,5],"selection":"median"}',
-        '{"position":"top","percentile":[99,105],"selection":"median"}',
+        '{"position":"top","percentile":10,"selection":"foo"}',
+        '{"position":"top","percentile":101,"selection":"median"}',
+        '{"position":"bottom","percentile":-1,"selection":"median"}',
         (
-            '{"position":"top","percentile":[99,100],"nb_points":100,'
+            '{"position":"top","percentile":1,"nb_points":100,'
             '"selection":"median"}'
         ),
         (
@@ -176,16 +175,12 @@ def test_flat_percentile_edge(config) -> None:
             '"nb_points":100,"selection":"median"}'
         ),
         (
-            '{"position":"top","percentile":[99,100],"percentile_limit":-1,'
-            '"selection":"median"}'
-        ),
-        (
-            '{"position":"top","percentile":[99,105],"nb_points":1,0,'
+            '{"position":"top","percentile":1,"percentile_limit":-1,'
             '"selection":"median"}'
         ),
         '{"position":"top","nb_points":0, "selection":"mean"}',
         '{"position":"top", "selection":"mean"}',
-        '{"percentile":[99,100],"selection":"median"}',
+        '{"percentile":1,"selection":"median"}',
     ],
 )
 def test_flat_percentile_edge_error(config) -> None:
@@ -331,29 +326,29 @@ def test_get_points(config, expected) -> None:
     [
         (
             '{"position":"top","interval_type":"size","interval_size":0.05,'
-            '"percentile":[98,100],"selection":"max"}'
+            '"percentile":2,"selection":"max"}'
         ),
         (
             '{"position":"top","interval_type":"density","interval_nb":20,'
-            '"percentile":[98,100],"selection":"max"}'
+            '"percentile":2,"selection":"max"}'
         ),
         (
             '{"position":"top","interval_type":"density","interval_nb":100,'
-            '"percentile":[99,100],"selection":"min"}'
+            '"percentile":1,"selection":"min"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.05,'
-            '"percentile":[98,100],"selection":"median"}'
+            '"percentile":2,"selection":"median"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.05,'
-            '"percentile":[95,100],"percentile_limit":10,"selection":"median"}'
+            '"percentile":5,"percentile_limit":10,"selection":"median"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.05,'
             '"nb_points": 20, "selection":"median"}'
         ),
-        '{"position":"top","interval_type":"density","percentile":[98,100]}',
+        '{"position":"top","interval_type":"density","percentile":2}',
     ],
 )
 def test_linear_edge(config) -> None:
@@ -383,7 +378,7 @@ def test_linear_edge(config) -> None:
     [
         (
             '{"position":"top","interval_type":"size","interval_size":0.05,'
-            '"percentile_bounds":[[50,100],[90,100]],'
+            '"percentile_bounds":[50,10],'
             '"percentile_intervals":[100,1000],"selection":"median"}'
         ),
     ],
@@ -416,7 +411,7 @@ def test_linear_edge_with_variable_percentile(config) -> None:
     [
         (
             '{"position":"top","interval_type":"size","interval_size":0.01,'
-            '"percentile":[98,100],"selection":"median","use_breakpoint":true}'
+            '"percentile":2,"selection":"median","use_breakpoint":true}'
         ),
     ],
 )
@@ -464,7 +459,7 @@ def test_top_linear_edge_using_breakpoint(config) -> None:
     [
         (
             '{"position":"bottom","interval_type":"size","interval_size":0.01,'
-            '"percentile":[0,2],"selection":"median","use_breakpoint":true}'
+            '"percentile":2,"selection":"median","use_breakpoint":true}'
         ),
     ],
 )
@@ -520,35 +515,31 @@ def test_bottom_linear_edge_using_breakpoint(config) -> None:
         ),
         (
             '{"position":"top","interval_type":"foo","interval_nb":20,'
-            '"percentile":[98,100],"selection":"max"}'
+            '"percentile":2,"selection":"max"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.5,'
-            '"percentile":[98,100],"selection":"foo"}'
+            '"percentile":2,"selection":"foo"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0,'
-            '"percentile":[98,100],"selection":"median"}'
+            '"percentile":2,"selection":"median"}'
         ),
         (
             '{"position":"top","interval_type":"density","interval_nb":0,'
-            '"percentile":[98,100],"selection":"median"}'
+            '"percentile":2,"selection":"median"}'
         ),
         (
             '{"position":"top","interval_type":"density","interval_size":0.4,'
-            '"percentile":[98,100],"selection":"median"}'
+            '"percentile":2,"selection":"median"}'
         ),
         (
             '{"position":"top","interval_type":"density","interval_nb":20,'
-            '"percentile":[46,12],"selection":"median"}'
+            '"percentile":112,"selection":"median"}'
         ),
         (
             '{"position":"bottom","interval_type":"density","interval_nb":20,'
-            '"percentile":[-1,5],"selection":"median"}'
-        ),
-        (
-            '{"position":"top","interval_type":"density","interval_nb":20,'
-            '"percentile":[99,105],"selection":"median"}'
+            '"percentile":-1,"selection":"median"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.05,'
@@ -556,14 +547,14 @@ def test_bottom_linear_edge_using_breakpoint(config) -> None:
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.05,'
-            '"percentile":[99,100],"nb_points": 10, "selection":"median"}'
+            '"percentile":1,"nb_points": 10, "selection":"median"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.05,'
             '"selection":"median"}'
         ),
         (
-            '{"interval_type":"density","interval_nb":20,"percentile":[99,100],'
+            '{"interval_type":"density","interval_nb":20,"percentile":1,'
             '"selection":"median"}'
         ),
         (
@@ -577,27 +568,24 @@ def test_bottom_linear_edge_using_breakpoint(config) -> None:
             '"selection":"median"}'
         ),
         (
-            '{"position":"top","percentile":[99,100],"nb_points":100,'
+            '{"position":"top","percentile":1,"nb_points":100,'
             '"selection":"median"}'
         ),
         (
-            '{"position":"top","percentile":[99,100],'
-            '"percentile_bounds":[[90,100],[99,100]],"selection":"median"}'
+            '{"position":"top","percentile":1,'
+            '"percentile_bounds":[10,1],"selection":"median"}'
         ),
         (
             '{"position":"top","nb_points":100,'
-            '"percentile_bounds":[[90,100],[99,100]],"selection":"median"}'
+            '"percentile_bounds":[10,1],"selection":"median"}'
         ),
+        ('{"position":"top","percentile_bounds":[10,1],"selection":"median"}'),
         (
-            '{"position":"top","percentile_bounds":[[90,100],[99,100]],'
-            '"selection":"median"}'
-        ),
-        (
-            '{"position":"top","percentile_bounds":[[90,100],[99,100]],'
+            '{"position":"top","percentile_bounds":[10,100],'
             '"percentile_intervals":[1000,100],"selection":"median"}'
         ),
         (
-            '{"position":"top","percentile_bounds":[[100,100],[99,100]],'
+            '{"position":"top","percentile_bounds":[0,1],'
             '"percentile_intervals":[100,1000],"selection":"median"}'
         ),
         (
@@ -605,7 +593,7 @@ def test_bottom_linear_edge_using_breakpoint(config) -> None:
             '"nb_points":100,"selection":"median"}'
         ),
         (
-            '{"position":"top","percentile":[99,100],"percentile_limit":-1,'
+            '{"position":"top","percentile":1,"percentile_limit":-1,'
             '"selection":"median"}'
         ),
     ],
@@ -624,11 +612,11 @@ def test_linear_edge_error(config) -> None:
     [
         (
             '{"position":"top","interval_type":"density","interval_nb":100,'
-            '"percentile":[99,100],"selection":"min"}'
+            '"percentile":1,"selection":"min"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.01,'
-            '"percentile":[99,100],"selection":"median"}'
+            '"percentile":1,"selection":"median"}'
         ),
     ],
 )
@@ -668,35 +656,31 @@ def test_parabolic_edge(config) -> None:
         ),
         (
             '{"position":"top","interval_type":"foo","interval_nb":20,'
-            '"percentile":[98,100],"selection":"max"}'
+            '"percentile":2,"selection":"max"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.5,'
-            '"percentile":[98,100],"selection":"foo"}'
+            '"percentile":2,"selection":"foo"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0,'
-            '"percentile":[98,100],"selection":"median"}'
+            '"percentile":2,"selection":"median"}'
         ),
         (
             '{"position":"top","interval_type":"density","interval_nb":0,'
-            '"percentile":[98,100],"selection":"median"}'
+            '"percentile":2,"selection":"median"}'
         ),
         (
             '{"position":"top","interval_type":"density","interval_nb":20,'
-            '"percentile":[46,12],"selection":"median"}'
+            '"percentile":101,"selection":"median"}'
         ),
         (
             '{"position":"bottom","interval_type":"density","interval_nb":20,'
-            '"percentile":[-1,5],"selection":"median"}'
-        ),
-        (
-            '{"position":"top","interval_type":"density","interval_nb":20,'
-            '"percentile":[99,105],"selection":"median"}'
+            '"percentile":-1,"selection":"median"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.1,'
-            '"interval_nb":20,"percentile":[99,100],"selection":"median"}'
+            '"interval_nb":20,"percentile":1,"selection":"median"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.05,'
@@ -704,14 +688,14 @@ def test_parabolic_edge(config) -> None:
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.05,'
-            '"percentile":[99,100],"nb_points": 10, "selection":"median"}'
+            '"percentile":1,"nb_points": 10, "selection":"median"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.05,'
             '"selection":"median"}'
         ),
         (
-            '{"interval_type":"density","interval_nb":20,"percentile":[99,100],'
+            '{"interval_type":"density","interval_nb":20,"percentile":1,'
             '"selection":"median"}'
         ),
         ('{"interval_type":"size","interval_nb":20,"selection":"max"}'),
@@ -731,15 +715,15 @@ def test_parabolic_edge_error(config) -> None:
     [
         (
             '{"position":"top","interval_type":"density","interval_nb":20,'
-            '"percentile":[98,100],"selection":"max"}'
+            '"percentile":2,"selection":"max"}'
         ),
         (
             '{"position":"top","interval_type":"density","interval_nb":100,'
-            '"percentile":[99,100],"selection":"min"}'
+            '"percentile":1,"selection":"min"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.05,'
-            '"percentile":[98,100],"selection":"median"}'
+            '"percentile":2,"selection":"median"}'
         ),
     ],
 )
@@ -774,11 +758,11 @@ def test_top_linear_edge_with_threshold(config) -> None:
     [
         (
             '{"position":"bottom","interval_type":"density","interval_nb":100,'
-            '"percentile":[0,2],"selection":"min"}'
+            '"percentile":2,"selection":"min"}'
         ),
         (
             '{"position":"bottom","interval_type":"size","interval_size":0.05,'
-            '"percentile":[0,2],"selection":"median"}'
+            '"percentile":2,"selection":"median"}'
         ),
     ],
 )
@@ -813,7 +797,7 @@ def test_bottom_linear_edge_with_threshold(config) -> None:
     [
         (
             '{"position":"top","interval_type":"size","interval_size":0.01,'
-            '"percentile":[98,100],"selection":"median","use_breakpoint":true}'
+            '"percentile":2,"selection":"median","use_breakpoint":true}'
         ),
     ],
 )
@@ -865,31 +849,27 @@ def test_top_linear_edge_with_threshold_using_breakpoint(config) -> None:
         ),
         (
             '{"position":"top","interval_type":"foo","interval_nb":20,'
-            '"percentile":[98,100],"selection":"max"}'
+            '"percentile":2,"selection":"max"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.5,'
-            '"percentile":[98,100],"selection":"foo"}'
+            '"percentile":2,"selection":"foo"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0,'
-            '"percentile":[98,100],"selection":"median"}'
+            '"percentile":2,"selection":"median"}'
         ),
         (
             '{"position":"top","interval_type":"density","interval_nb":0,'
-            '"percentile":[98,100],"selection":"median"}'
+            '"percentile":2,"selection":"median"}'
         ),
         (
             '{"position":"bottom","interval_type":"density","interval_nb":20,'
-            '"percentile":[46,12],"selection":"median"}'
+            '"percentile":101,"selection":"median"}'
         ),
         (
             '{"position":"bottom","interval_type":"density","interval_nb":20,'
-            '"percentile":[-1,5],"selection":"median"}'
-        ),
-        (
-            '{"position":"top","interval_type":"density","interval_nb":20,'
-            '"percentile":[99,105],"selection":"median"}'
+            '"percentile":-1,"selection":"median"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.05,'
@@ -897,11 +877,11 @@ def test_top_linear_edge_with_threshold_using_breakpoint(config) -> None:
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.05,'
-            '"percentile":[99,100],"nb_points": 10, "selection":"median"}'
+            '"percentile":1,"nb_points": 10, "selection":"median"}'
         ),
         (
             '{"interval_type":"density","interval_nb":20,'
-            '"percentile":[99,100],"selection":"median"}'
+            '"percentile":1,"selection":"median"}'
         ),
     ],
 )
@@ -919,11 +899,11 @@ def test_linear_edge_with_threshold_error(config) -> None:
     [
         (
             '{"position":"top","interval_type":"size","interval_size":0.02,'
-            '"percentile":[99,100],"selection":"max"}'
+            '"percentile":1,"selection":"max"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.05,'
-            '"percentile":[98,100],"selection":"median"}'
+            '"percentile":2,"selection":"median"}'
         ),
     ],
 )
@@ -975,7 +955,7 @@ def test_double_linear_edge(config) -> None:
     [
         (
             '{"position":"top","interval_type":"size","interval_size":0.01,'
-            '"percentile":[98,100],"selection":"median","use_breakpoint":true}'
+            '"percentile":2,"selection":"median","use_breakpoint":true}'
         ),
     ],
 )
@@ -1029,31 +1009,27 @@ def test_double_linear_edge_using_breakpoint(config) -> None:
         ),
         (
             '{"position":"top","interval_type":"foo","interval_nb":20,'
-            '"percentile":[98,100],"selection":"max"}'
+            '"percentile":2,"selection":"max"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.5,'
-            '"percentile":[98,100],"selection":"foo"}'
+            '"percentile":2,"selection":"foo"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0,'
-            '"percentile":[98,100],"selection":"median"}'
+            '"percentile":2,"selection":"median"}'
         ),
         (
             '{"position":"top","interval_type":"density","interval_nb":0,'
-            '"percentile":[98,100],"selection":"median"}'
+            '"percentile":2,"selection":"median"}'
         ),
         (
             '{"position":"bottom","interval_type":"density","interval_nb":20,'
-            '"percentile":[46,12],"selection":"median"}'
+            '"percentile":101,"selection":"median"}'
         ),
         (
             '{"position":"bottom","interval_type":"density","interval_nb":20,'
-            '"percentile":[-1,5],"selection":"median"}'
-        ),
-        (
-            '{"position":"top","interval_type":"density","interval_nb":20,'
-            '"percentile":[99,105],"selection":"median"}'
+            '"percentile":-1,"selection":"median"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.05,'
@@ -1061,11 +1037,11 @@ def test_double_linear_edge_using_breakpoint(config) -> None:
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.05,'
-            '"percentile":[99,100],"nb_points": 10, "selection":"median"}'
+            '"percentile":1,"nb_points": 10, "selection":"median"}'
         ),
         (
             '{"interval_type":"density","interval_nb":20,'
-            '"percentile":[99,100],"selection":"median"}'
+            '"percentile":1,"selection":"median"}'
         ),
     ],
 )
@@ -1083,15 +1059,15 @@ def test_double_linear_edge_error(config) -> None:
     [
         (
             '{"position":"top","interval_type":"size","interval_size":0.05,'
-            '"percentile":[98,100],"selection":"max"}'
+            '"percentile":2,"selection":"max"}'
         ),
         (
             '{"position":"top","interval_type":"density","interval_nb":100,'
-            '"percentile":[99,100],"selection":"min"}'
+            '"percentile":1,"selection":"min"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.05,'
-            '"percentile":[98,100],"selection":"median"}'
+            '"percentile":2,"selection":"median"}'
         ),
     ],
 )
@@ -1126,7 +1102,7 @@ def test_flat_linear_edge(config) -> None:
     [
         (
             '{"position":"top","interval_type":"size","interval_size":0.01,'
-            '"percentile":[98,100],"selection":"median","use_breakpoint":true}'
+            '"percentile":2,"selection":"median","use_breakpoint":true}'
         ),
     ],
 )
@@ -1179,31 +1155,27 @@ def test_flat_linear_edge_using_breakpoint(config) -> None:
         ),
         (
             '{"position":"top","interval_type":"foo","interval_nb":20,'
-            '"percentile":[98,100],"selection":"max"}'
+            '"percentile":2,"selection":"max"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.5,'
-            '"percentile":[98,100],"selection":"foo"}'
+            '"percentile":2,"selection":"foo"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0,'
-            '"percentile":[98,100],"selection":"median"}'
+            '"percentile":2,"selection":"median"}'
         ),
         (
             '{"position":"top","interval_type":"density","interval_nb":0,'
-            '"percentile":[98,100],"selection":"median"}'
+            '"percentile":2,"selection":"median"}'
         ),
         (
             '{"position":"bottom","interval_type":"density","interval_nb":20,'
-            '"percentile":[46,12],"selection":"median"}'
+            '"percentile":101,"selection":"median"}'
         ),
         (
             '{"position":"bottom","interval_type":"density","interval_nb":20,'
-            '"percentile":[-1,5],"selection":"median"}'
-        ),
-        (
-            '{"position":"top","interval_type":"density","interval_nb":20,'
-            '"percentile":[99,105],"selection":"median"}'
+            '"percentile":-1,"selection":"median"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.05,'
@@ -1211,10 +1183,10 @@ def test_flat_linear_edge_using_breakpoint(config) -> None:
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.05,'
-            '"percentile":[99,100],"nb_points": 10, "selection":"median"}'
+            '"percentile":1,"nb_points": 10, "selection":"median"}'
         ),
         (
-            '{"interval_type":"density","interval_nb":20,"percentile":[99,100],'
+            '{"interval_type":"density","interval_nb":20,"percentile":1,'
             '"selection":"median"}'
         ),
     ],
@@ -1233,21 +1205,21 @@ def test_flat_linear_edge_error(config) -> None:
     [
         (
             '{"position":"top","interval_type":"size","interval_size":0.05,'
-            '"percentile":[98,100],"selection":"max"}'
+            '"percentile":2,"selection":"max"}'
         ),
         (
             '{"position":"top","interval_type":"density","interval_nb":20,'
-            '"percentile":[98,100],"selection":"max"}'
+            '"percentile":2,"selection":"max"}'
         ),
         (
             '{"position":"top","interval_type":"density","interval_nb":100,'
-            '"percentile":[99,100],"selection":"min"}'
+            '"percentile":1,"selection":"min"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.05,'
-            '"percentile":[98,100],"selection":"median"}'
+            '"percentile":2,"selection":"median"}'
         ),
-        '{"position":"top","interval_type":"density","percentile":[98,100]}',
+        '{"position":"top","interval_type":"density","percentile":2}',
     ],
 )
 def test_flat_regression_edge(config) -> None:
@@ -1280,31 +1252,27 @@ def test_flat_regression_edge(config) -> None:
         ),
         (
             '{"position":"top","interval_type":"foo","interval_nb":20,'
-            '"percentile":[98,100],"selection":"max"}'
+            '"percentile":2,"selection":"max"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.5,'
-            '"percentile":[98,100],"selection":"foo"}'
+            '"percentile":2,"selection":"foo"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0,'
-            '"percentile":[98,100],"selection":"median"}'
+            '"percentile":2,"selection":"median"}'
         ),
         (
             '{"position":"top","interval_type":"density","interval_nb":0,'
-            '"percentile":[98,100],"selection":"median"}'
+            '"percentile":2,"selection":"median"}'
         ),
         (
             '{"position":"top","interval_type":"density","interval_nb":20,'
-            '"percentile":[46,12],"selection":"median"}'
+            '"percentile":101,"selection":"median"}'
         ),
         (
             '{"position":"bottom","interval_type":"density","interval_nb":20,'
-            '"percentile":[-1,5],"selection":"median"}'
-        ),
-        (
-            '{"position":"top","interval_type":"density","interval_nb":20,'
-            '"percentile":[99,105],"selection":"median"}'
+            '"percentile":-1,"selection":"median"}'
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.05,'
@@ -1312,11 +1280,11 @@ def test_flat_regression_edge(config) -> None:
         ),
         (
             '{"position":"top","interval_type":"size","interval_size":0.05,'
-            '"percentile":[99,100],"nb_points": 10, "selection":"median"}'
+            '"percentile":1,"nb_points": 10, "selection":"median"}'
         ),
         (
             '{"interval_type":"density","interval_nb":20,'
-            '"percentile":[99,105],"selection":"median"}'
+            '"percentile":2,"selection":"median"}'
         ),
     ],
 )
@@ -1350,7 +1318,7 @@ def test_flat_regression_edge_error(config) -> None:
                 "position": "top",
                 "interval_type": "density",
                 "interval_nb": 20,
-                "percentile": [98, 100],
+                "percentile": 2,
                 "selection": "max",
             },
         ),
@@ -1360,7 +1328,7 @@ def test_flat_regression_edge_error(config) -> None:
                 "position": "bottom",
                 "interval_type": "size",
                 "interval_size": 0.05,
-                "percentile": [0, 4],
+                "percentile": 4,
                 "selection": "median",
             },
         ),
@@ -1370,7 +1338,7 @@ def test_flat_regression_edge_error(config) -> None:
                 "position": "top",
                 "interval_type": "density",
                 "interval_nb": 20,
-                "percentile": [98, 100],
+                "percentile": 2,
                 "selection": "median",
             },
         ),
@@ -1380,7 +1348,7 @@ def test_flat_regression_edge_error(config) -> None:
                 "position": "bottom",
                 "interval_type": "size",
                 "interval_size": 0.05,
-                "percentile": [0, 4],
+                "percentile": 4,
                 "selection": "max",
             },
         ),
@@ -1390,7 +1358,7 @@ def test_flat_regression_edge_error(config) -> None:
                 "position": "top",
                 "interval_type": "density",
                 "interval_nb": 20,
-                "percentile": [98, 100],
+                "percentile": 2,
                 "selection": "median",
             },
         ),
@@ -1400,7 +1368,7 @@ def test_flat_regression_edge_error(config) -> None:
                 "position": "bottom",
                 "interval_type": "size",
                 "interval_size": 0.05,
-                "percentile": [0, 4],
+                "percentile": 4,
                 "selection": "max",
             },
         ),
@@ -1410,7 +1378,7 @@ def test_flat_regression_edge_error(config) -> None:
                 "position": "top",
                 "interval_type": "density",
                 "interval_nb": 20,
-                "percentile": [98, 100],
+                "percentile": 2,
                 "selection": "median",
             },
         ),
@@ -1420,7 +1388,7 @@ def test_flat_regression_edge_error(config) -> None:
                 "position": "bottom",
                 "interval_type": "size",
                 "interval_size": 0.05,
-                "percentile": [0, 4],
+                "percentile": 4,
                 "selection": "max",
             },
         ),
@@ -1430,7 +1398,7 @@ def test_flat_regression_edge_error(config) -> None:
                 "position": "top",
                 "interval_type": "density",
                 "interval_nb": 20,
-                "percentile": [98, 100],
+                "percentile": 2,
                 "selection": "median",
             },
         ),
@@ -1440,7 +1408,7 @@ def test_flat_regression_edge_error(config) -> None:
                 "position": "bottom",
                 "interval_type": "size",
                 "interval_size": 0.05,
-                "percentile": [0, 4],
+                "percentile": 4,
                 "selection": "max",
             },
         ),

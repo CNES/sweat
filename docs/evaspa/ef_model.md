@@ -60,9 +60,9 @@ Therefore, an edge is characterized by:
 * for edge based on a point selection for regression (inherited from *RegressionEdge*), a configuration **config**:
     - **interval_type**: an interval type either fixed size *size* or fixed density *density*
     - **interval_nb**: a number of intervals (for density interval type or fixed size type) or **interval_size**: a size of intervals (for fixed size type only)
-    - **interval_limits**: limits for interval to consider for point selecttion
+    - **interval_limits**: limits for interval to consider for point selection
     - **nb_points**: number of points to considered for point selection
-    - **percentile**: a percentile interval to considered for point selection
+    - **percentile**: a percentile value to considered for point selection
     - **percentile_limit** (*optional*): the maximum number of points to be considered in the percentile interval
     - **percentile_bounds**: Percentiles used for sparse and dense intervals (logarithmic regression to compute percentile used between bounds)
     - **percentile_intervals**: Number of points to consider a sparse interval and dense intervals
@@ -71,7 +71,7 @@ Therefore, an edge is characterized by:
      albedo increases for low albedo values (not necessarily linearly), and the mean temperature decreases when albedo increases
      for high albedo values (linearly). The break point occurs around 0.25 and 0.3. Once the option is activated, the breakpoint
      is used to computed the edge. For *LinearEdge*, if the option use_break_point is activated, the regression occurs only on a
-     part of the selected point: after the break point for top eadge and before the break point for bottom edge.
+     part of the selected point: after the break point for top edge and before the break point for bottom edge.
      For *ThresholdLinearEdge* and *FlatLinearEdge*, if the option use_break_point is activated, the breakpoint is used as guess
      during the regression.
 
@@ -97,7 +97,7 @@ Therefore, an edge is characterized by:
 {
     "type": "FlatPercentileEdge",
     "config": {
-        "percentile": [99.9, 100],
+        "percentile": 0.1,
         "selection": "median"
     }
 }
@@ -111,7 +111,7 @@ Therefore, an edge is characterized by:
     "config": {
         "interval_type": "density",
         "interval_nb": 20,
-        "percentile": [95, 100],
+        "percentile": 5,
         "selection": "median"
     }
 }
@@ -125,7 +125,22 @@ or
     "config": {
         "interval_type": "size",
         "interval_size": 0.05,
-        "percentile": [95, 100],
+        "percentile": 5,
+        "selection": "median"
+    }
+}
+```
+
+or
+
+```json
+{
+    "type": "LinearEdge",
+    "config": {
+        "interval_type": "size",
+        "interval_nb": 10,
+        "percentile_bounds": [5,1],
+        "percentile_intervals": [100,10000],
         "selection": "median"
     }
 }
@@ -139,7 +154,7 @@ or
     "config": {
         "interval_type": "size",
         "interval_size": 0.01,
-        "percentile": [95, 100],
+        "percentile": 5,
         "selection": "median"
     }
 }
@@ -153,7 +168,7 @@ or
     "config": {
         "interval_type": "size",
         "interval_size": 0.01,
-        "percentile": [95, 100],
+        "percentile": 5,
         "selection": "median"
     }
 }
@@ -167,7 +182,7 @@ or
     "config": {
         "interval_type": "size",
         "interval_size": 0.05,
-        "percentile": [95, 100],
+        "percentile": 5,
         "selection": "median"
     }
 }
@@ -181,7 +196,7 @@ or
     "config": {
         "interval_type": "size",
         "interval_size": 0.05,
-        "percentile": [95, 100],
+        "percentile": 5,
         "selection": "median"
     }
 }
@@ -207,7 +222,7 @@ A EF model is defined by:
         "config": {
             "interval_type": "density",
             "interval_nb": 20,
-            "percentile": [95, 100],
+            "percentile": 5,
             "selection": "median"
         }
     },
@@ -216,7 +231,7 @@ A EF model is defined by:
         "config": {
             "interval_type": "density",
             "interval_nb": 20,
-            "percentile": [0, 5],
+            "percentile": 5,
             "selection": "median"
         }
     },
@@ -233,7 +248,7 @@ A EF model is defined by:
         "config": {
             "interval_type": "density",
             "interval_nb": 20,
-            "percentile": [95, 100],
+            "percentile": 5,
             "selection": "median"
         }
     },
@@ -258,7 +273,7 @@ In the input file, the description of EF models can be provided as a list of EF 
                     "config": {
                         "interval_type": "density",
                         "interval_nb": 20,
-                        "percentile": [98, 100],
+                        "percentile": 2,
                         "selection": "median"
                     }
                 },
@@ -267,7 +282,7 @@ In the input file, the description of EF models can be provided as a list of EF 
                     "config": {
                         "interval_type": "density",
                         "interval_nb": 20,
-                        "percentile": [0, 2],
+                        "percentile": 2,
                         "selection": "median"
                     }
                 },
@@ -280,7 +295,7 @@ In the input file, the description of EF models can be provided as a list of EF 
                     "config": {
                         "interval_type": "density",
                         "interval_nb": 20,
-                        "percentile": [95, 100],
+                        "percentile": 5,
                         "selection": "median"
                     }
                 },

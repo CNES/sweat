@@ -1,70 +1,71 @@
 {
-    "input":{
-        "path":"tests/data/modis_test_dem.tif",
-        "date":"2018-05-16T10:00:00-00:00"
+    "input": {
+        "path": "tests/data/modis_test_dem.tif",
+        "date": "2018-05-16T10:00:00-00:00"
     },
-    "output":{
-        "path":"out"
+    "output": {
+        "path": "out"
     },
-    "params":{
-        "filtering":{
-        },
-        "ef":{
-            "check":{
+    "params": {
+        "filtering": {},
+        "ef": {
+            "check": {
                 "threshold": 0.02
             },
             "models": [
-            {
-                "name": "model1",
-                "dry_edge": {
-                    "type": "LinearEdge",
-                    "config": {
-                        "interval_type": "density",
-                        "interval_nb": 20,
-                        "percentile": [98, 100],
-                        "selection": "median"
-                    }
+                {
+                    "name": "model1",
+                    "dry_edge": {
+                        "type": "LinearEdge",
+                        "config": {
+                            "interval_type": "density",
+                            "interval_nb": 20,
+                            "percentile": 2,
+                            "selection": "median"
+                        }
+                    },
+                    "wet_edge": {
+                        "type": "LinearEdge",
+                        "config": {
+                            "interval_type": "density",
+                            "interval_nb": 20,
+                            "percentile": 2,
+                            "selection": "median"
+                        }
+                    },
+                    "var": "albedo"
                 },
-                "wet_edge": {
-                    "type": "LinearEdge",
-                    "config": {
-                        "interval_type": "density",
-                        "interval_nb": 20,
-                        "percentile": [0, 2],
-                        "selection": "median"
-                    }
-                },
-                "var": "albedo"
-            },
-            {
-                "name": "model2",
-                "dry_edge": {
-                    "type": "LinearEdge",
-                    "config": {
-                        "interval_type": "density",
-                        "interval_nb": 20,
-                        "percentile": [95, 100],
-                        "selection": "median"
-                    }
-                },
-                "wet_edge": {
-                    "type": "FlatEdge"
-                },
-                "var": "albedo"
-            }
+                {
+                    "name": "model2",
+                    "dry_edge": {
+                        "type": "LinearEdge",
+                        "config": {
+                            "interval_type": "density",
+                            "interval_nb": 20,
+                            "percentile": 5,
+                            "selection": "median"
+                        }
+                    },
+                    "wet_edge": {
+                        "type": "FlatEdge"
+                    },
+                    "var": "albedo"
+                }
             ],
-            "options":{
+            "options": {
                 "selection": false,
                 "merging": "mean"
             }
         },
-        "seb":{
+        "seb": {
             "use_topo": true,
-            "models": ["kustas"],
+            "models": [
+                "kustas"
+            ],
             "merging": "mean"
         },
-        "daily":{
-            "use_topo" : true,
+        "daily": {
+            "use_topo": true,
             "method": "toa"
         }
     },
