@@ -1,6 +1,6 @@
 RUN = pixi run --locked -q --no-progress -e dev
 
-.PHONY: test list
+.PHONY: test list docs
 
 ruff:
 	$(RUN) ruff format .
