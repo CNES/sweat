@@ -1,11 +1,99 @@
-import datetime as dt
-import os
-
 import numpy as np
+import scipy.stats
 import xarray as xr
+from models_tools import (
+    get_et_single_date,
+    get_et_time_series,
+    list_error,
+    list_var,
+)
 
-from sweat.common.constant import ETVar
-from sweat.common.io import read_data_from_file
+
+def pixel_rmse(
+    dir_sd: str, dir_ts: str, start_date: str, end_date: str, x: int, y: int
+) -> float:
+    errors, _, _ = list_error(
+        dir_sd, dir_ts, start_date, end_date, x, y, to_filter=True
+    )
+    n = len(errors)
+    squared_errors = [daily_error**2 for daily_error in errors]
+    rmse = np.sqrt(sum(squared_errors) / n)
+    return rmse.item()
+
+
+def pixel_mae(
+    dir_sd: str, dir_ts: str, start_date: str, end_date: str, x: int, y: int
+) -> float:
+    errors, _, _ = list_error(
+        dir_sd,
+        dir_ts,
+        start_date,
+        end_date,
+        x,
+        y,
+        absolute=True,
+        to_filter=True,
+    )
+    n = len(errors)
+    return sum(errors) / n
+
+
+def pixel_mbe(
+    dir_sd: str, dir_ts: str, start_date: str, end_date: str, x: int, y: int
+) -> float:
+    errors, _, _ = list_error(
+        dir_sd,
+        dir_ts,
+        start_date,
+        end_date,
+        x,
+        y,
+        absolute=False,
+        to_filter=True,
+    )
+    n = len(errors)
+    return sum(errors) / n
+
+
+def pixel_r2(
+    dir_sd: str, dir_ts: str, start_date: str, end_date: str, x: int, y: int
+) -> float:
+    time = xr.date_range(start_date, end=end_date, freq="1D")
+    errors, _, _ = list_error(
+        dir_sd,
+        dir_ts,
+        start_date,
+        end_date,
+        x,
+        y,
+        absolute=False,
+        to_filter=True,
+    )
+    n = len(errors)
+    squared_errors = [daily_error**2 for daily_error in errors]
+    rss = sum(squared_errors) / n
+    mean_et_sd = (
+        sum(
+            get_et_single_date(dir_sd, date)
+            .sel(x=x, y=y, method="nearest")
+            .item()
+            for date in time
+        )
+        / n
+    )
+    tss = (
+        sum(
+            (
+                get_et_single_date(dir_sd, date)
+                .sel(x=x, y=y, method="nearest")
+                .item()
+                - mean_et_sd
+            )
+            ** 2
+            for date in time
+        )
+    ) / n
+    return 1 - rss / tss
 
 
 def mae_date(x: xr.DataArray, y: xr.DataArray) -> float:
@@ -94,96 +182,6 @@ def r2_date(x: xr.DataArray, y: xr.DataArray) -> float:
     return 1 - rss / tss
 
 
-def get_et_time_series(path_dir: str, date: dt.datetime) -> xr.DataArray:
-    """
-    Return the simulated evapotranspiration for a given date
-    from the corresponding GeoTIFF file in the specified directory.
-
-    Parameters
-    ----------
-    dir: str
-        Directory where the `et_time_series_YYYYMMDD.tif` files are stored
-    date: dt.datetime
-        Date
-
-    Returns
-    -------
-    xr.DataArray
-        Simulated evapotranspiration spatial distribution
-    """
-    filename = f"et_time_series_{date.strftime('%Y%m%d')}.tif"
-    path = os.path.join(path_dir, filename)
-    if not os.path.isfile(path):
-        msg = f"ET TS File not found for date {date}"
-        raise ValueError(msg)
-    data = read_data_from_file(path)
-    return data[ETVar.ET.value]
-
-
-def get_et_single_date(path_dir: str, date: dt.datetime) -> xr.DataArray:
-    """
-    Return the observed evapotranspiration for a given date
-    from the corresponding GeoTIFF file in the specified directory.
-
-    Parameters
-    ----------
-    dir: str
-        Directory where the `et_single_date_YYYYMMDD.tif` are stored
-    date: dt.datetime
-        Date of the acquisition
-
-    Returns
-    -------
-    xr.DataArray
-        Observed evapotranspiration spatial distribution
-    """
-    filename = f"et_single_date_{date.strftime('%Y%m%d')}.tif"
-    path = os.path.join(path_dir, filename)
-    if not os.path.isfile(path):
-        msg = f"ET File not found for date {date}"
-        raise ValueError(msg)
-    data = read_data_from_file(path)
-    return data[ETVar.ET.value]
-
-
-def error_date_list(
-    dir_sd: str, dir_ts: str, start_date: str, end_date: str, metric
-) -> list[float]:
-    """
-    Create a list containing the values of a specified error metric
-    between observed and simulated evapotranspiration for each date
-    within the given period.
-
-    Parameters
-    ----------
-    dir_sd : str
-        Directory where the observed evapotranspiration product files
-        are stored.
-    dir_ts : str
-        Directory where the simulated evapotranspiration product file
-        are stored.
-    start_date : str
-        Start date of the period in `YYYY-MM-DD` format.
-    end_date : str
-        End date of the period in `YYYY-MM-DD` format.
-    metric : callableread_ts_input_data, run_timeseries,
-        Error metric function
-
-    Returns
-    -------
-    list[float]
-        List of error values for each date in the period.
-    """
-    errors = []
-    time = xr.date_range(start_date, freq="1D", end=end_date)
-    for date in time:
-        error_date = metric(
-            get_et_single_date(dir_sd, date), get_et_time_series(dir_ts, date)
-        )
-        errors.append(error_date)
-    return errors
-
-
 def mae_pixel(
     dir_sd: str, dir_ts: str, start_date: str, end_date: str
 ) -> xr.DataArray:
@@ -210,11 +208,17 @@ def mae_pixel(
         Spatial distribution of the Mean Absolute Error
     """
     time = xr.date_range(start_date, freq="1D", end=end_date)
-    aes = sum(
-        abs(get_et_time_series(dir_ts, date) - get_et_single_date(dir_sd, date))
-        for date in time
+    errors = xr.concat(
+        [
+            abs(
+                get_et_time_series(dir_ts, date)
+                - get_et_single_date(dir_sd, date)
+            )
+            for date in time
+        ],
+        dim="time",
     )
-    return aes / len(time)
+    return errors.mean(dim="time")
 
 
 def rmse_pixel(
@@ -243,12 +247,18 @@ def rmse_pixel(
         Spatial distribution of the Root Mean Squared Error
     """
     time = xr.date_range(start_date, freq="1D", end=end_date)
-    ses = sum(
-        (get_et_time_series(dir_ts, date) - get_et_single_date(dir_sd, date))
-        ** 2
-        for date in time
+    errors = xr.concat(
+        [
+            (
+                get_et_time_series(dir_ts, date)
+                - get_et_single_date(dir_sd, date)
+            )
+            ** 2
+            for date in time
+        ],
+        dim="time",
     )
-    return np.sqrt(ses / len(time))
+    return errors.mean(dim="time") ** 0.5
 
 
 def mbe_pixel(dir_sd: str, dir_ts: str, start_date: str, end_date: str):
@@ -275,11 +285,17 @@ def mbe_pixel(dir_sd: str, dir_ts: str, start_date: str, end_date: str):
         Spatial distribution of the Mean Bias Error
     """
     time = xr.date_range(start_date, freq="1D", end=end_date)
-    bes = sum(
-        get_et_single_date(dir_sd, date) - get_et_time_series(dir_ts, date)
-        for date in time
+    errors = xr.concat(
+        [
+            (
+                get_et_time_series(dir_ts, date)
+                - get_et_single_date(dir_sd, date)
+            )
+            for date in time
+        ],
+        dim="time",
     )
-    return bes / len(time)
+    return errors.mean(dim="time")
 
 
 def r2_pixel(
@@ -308,16 +324,49 @@ def r2_pixel(
         Spatial distribution of the coefficient of determination
     """
     time = xr.date_range(start_date, freq="1D", end=end_date)
-    rss = sum(
-        (get_et_time_series(dir_ts, date) - get_et_single_date(dir_sd, date))
-        ** 2
-        for date in time
+    rs = xr.concat(
+        [
+            (
+                get_et_time_series(dir_ts, date)
+                - get_et_single_date(dir_sd, date)
+            )
+            ** 2
+            for date in time
+        ],
+        dim="time",
     )
-    single_date_mean = sum(
-        get_et_single_date(dir_sd, date) for date in time
-    ) / len(time)
-    tss = sum(
-        (get_et_single_date(dir_sd, date) - single_date_mean) ** 2
-        for date in time
+    rss = rs.sum(dim="time")
+    sd_values = xr.concat(
+        [get_et_single_date(dir_sd, date) for date in time], dim="time"
     )
+    mean_sd = sd_values.mean(dim="time")
+    ts = xr.concat(
+        [(mean_sd - get_et_single_date(dir_sd, date)) ** 2 for date in time],
+        dim="time",
+    )
+    tss = ts.sum(dim="time")
     return 1 - rss / tss
+
+
+def variable_correlation(
+    dir_var: str,
+    dir_sd: str,
+    dir_ts: str,
+    start_date: str,
+    end_date: str,
+    x: int,
+    y: int,
+    variable: str,
+    correlation: str,
+    absolute: bool,
+):
+    errors, index, _ = list_error(
+        dir_sd, dir_ts, start_date, end_date, x, y, absolute, to_filter=True
+    )
+    var_values = list_var(dir_var, variable, start_date, end_date, x, y)
+    filtered_vars = [var_values[i] for i in index]
+    if correlation == "spearman":
+        corr = scipy.stats.spearmanr(filtered_vars, errors)
+    elif correlation == "pearson":
+        corr = scipy.stats.pearsonr(filtered_vars, errors)
+    return corr[0]
