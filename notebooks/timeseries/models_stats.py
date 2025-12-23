@@ -15,10 +15,9 @@ def pixel_rmse(
     errors, _, _ = list_error(
         dir_sd, dir_ts, start_date, end_date, x, y, to_filter=True
     )
-    n = len(errors)
-    squared_errors = [daily_error**2 for daily_error in errors]
-    rmse = np.sqrt(sum(squared_errors) / n)
-    return rmse.item()
+    np_errors = np.array(errors, dtype=float)
+    rmse = np.sqrt(np.nanmean(np_errors**2))
+    return float(rmse)
 
 
 def pixel_mae(
@@ -34,8 +33,9 @@ def pixel_mae(
         absolute=True,
         to_filter=True,
     )
-    n = len(errors)
-    return sum(errors) / n
+    np_errors = np.array(errors, dtype=float)
+    mae = np.nanmean(np_errors)
+    return float(mae)
 
 
 def pixel_mbe(
@@ -51,13 +51,17 @@ def pixel_mbe(
         absolute=False,
         to_filter=True,
     )
-    n = len(errors)
-    return sum(errors) / n
+    np_errors = np.array(errors, dtype=float)
+    mbe = np.nanmean(np_errors)
+    return float(mbe)
 
 
 def pixel_r2(
     dir_sd: str, dir_ts: str, start_date: str, end_date: str, x: int, y: int
 ) -> float:
+    import numpy as np
+    import xarray as xr
+
     time = xr.date_range(start_date, end=end_date, freq="1D")
     errors, _, _ = list_error(
         dir_sd,
@@ -69,31 +73,21 @@ def pixel_r2(
         absolute=False,
         to_filter=True,
     )
-    n = len(errors)
-    squared_errors = [daily_error**2 for daily_error in errors]
-    rss = sum(squared_errors) / n
-    mean_et_sd = (
-        sum(
+    np_errors = np.array(errors, dtype=float)
+    rss = np.nanmean(np_errors**2)
+    et_values = np.array(
+        [
             get_et_single_date(dir_sd, date)
             .sel(x=x, y=y, method="nearest")
             .item()
             for date in time
-        )
-        / n
+        ],
+        dtype=float,
     )
-    tss = (
-        sum(
-            (
-                get_et_single_date(dir_sd, date)
-                .sel(x=x, y=y, method="nearest")
-                .item()
-                - mean_et_sd
-            )
-            ** 2
-            for date in time
-        )
-    ) / n
-    return 1 - rss / tss
+    mean_et = np.nanmean(et_values)
+    tss = np.nanmean((et_values - mean_et) ** 2)
+    r2 = 1 - rss / tss if tss != 0 else np.nan
+    return float(r2)
 
 
 def mae_date(x: xr.DataArray, y: xr.DataArray) -> float:

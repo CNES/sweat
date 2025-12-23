@@ -400,11 +400,11 @@ def pixel_time_stats(
         dir_sd, dir_ts, start_date, end_date, x, y, absolute, to_filter=True
     )
     np_errors = np.array(errors)
-    argmax = np_errors.argmax().item()
-    max_value = np_errors.max().item()
-    argmin = np_errors.argmin().item()
-    min_value = np_errors.min().item()
-    mean = sum(errors) / len(errors)
+    argmax = np.nanargmax(np_errors)
+    max_value = np.max(np_errors)
+    argmin = np.nanargmin(np_errors)
+    min_value = np.nanmin(np_errors)
+    mean = np.nanmean(np_errors)
     date_max = filtered_time[argmax].strftime("%Y-%m-%d")
     date_min = filtered_time[argmin].strftime("%Y-%m-%d")
     return pd.DataFrame(
@@ -547,12 +547,9 @@ def plot_et_time_comparison(dir_sd, dir_ts, start_date, end_date, x, y):
     time = xr.date_range(start_date, end=end_date, freq="1D")
     et_sd = et_sd_list(dir_sd, start_date, end_date, x, y)
     et_ts = et_ts_list(dir_ts, start_date, end_date, x, y)
-    plt.plot(time, et_ts, color="red", label="Observed ET")
-    plt.plot(time, et_sd, color="blue", label="Simulated ET")
-    plt.title(
-        f"Simulated ET vs Observed ET from {start_date} to {end_date} "
-        f"for pixel [{x},{y}]"
-    )
+    plt.plot(time, et_ts, color="red", label="Simulated ET")
+    plt.plot(time, et_sd, color="blue", label="Observed ET")
+    plt.title(f"Simulated ET vs Observed ET from {start_date} to {end_date}")
     plt.xlabel("Date")
     plt.ylabel("ET (mm/day)")
     plt.legend()
@@ -614,11 +611,13 @@ def print_error_metrics(
     et_sd_filt = et_sd_np[mask]
     rmse = root_mean_squared_error(et_sd_filt, et_ts_filt)
     mae = mean_absolute_error(et_sd_filt, et_ts_filt)
+    mbe = (et_ts_np - et_sd_np).mean()
     r2 = r2_score(et_sd_filt, et_ts_filt)
     logging.info(
-        "RMSE: %.4f, MAE: %.4f, R²: %.4f",
+        "RMSE: %.4f, MAE: %.4f, MBE: %.4f, R²: %.4f",
         rmse,
         mae,
+        mbe,
         r2,
     )
 
