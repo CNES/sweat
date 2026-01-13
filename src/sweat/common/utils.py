@@ -17,7 +17,9 @@ def compute_ndvi(
     -----
     Normalized Difference Vegetation Index NDVI is computed
     with the following formula:
-        NDVI = (NIR - (RED + delta)) / (NIR + RED + delta)
+    $$
+    NDVI = \\frac{NIR - (RED + delta)}{NIR + RED + delta}
+    $$
     Where NIR and RED are the reflectances in the NIR and RED
     and delta is a constant to add to the red band surface
     reflectance in order to solve the issue of red surface
@@ -44,13 +46,16 @@ def compute_ndvi(
 
 def compute_broadband_emissivity():
     """
-    Compute broadband emissivity
+    Compute broadband emissivity.
 
     Notes
     -----
     Broadband emissivity is computed from spectral emissivity
     that are obtained from the TES algorithm used to compute
     surface temperature (see RD7).
-    Broadband emissivity is computed using linear combination
+    Broadband emissivity $\\epsilon_{BB}$ is computed using linear combination
     models that has to be implemented.
+    $$
+    \\epsilon_{BB} = \\beta_{0} +\\sum_{j=1}^{Nbands}\\beta_{j}\\epsilon_{j}
+    $$
     """
