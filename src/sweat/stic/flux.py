@@ -200,7 +200,6 @@ def compute_le_h_fluxes(
     h_flux: float
         Sensible heat flux
     """
-    # TODO: To check difference with STIC-JPL to compute LE
     le_flux = (
         (rho * cp / f32(PSYCHROMETRIC_CST))
         * ((g_aero * g_surf) / (g_aero + g_surf))
