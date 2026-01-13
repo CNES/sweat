@@ -130,13 +130,13 @@ def initialize_soil_moisture(
     # Handle division by zero
     tdew_index = (ts - tsd) / (ta - td) if abs(ta - td) > epsilon else f32(0)
 
-    # Compute the ootential evaporation (Priestley-Taylor eqn.)
+    # Compute the potential evaporation (Priestley-Taylor eqn.)
     ep_pt = (f32(PT_CST) * slope * rn) / (slope + f32(PSYCHROMETRIC_CST))
 
     # Temperature difference
     dts = ts - ta
 
-    # Surface wetness comes from the soil, vegetation contribution is neglegible
+    # Surface wetness comes from the soil, vegetation contribution is negligible
     if (fc <= f32(0.25)) & (tdew_index < f32(1)):
         m_surf = m_soil
         m_canopy = f32(0)
@@ -286,7 +286,7 @@ def iterate_soil_moisture(
     m_rz: float
         Surface moisture availability for root zone wetness (0-1)
     """
-    # Surface moisture (Msurf)
+    # Surface available moisture
     m_surf = f32(1)
     if abs(ts - td) > f32(1.0e-7):
         k = (e0star - ea) / (esstar - ea)
@@ -305,7 +305,7 @@ def iterate_soil_moisture(
         slope + f32(PSYCHROMETRIC_CST)
     )  # Potential evaporation (Priestley-Taylor eqn.)
 
-    # Surface wetness comes from the soil, vegetation contribution is neglegible
+    # Surface wetness comes from the soil, vegetation contribution is negligible
     if (fc <= f32(0.25)) & (tdew_index < f32(1)):
         m_surf = m_soil
         m_canopy = f32(0)
