@@ -5,5 +5,5 @@ Module for STIC constant management
 
 # Psychrometric constant (hpa/K)
 PSYCHROMETRIC_CST = 0.67
-# Priestley-Taylo parameter
+# Priestley-Taylor parameter
 PT_CST = 1.26
