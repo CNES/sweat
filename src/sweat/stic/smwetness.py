@@ -45,6 +45,42 @@ def initialize_soil_moisture(
     the actual ET estimation loop to establish feedback
     between M and biophysical states.
 
+    The moisture availability $M$ can be initialized using two
+    equations: one which is an indicator
+    of surface (canopy-top soil) wetness, $M_{surf}$ and the
+    other indicates the root-zone soil wetness, $M_{rz}$.
+    The choice of the equation depends on a set of conditions.
+
+    $M_{surf}$ can be initialized as follows:
+    $$
+    M_{surf} = \\frac{s_{1}(T_{0D} - T_{D})}{s_{2}(LST - T_{D})}
+    $$
+    $M_{surf}$ must remain between 0 and 1.
+
+    For root-zone wetness, $M_{rz}$ can be initialized as follows
+    $$
+    M_{rz} = \\frac{\\gamma s_{1} (T_{0D} - T_{D}) }
+    {s_{3} ( LST - T_{0D} ) \\Delta +
+    \\gamma s_{4} ( T_{a} - T_{D} ) +
+    \\Delta s_{1} ( T_{0D} - T_{D} ) }
+    $$
+    $M_{rz}$ must remain between 0 and 1.
+
+    The conditions to choose between the both equations for $M$ depends of the
+    following variables:
+
+    - The surface vapor pressure
+    - The vapor pressure deficit at the surface is as follows.
+    - The dew-point temperature index
+    - Latent heat flux computed with Priestley-Taylor equation
+    - The temperatures $T_{a}$, $T_{D}$ and the
+      difference between $T_{a}$ and $LST$
+    - The net radiation $R_{n}$
+    - The net longwave radiation
+    - The vegetation variable Fcover
+    - The vapor pressure deficit (VPD) of the air at the
+      reference height $D_{a}$
+
     Parameters
     ----------
     slope: float
@@ -220,11 +256,47 @@ def iterate_soil_moisture(
 
     Notes
     -----
-    This functions estimates the soil moisture availability (M) (or
+    This functions estimates the soil moisture availability $M$ (or
     wetness) (value 0 to 1) based on thermal IR and meteorological
-    information. However, this M will be treated as initial M, which will be
-    later on estimated through iteration in the actual ET estimation loop to
-    establish feedback between M and biophysical states.
+    information. However, this $M$ will be treated as initial $M$,
+    which will be later on estimated through iteration in the
+    actual ET estimation loop to establish feedback between M and
+    biophysical states.
+
+    $M$ can be calculated using two equations: one which is an indicator
+    of surface (canopy-top soil) wetness, $M_{surf}$ and the
+    other indicates the root-zone soil wetness, $M_{rz}$.
+    The choice of the equation depends on a set of conditions.
+
+    $M_{surf}$ can be computed as follows:
+    $$
+    M_{surf} = \\frac{e_{s}^{\\star} - e_{a}}
+    {e_{0}^{\\star} - e_{a}} \\times \\frac{s_{1}(T_{0D} - T_{D})}
+    {s_{2}(LST - T_{D})}
+    $$
+    $M_{surf}$ must remain between 0 and 1.
+
+    For root-zone wetness, $M_{rz}$ can be computed as follows
+    $$
+    M_{rz} = \\frac{\\gamma s_{1} (T_{0D} - T_{D}) }
+    {s_{3} ( LST - T_{0D} ) \\Delta +
+    \\gamma s_{4} ( T_{a} - T_{D} ) +
+    \\Delta s_{1} (T_{0D} - T_{D} ) }
+    $$
+    $M_{rz}$ must remain between 0 and 1.
+
+    The conditions to choose between the both equations for $M$ depends of the
+    following variables:
+
+    - The dew-point temperature index
+    - Latent heat flux computed with Priestley-Taylor equation
+    - The temperatures $T_{a}$, $T_{D}$ and the
+      difference between $T_{a}$ and $LST$
+    - The net radiation $R_{n}$
+    - The net longwave radiation
+    - The vegetation variable Fcover
+    - The vapor pressure deficit (VPD) of the air at the
+      reference height $D_{a}$
 
     Parameters
     ----------

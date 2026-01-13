@@ -51,7 +51,7 @@ MSK_STIC_NOT_CONVERGED = 1 << 3
 
 class STICPrepareConfig(BaseModel):
     """
-    Configuration for parameters to STIC model
+    Configuration for data preparation in STIC model
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -61,7 +61,7 @@ class STICPrepareConfig(BaseModel):
 
 class STICModelConfig(BaseModel):
     """
-    Configuration for parameters to STIC model
+    Configuration for parameters in STIC model
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -343,8 +343,11 @@ def run_stic_model(
     nb_steps: int,
 ) -> tuple[npt.NDArray, npt.NDArray, npt.NDArray]:
     """
-    STIC model calulation function.
-    Takes in numpy arrays and constants to calculate spatial outputs.
+    STIC model calulation function
+
+    Notes
+    -----
+    The method takes numpy arrays to calculate spatial outputs.
 
     Parameters
     ----------
@@ -417,7 +420,10 @@ def prepare(
     selected_radiation: str | None = None,
 ) -> xr.Dataset:
     """
-    Prepare data for STIC:
+    Prepare data for STIC
+
+    The following steps are performed:
+
     - Compute LST in celsius
     - Compute relative humidity
     - Compute local time

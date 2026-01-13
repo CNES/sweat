@@ -35,10 +35,12 @@ def compute_g_flux(
     m: float,
 ) -> float:
     """
-    Compute soil heat flux, called G flux.
+    Compute soil heat flux
 
     Notes
     -----
+    The soil heat flux, called G flux is computed with
+    the method described in
     Santanello, J. A., and M. A. Friedl, 2003:
     Diurnal Covariation in Soil Heat Flux and
     Net Radiation. J. Appl. Meteor. Climatol., 42, 851-862
@@ -90,10 +92,12 @@ def initiate_le_h_fluxes(
     cp: float,
 ) -> tuple[float, float]:
     """
-    Initiatelatent heat flux and sensible heat flux.
+    Initiate latent heat flux and sensible heat flux
 
     Notes
     -----
+    The latent heat flux and the sensible heat flux
+    are initialized with the method provided by
     P.G. Jarvis, K.G. McNaughton,
     Stomatal Control of Transpiration: Scaling Up from Leaf to Region,
     Advances in Ecological Research, 15, 1986
@@ -166,6 +170,21 @@ def compute_le_h_fluxes(
 ) -> tuple[float, float]:
     """
     Compute latent heat flux and sensible heat flux.
+
+    Notes
+    -----
+    The sensible heat flux is computed with
+    $$
+    H = \\frac{\\gamma \\left( R_{n} - G \\right) \\left( 1 +
+    \\frac{g_{a}}{g_{s}} \\right) - \\rho c_{p} g_{a} D_{a} }
+    {\\Delta + \\gamma \\left( 1 + \\frac{g_{a}}{g_{s}} \\right) }
+    $$
+    The latent heat flux is computed with
+    $$
+    LE = \\frac{\\rho c_{p}g_{a}g_{s}}
+    {\\gamma(g_{a} + g_{s})}
+    \\left( \\Delta(T_{0} - T_{a}) + D_{a} \\right)
+    $$
 
     Parameters
     ----------

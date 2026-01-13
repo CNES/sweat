@@ -1,6 +1,11 @@
 # Copyright: (c) 2025 CESBIO / Centre National d'Etudes Spatiales
 """
-Module for STIC constant management
+Module for STIC constants
+
+List of contants:
+
+- Psychrometric constant (hpa/K)
+- Priestley-Taylor parameter
 """
 
 # Psychrometric constant (hpa/K)
