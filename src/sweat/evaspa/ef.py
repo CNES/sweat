@@ -24,7 +24,8 @@ from pydantic import (
     model_validator,
 )
 
-from sweat.common.constant import FLAGS_TYPE, ETVar
+from sweat.common.constant import ETVar
+from sweat.common.filter import find_valid_pixels
 from sweat.debugging import register_debugging
 from sweat.evaspa.edge import Edge, EdgeConfig, EdgeError
 from sweat.evaspa.merging import MergeMethod, merge_to_dataset
@@ -87,7 +88,7 @@ def update_efconfig(v: Any) -> list[EFModel]:
     if isinstance(v, str):
         filename = os.path.join(config_path, f"{v}.json")
         if not os.path.isfile(filename):
-            msg = f"No config file: {filename}"
+            msg = f"No EVASPA configuration file: {filename}"
             raise OSError(msg)
         # Read config file
         with open(filename) as json_file:
@@ -178,7 +179,7 @@ class EFModel:
             if mask not in data.data_vars:
                 msg = f"No mask {mask}"
                 raise ValueError(msg)
-            data_masked = data.where(data[mask], drop=True)
+            data_masked = data.where(data[mask])
         else:
             data_masked = data
         self.wet_edge.fit(data_masked[self.var], data_masked[ETVar.LST.value])
@@ -246,7 +247,7 @@ class EFModel:
             if mask not in data.data_vars:
                 msg = f"No mask {mask}"
                 raise ValueError(msg)
-            data_masked = data.where(data[mask], drop=True)
+            data_masked = data.where(data[mask])
         else:
             data_masked = data
         ef = (
@@ -492,7 +493,7 @@ def compute(models: list[EFModel], data: xr.Dataset) -> xr.Dataset:
     ef = {}
     for m in models:
         m.fit(data, mask=mask)
-        ef[m.name] = m.compute(data, mask=mask)
+        ef[m.name] = m.compute(data)
     return xr.Dataset(ef, coords=data.coords.copy(), attrs=data.attrs.copy())
 
 
@@ -554,14 +555,18 @@ def run(
     if selection:
         ef = select(ef)
     # Get valid and flags
-    if ETVar.VALID.value in data.data_vars:
-        valid = data[ETVar.VALID.value]
-    else:
-        valid = xr.ones_like(data[ETVar.LST.value], dtype=FLAGS_TYPE)
     if ETVar.FLAGS.value in data.data_vars:
         flags = data[ETVar.FLAGS.value]
-    else:
-        flags = xr.zeros_like(data[ETVar.LST.value], dtype=FLAGS_TYPE)
+    if ETVar.VALID.value in data.data_vars:
+        valid = data[ETVar.VALID.value]
+    if ETVar.FLAGS.value not in data.data_vars or (
+        ETVar.VALID.value not in data.data_vars
+    ):
+        valid, flags = find_valid_pixels(
+            data,
+            nan_config=[ETVar.LST.value],
+            valid_config=None,
+        )
     merged = merge_to_dataset(ef, method=merging, name=ETVar.EF.value)
     ef[ETVar.VALID.value] = valid
     ef[ETVar.FLAGS.value] = flags
