@@ -1192,7 +1192,7 @@ class LinearEdge(RegressionEdge):
         """
         String conversion method
         """
-        return f"LinearEdge({self._common_repr()},coeffs={self.coeffs})"
+        return f"LinearEdge({self._common_repr()}coeffs={self.coeffs})"
 
     def __str__(self) -> str:
         """
@@ -1283,7 +1283,7 @@ class ThresholdLinearEdge(RegressionEdge):
         """
         return (
             "ThresholdLinearEdge("
-            f"{self._common_repr()},"
+            f"{self._common_repr()}"
             f"coeffs={self.coeffs},"
             f"threshold={self.threshold}"
         )
@@ -1397,7 +1397,7 @@ class DoubleLinearEdge(RegressionEdge):
         """
         return (
             f"DoubleLinearEdge("
-            f"{self._common_repr()},"
+            f"{self._common_repr()}"
             f"coeffs1={self.coeffs1},"
             f"coeffs2={self.coeffs2},"
             f"fit_breakpoint={self.fit_breakpoint})"
@@ -1514,7 +1514,7 @@ class FlatLinearEdge(RegressionEdge):
         """
         return (
             f"FlatLinearEdge("
-            f"{self._common_repr()},"
+            f"{self._common_repr()}"
             f"coeffs1={self.coeffs1},"
             f"coeffs2={self.coeffs2},"
             f"fit_breakpoint={self.fit_breakpoint})"
@@ -1596,7 +1596,7 @@ class ParabolicEdge(RegressionEdge):
         """
         String conversion method
         """
-        return f"ParabolicEdge({self._common_repr()},coeffs={self.coeffs})"
+        return f"ParabolicEdge({self._common_repr()}coeffs={self.coeffs})"
 
     def __str__(self) -> str:
         """
@@ -1666,7 +1666,7 @@ class FlatRegressionEdge(RegressionEdge):
         """
         String conversion method
         """
-        return f"FlatRegressionEdge({self._common_repr()},coeff={self.coeff})"
+        return f"FlatRegressionEdge({self._common_repr()}coeff={self.coeff})"
 
     def __str__(self) -> str:
         """
