@@ -8,6 +8,7 @@ from __future__ import annotations
 import datetime as dt
 
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 import xarray as xr
 
@@ -191,6 +192,41 @@ def read_ts_input_data(
     return et_ts, radiation_ts, et_sd, dem
 
 
+def filter_data_for_evaspa(
+    data: xr.Dataset, models: list[ef.EFModel], config: dict
+) -> xr.Dataset:
+    """
+    Filter data for EVASPA
+
+    Parameters
+    ----------
+    data: xr.Dataset
+        Input data
+    models : list[EFModel]
+        List of EF models
+    config: dict
+        Filtering configuration
+
+    Returns
+    -------
+    filtered_data: xr.Dataset
+        Filtered dataset containing valid and flags masks
+    """
+    filtered_data = data.copy(deep=True)
+    variables = ef.get_variables_from_models(models=models)
+    valid_mask, flags_mask = filter.find_valid_pixels(
+        filtered_data,
+        nan_config=variables,
+        valid_config=config,
+    )
+    filtered_data[ETVar.LST.value] = filtered_data[ETVar.LST.value].where(
+        flags_mask & filter.MSK_INPUT_NODATA != 0b1, np.nan
+    )
+    filtered_data[ETVar.VALID.value] = valid_mask
+    filtered_data[ETVar.FLAGS.value] = flags_mask
+    return filtered_data
+
+
 def run_evaspa(
     data: xr.Dataset, params: dict, debug: dict | None = None
 ) -> tuple[xr.Dataset, xr.Dataset] | None:
@@ -228,15 +264,12 @@ def run_evaspa(
     logger.debug("Check configuration: OK")
     # Initialize EF models
     models, options = ef.initialize(params_config.ef.model_dump())
-    variables = ef.get_variables_from_models(models=models)
     # Filter data
-    valid_mask, flags_mask = filter.find_valid_pixels(
-        data,
-        nan_config=variables,
-        valid_config=params_config.filtering.model_dump(),
+    data = filter_data_for_evaspa(
+        data=data,
+        models=models,
+        config=params_config.filtering.model_dump(by_alias=True),
     )
-    data[ETVar.VALID.value] = valid_mask
-    data[ETVar.FLAGS.value] = flags_mask
     logger.debug("Filter data: OK")
     # Check variability
     if not ef.check_variability(

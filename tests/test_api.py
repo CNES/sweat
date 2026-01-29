@@ -5,10 +5,12 @@ import os
 import shutil
 
 import geopandas as gpd
+import numpy as np
 import pytest
+import xarray as xr
 
 from sweat import api
-from sweat.evaspa import tiling
+from sweat.evaspa import edge, ef, tiling
 
 
 def get_data_path() -> str:
@@ -85,6 +87,62 @@ def test_read_input_data(entry: dict[str, str]) -> None:
     """
     res = api.read_input_data(entry)
     assert res
+
+
+@pytest.mark.functional
+def test_filter_data_for_evaspa():
+    """
+    Test function for filtering data for evaspa
+    """
+    data = xr.Dataset(
+        data_vars={
+            "lst": (["x"], np.array([300, 290, 310, np.nan])),
+            "albedo": (["x"], np.array([0.2, 0.3, np.nan, 0.4])),
+        },
+        coords={
+            "x": ("x", [0, 1, 2, 3]),
+        },
+        attrs={"description": "Test data"},
+    )
+    models = [
+        ef.EFModel(
+            name="model1",
+            wet_edge=edge.LinearEdge(
+                position=edge.EdgePosition.BOTTOM,
+                interval_type=edge.IntervalType.SIZE,
+                interval_nb=20,
+                percentile=1.0,
+                selection=edge.SelectionMethod.MEDIAN,
+            ),
+            dry_edge=edge.LinearEdge(
+                position=edge.EdgePosition.TOP,
+                interval_type=edge.IntervalType.SIZE,
+                interval_nb=20,
+                percentile=1.0,
+                selection=edge.SelectionMethod.MEDIAN,
+            ),
+            var="albedo",
+        )
+    ]
+    config = {"lst": {"op": ">=", "value": 300}}
+    ref_valid = xr.DataArray(
+        data=np.array([1, 0, 0, 0]),
+        dims=["x"],
+        coords={
+            "x": ("x", [0, 1, 2, 3]),
+        },
+    )
+    ref_flags = xr.DataArray(
+        data=np.array([0, 2, 1, 3]),
+        dims=["x"],
+        coords={
+            "x": ("x", [0, 1, 2, 3]),
+        },
+    )
+    res = api.filter_data_for_evaspa(data=data, models=models, config=config)
+    assert res
+    xr.testing.assert_allclose(res["valid"], ref_valid)
+    xr.testing.assert_allclose(res["flags"], ref_flags)
 
 
 @pytest.mark.functional
