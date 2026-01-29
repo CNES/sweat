@@ -93,4 +93,4 @@ def check_config_evaspa(config: dict) -> dict:
         Checked dictionary containing the configuration parameters
     """
     cfg = EVASPAInputFile.model_validate(config)
-    return cfg.model_dump(mode="json")
+    return cfg.model_dump(mode="json", by_alias=True)
