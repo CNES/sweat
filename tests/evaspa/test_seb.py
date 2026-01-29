@@ -236,6 +236,68 @@ def test_create_le() -> None:
     )
     le = seb.create_le(ef, rn, ratio)
     assert len(le.data_vars) == 18
+    assert sorted(le.data_vars) == sorted(
+        [
+            "ef1_rn1_model1",
+            "ef1_rn1_model2",
+            "ef1_rn1_model3",
+            "ef1_rn2_model1",
+            "ef1_rn2_model2",
+            "ef1_rn2_model3",
+            "ef2_rn1_model1",
+            "ef2_rn1_model2",
+            "ef2_rn1_model3",
+            "ef2_rn2_model1",
+            "ef2_rn2_model2",
+            "ef2_rn2_model3",
+            "ef3_rn1_model1",
+            "ef3_rn1_model2",
+            "ef3_rn1_model3",
+            "ef3_rn2_model1",
+            "ef3_rn2_model2",
+            "ef3_rn2_model3",
+        ]
+    )
+
+
+@pytest.mark.functional
+def test_create_le_with_masks() -> None:
+    """
+    Test create LE dataset
+    """
+    ef = setup_dataset(["ef1", "ef2", "ef3"])
+    ef["valid"] = xr.ones_like(ef["ef1"])
+    ef["flags"] = xr.zeros_like(ef["ef1"])
+    rn = setup_dataset(["rn1", "rn2"], min_value=200, max_value=250)
+    ratio = setup_dataset(
+        ["model1", "model2", "model3"], min_value=100, max_value=150
+    )
+    le = seb.create_le(ef, rn, ratio)
+    assert len(le.data_vars) == 20
+    assert sorted(le.data_vars) == sorted(
+        [
+            "ef1_rn1_model1",
+            "ef1_rn1_model2",
+            "ef1_rn1_model3",
+            "ef1_rn2_model1",
+            "ef1_rn2_model2",
+            "ef1_rn2_model3",
+            "ef2_rn1_model1",
+            "ef2_rn1_model2",
+            "ef2_rn1_model3",
+            "ef2_rn2_model1",
+            "ef2_rn2_model2",
+            "ef2_rn2_model3",
+            "ef3_rn1_model1",
+            "ef3_rn1_model2",
+            "ef3_rn1_model3",
+            "ef3_rn2_model1",
+            "ef3_rn2_model2",
+            "ef3_rn2_model3",
+            "flags",
+            "valid",
+        ]
+    )
 
 
 @pytest.mark.unit

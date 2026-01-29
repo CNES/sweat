@@ -354,7 +354,13 @@ def create_le(ef: xr.Dataset, rn: xr.Dataset, ratio: xr.Dataset) -> xr.Dataset:
         Latent heat flux dataset
     """
     data_vars = {}
-    for ef_model in ef.data_vars:
+    ef_models = [
+        v
+        for v in ef.data_vars
+        if v not in [ETVar.VALID.value, ETVar.FLAGS.value]
+    ]
+    # Compute le for each combination of ef, rn and ratio models
+    for ef_model in ef_models:
         for rn_model in rn.data_vars:
             for ratio_model in ratio.data_vars:
                 name = f"{ef_model}_{rn_model}_{ratio_model}"
@@ -370,7 +376,15 @@ def create_le(ef: xr.Dataset, rn: xr.Dataset, ratio: xr.Dataset) -> xr.Dataset:
         "crs": ef.attrs.get("crs", None),
         "transform": ef.attrs.get("transform", None),
     }
-    return xr.Dataset(data_vars, attrs=attrs)
+    # Create dataset
+    le = xr.Dataset(data_vars, attrs=attrs)
+    # Propagate flags
+    if ETVar.FLAGS.value in ef.data_vars and (
+        ETVar.VALID.value in ef.data_vars
+    ):
+        le[ETVar.VALID.value] = ef[ETVar.VALID.value].copy()
+        le[ETVar.FLAGS.value] = ef[ETVar.FLAGS.value].copy()
+    return le
 
 
 @register_debugging
