@@ -296,14 +296,14 @@ def find_valid_pixels(
         raise ValueError(msg)
     # Get valid mask or initialize it
     if ETVar.VALID.value in data.data_vars:
-        valid = data[ETVar.VALID.value]
+        valid = data[ETVar.VALID.value].astype(FLAGS_TYPE)
     else:
         valid = xr.full_like(
             next(iter(data.data_vars.values())), 1, dtype=FLAGS_TYPE
         )
     # Get flags mask or initialize it
     if ETVar.FLAGS.value in data.data_vars:
-        flags = data[ETVar.FLAGS.value]
+        flags = data[ETVar.FLAGS.value].astype(FLAGS_TYPE)
     else:
         flags = xr.full_like(
             next(iter(data.data_vars.values())), 0, dtype=FLAGS_TYPE
