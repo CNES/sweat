@@ -27,7 +27,12 @@ def merge(
     data: xr.Dataset, method: MergeMethod = MergeMethod.MEAN
 ) -> tuple[xr.DataArray, xr.DataArray]:
     """
-    Merge data and compute uncertainty
+    Merge data and compute uncertainty.
+
+    The merge method use can be:
+
+    - mean/standard deviation
+    - median/NMAD
 
     Parameters
     ----------
@@ -54,10 +59,13 @@ def merge(
                 message="Degrees of freedom <= 0 for slice.",
                 category=RuntimeWarning,
             )
-            return xarr.mean("new"), xarr.std(dim="new", skipna=True, ddof=1)
+            # Standard deviation compute with ddof = 1
+            return xarr.mean(dim="new", skipna=False), xarr.std(
+                dim="new", skipna=False, ddof=1
+            )
     if method.value == MergeMethod.MEDIAN.value:
         xarr = data.to_dataarray(dim="new")
-        return xarr.median("new"), xr.apply_ufunc(
+        return xarr.median(dim="new", skipna=False), xr.apply_ufunc(
             scipy.stats.median_abs_deviation,
             xarr,
             input_core_dims=[
