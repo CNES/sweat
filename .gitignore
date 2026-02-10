@@ -12,6 +12,7 @@ dist/
 # Notebooks
 .ipynb_checkpoints/
 Untitled*.ipynb
+test*.ipynb
 notebooks/evaspa/groups.*
 !notebooks/data_validation/*
 
