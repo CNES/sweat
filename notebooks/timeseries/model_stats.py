@@ -1,17 +1,47 @@
+"""
+Module for computing error metrics and other related statistics.
+"""
+
 import numpy as np
 import scipy.stats
 import xarray as xr
-from models_tools import (
+from model_tools import (
+    extra_variable_list,
     get_et_single_date,
     get_et_time_series,
     list_error,
-    list_var,
 )
 
 
 def pixel_rmse(
     dir_sd: str, dir_ts: str, start_date: str, end_date: str, x: int, y: int
 ) -> float:
+    """
+    Compute the Root Mean Squared Error (RMSE) between observed and simulated ET
+    at a specified pixel on a given period
+
+    Parameters
+    ----------
+    dir_sd : str
+        Directory where the observed evapotranspiration product files
+        are stored.
+    dir_ts : str
+        Directory where the simulated evapotranspiration product files
+        are stored.
+    start_date : str
+        Start date of the period in `YYYY-MM-DD` format.
+    end_date : str
+        End date of the period in `YYYY-MM-DD` format.
+        x: int
+        First axis coordinate (UTM)
+    y: int
+        Second axis coordinate (UTM)
+
+    Returns
+    -------
+    rmse: float
+        RMSE
+    """
     errors, _, _ = list_error(
         dir_sd, dir_ts, start_date, end_date, x, y, to_filter=True
     )
@@ -23,6 +53,32 @@ def pixel_rmse(
 def pixel_mae(
     dir_sd: str, dir_ts: str, start_date: str, end_date: str, x: int, y: int
 ) -> float:
+    """
+    Compute the Mean Absolute Error (MAE) between observed and simulated ET
+    at a specified pixel on a given period
+
+    Parameters
+    ----------
+    dir_sd : str
+        Directory where the observed evapotranspiration product files
+        are stored.
+    dir_ts : str
+        Directory where the simulated evapotranspiration product files
+        are stored.
+    start_date : str
+        Start date of the period in `YYYY-MM-DD` format.
+    end_date : str
+        End date of the period in `YYYY-MM-DD` format.
+        x: int
+        First axis coordinate (UTM)
+    y: int
+        Second axis coordinate (UTM)
+
+    Returns
+    -------
+    mae: float
+        MAE
+    """
     errors, _, _ = list_error(
         dir_sd,
         dir_ts,
@@ -41,6 +97,32 @@ def pixel_mae(
 def pixel_mbe(
     dir_sd: str, dir_ts: str, start_date: str, end_date: str, x: int, y: int
 ) -> float:
+    """
+    Compute the Mean Bias Error (MBE) between observed and simulated ET
+    at a specified pixel on a given period
+
+    Parameters
+    ----------
+    dir_sd : str
+        Directory where the observed evapotranspiration product files
+        are stored.
+    dir_ts : str
+        Directory where the simulated evapotranspiration product files
+        are stored.
+    start_date : str
+        Start date of the period in `YYYY-MM-DD` format.
+    end_date : str
+        End date of the period in `YYYY-MM-DD` format.
+        x: int
+        First axis coordinate (UTM)
+    y: int
+        Second axis coordinate (UTM)
+
+    Returns
+    -------
+    mbe: float
+        MBE
+    """
     errors, _, _ = list_error(
         dir_sd,
         dir_ts,
@@ -59,9 +141,32 @@ def pixel_mbe(
 def pixel_r2(
     dir_sd: str, dir_ts: str, start_date: str, end_date: str, x: int, y: int
 ) -> float:
-    import numpy as np
-    import xarray as xr
+    """
+    Compute the coefficient of determination (R²) between
+    observed and simulated ET at a specified pixel on a given period
 
+    Parameters
+    ----------
+    dir_sd : str
+        Directory where the observed evapotranspiration product files
+        are stored.
+    dir_ts : str
+        Directory where the simulated evapotranspiration product files
+        are stored.
+    start_date : str
+        Start date of the period in `YYYY-MM-DD` format.
+    end_date : str
+        End date of the period in `YYYY-MM-DD` format.
+        x: int
+        First axis coordinate (UTM)
+    y: int
+        Second axis coordinate (UTM)
+
+    Returns
+    -------
+    r2: float
+        R²
+    """
     time = xr.date_range(start_date, end=end_date, freq="1D")
     errors, _, _ = list_error(
         dir_sd,
@@ -176,7 +281,7 @@ def r2_date(x: xr.DataArray, y: xr.DataArray) -> float:
     return 1 - rss / tss
 
 
-def mae_pixel(
+def mae_roi(
     dir_sd: str, dir_ts: str, start_date: str, end_date: str
 ) -> xr.DataArray:
     """
@@ -215,7 +320,7 @@ def mae_pixel(
     return errors.mean(dim="time")
 
 
-def rmse_pixel(
+def rmse_roi(
     dir_sd: str, dir_ts: str, start_date: str, end_date: str
 ) -> xr.DataArray:
     """
@@ -255,7 +360,7 @@ def rmse_pixel(
     return errors.mean(dim="time") ** 0.5
 
 
-def mbe_pixel(dir_sd: str, dir_ts: str, start_date: str, end_date: str):
+def mbe_roi(dir_sd: str, dir_ts: str, start_date: str, end_date: str):
     """
     Compute the spatial distribution of the Mean Bias Error (MBE)
     between observed and simulated evapotranspiration over the given period.
@@ -292,7 +397,7 @@ def mbe_pixel(dir_sd: str, dir_ts: str, start_date: str, end_date: str):
     return errors.mean(dim="time")
 
 
-def r2_pixel(
+def r2_roi(
     dir_sd: str, dir_ts: str, start_date: str, end_date: str
 ) -> xr.DataArray:
     """
@@ -354,10 +459,44 @@ def variable_correlation(
     correlation: str,
     absolute: bool,
 ):
+    """
+    Calculates Spearman or Pearson correlations between absolute
+    or bias errors and the considered ERA5-Land variable
+    for a specified pixel over a given period
+
+    Parameters
+    ----------
+    dir_var : str
+        Directory where the extra ERA5-Land variables product file
+        are stored.
+    dir_sd : str
+        Directory where the observed evapotranspiration product files
+        are stored.
+    dir_ts : str
+        Directory where the simulated evapotranspiration product file
+        are stored.
+    start_date : str
+        Start date of the period in `YYYY-MM-DD` format.
+    end_date : str
+        End date of the period in `YYYY-MM-DD` format.
+    x: int
+        First axis coordinate (UTM)
+    y: int
+        Second axis coordinate (UTM)
+    variable : str
+        The ERA5-Land variable to consider (`tp`,`sro`,`src`,`sw`)
+    correlation : str
+        Type of correlation (`spearman` or `pearson`)
+    absolute: bool
+        If True, displays the absolute error.
+        If False, displays the bias error.
+    """
     errors, index, _ = list_error(
         dir_sd, dir_ts, start_date, end_date, x, y, absolute, to_filter=True
     )
-    var_values = list_var(dir_var, variable, start_date, end_date, x, y)
+    var_values = extra_variable_list(
+        dir_var, variable, start_date, end_date, x, y
+    )
     filtered_vars = [var_values[i] for i in index]
     if correlation == "spearman":
         corr = scipy.stats.spearmanr(filtered_vars, errors)
