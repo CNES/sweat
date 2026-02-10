@@ -29,6 +29,7 @@ from sweat.stic.flux import (
     initiate_le_h_fluxes,
 )
 from sweat.stic.functions import (
+    compute_alpha_coefficient,
     compute_canopy_air_saturation_vapor_pressure,
     compute_canopy_air_vapor_pressure_deficit,
     compute_psychrometrics,
@@ -50,7 +51,7 @@ MSK_STIC_NOT_CONVERGED = 1 << 3
 
 class STICPrepareConfig(BaseModel):
     """
-    Configuration for parameters to STIC model
+    Configuration for data preparation in STIC model
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -60,7 +61,7 @@ class STICPrepareConfig(BaseModel):
 
 class STICModelConfig(BaseModel):
     """
-    Configuration for parameters to STIC model
+    Configuration for parameters in STIC model
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -161,7 +162,7 @@ def run_stic_model_pixel(
     # -------------
 
     # Compute soi moisture
-    # m: surface moisture avalilability (0 - 1)
+    # m: surface moisture availability (0 - 1)
     # m_soil: surface moisture availability for soil component
     # es: vapor pressure at surface temperature
     # t0d: dewpoint temperature at source/sink height
@@ -184,7 +185,7 @@ def run_stic_model_pixel(
     )
     # Initialize saturation vapor pressure at t0
     e0star = esstar
-    # Initialiaze vapor pressure at t0
+    # Initialize vapor pressure at t0
     e0 = es
     # Initialize alpha to Priestley taylor parameter
     alpha = f32(PT_CST)
@@ -194,7 +195,7 @@ def run_stic_model_pixel(
     g_flux = compute_g_flux(rn, lai, local_time, m_soil)
     # Compute available energy
     available_energy = rn - g_flux
-    # Compute state equestions
+    # Compute state equations
     (g_aero, g_surf, delta_t, ef) = compute_state_equations(
         rho, cp, alpha, slope, available_energy, e0, ea, e0star, m
     )
@@ -204,8 +205,6 @@ def run_stic_model_pixel(
     le_flux, h_flux = initiate_le_h_fluxes(
         slope, g_aero, g_surf, available_energy, da, rho, cp
     )
-    # TODO: To check
-    slope0 = (e0star - ea) / (t0 - td)
 
     # 3. Iteration
     # ------------
@@ -236,11 +235,6 @@ def run_stic_model_pixel(
             e0 = es
         if e0 > e0star:
             e0 = es
-        # TODO: To check difference with STIC-JPL
-        # if e0 < f32(0.0):
-        #    e0 = es
-        # if e0 > e0star:
-        #    e0 = e0star
 
         # Re-estimate dewpoint temperature at source/sink height
         t0d = td + (f32(PSYCHROMETRIC_CST) * le_flux) / (rho * cp * g_aero * s1)
@@ -272,28 +266,9 @@ def run_stic_model_pixel(
         )
 
         # Re-estimate PT coefficient
-        # TODO: Check formulation (slope0)
-        alpha = (
-            g_surf
-            * slope0
-            * (t0 - td)
-            * (
-                f32(2) * slope
-                + f32(2) * f32(PSYCHROMETRIC_CST)
-                + f32(PSYCHROMETRIC_CST) * (g_aero / g_surf) * (f32(1) + m)
-            )
-        ) / (
-            f32(2)
-            * slope
-            * (
-                f32(PSYCHROMETRIC_CST) * (t0 - ta) * (g_aero + g_surf)
-                + g_surf * slope0 * (t0 - td)
-            )
+        alpha = compute_alpha_coefficient(
+            slope, g_aero, g_surf, ta, t0, e0star, ea, m
         )
-        # TODO: Explanation
-        if alpha < f32(0.0):
-            alpha = f32(1.0)
-        alpha = min(alpha, f32(2.0))
 
         # Re-estimate net available energy
         g_flux = compute_g_flux(rn, lai, local_time, m)
@@ -318,11 +293,6 @@ def run_stic_model_pixel(
         le_flux, h_flux = compute_le_h_fluxes(
             slope, g_aero, g_surf, available_energy, da, ta, t0, ea, e0, rho, cp
         )
-
-        # TODO: To check
-        slope0 = (
-            (PSYCHROMETRIC_CST * le_flux) / (rho * cp * g_surf) + (e0 - ea)
-        ) / (t0 - td)
 
         # Error
         le_error = np.abs(le_flux_old - le_flux)
@@ -373,8 +343,11 @@ def run_stic_model(
     nb_steps: int,
 ) -> tuple[npt.NDArray, npt.NDArray, npt.NDArray]:
     """
-    STIC model calulation function.
-    Takes in numpy arrays and constants to calculate spatial outputs.
+    STIC model calulation function
+
+    Notes
+    -----
+    The method takes numpy arrays to calculate spatial outputs.
 
     Parameters
     ----------
@@ -447,7 +420,10 @@ def prepare(
     selected_radiation: str | None = None,
 ) -> xr.Dataset:
     """
-    Prepare data for STIC:
+    Prepare data for STIC
+
+    The following steps are performed:
+
     - Compute LST in celsius
     - Compute relative humidity
     - Compute local time

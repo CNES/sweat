@@ -75,7 +75,7 @@ class STICInputFile(BaseModel):
     @field_validator("version")
     @classmethod
     def update_version(cls, v: str) -> str:
-        """ "
+        """
         Update version in configuration
         """
         if Version(v) > Version(__version__):
