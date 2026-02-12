@@ -60,6 +60,45 @@ variables = {
 }
 
 
+def plot_pixel_evolution(time, et_sd, rad, tp, sw):
+    """
+    Plots observed daily ET, daily solar radiation, precipitation,
+    and volumetric soil water at a given pixel
+
+    Parameters
+    ----------
+    time: pd.DateIndex
+       Date values
+    et_sd: xr.DataArray
+       ET values
+    rad: xr.DataArray
+       Radiation values
+    tp: xr.DataArray
+       Precipitation values
+    sw: xr.DataArray
+       Soil water values
+    """
+    _, axes = plt.subplots(2, 2, figsize=(18, 5))
+    axes[0, 0].plot(time, et_sd, color="green")
+    axes[0, 0].set_title("daily evapotranspiration")
+    axes[1, 0].plot(time, rad, color="orange")
+    axes[1, 0].set_title("daily surface radiation")
+    if tp is not None:
+        axes[0, 1].plot(time, tp, color="blue")
+        axes[0, 1].set_title("daily precipitation")
+    if sw is not None:
+        axes[1, 1].plot(time, sw, color="purple")
+        axes[1, 1].set_title("volumetric soil water")
+    # Set the x-axis limits
+    for ax in axes.flatten():
+        ax.set_xlim(time[0], time[-1])
+        ax.xaxis.set_major_locator(mdates.AutoDateLocator())
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
+        plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
+    plt.tight_layout()
+    plt.show()
+
+
 def plot_variable_evolution(
     dir_var: str,
     dir_sd: str,
@@ -70,7 +109,7 @@ def plot_variable_evolution(
     y: int,
 ):
     """
-    Plots observed ET, daily solar radiation, precipitation,
+    Plots observed daily ET, daily solar radiation, precipitation,
     and volumetric soil water at a given pixel over a specified period
 
     Parameters
@@ -96,19 +135,10 @@ def plot_variable_evolution(
     time = xr.date_range(start_date, end_date)
     rad = radiation_list(dir_rad, start_date, end_date, x, y)
     et_sd = et_sd_list(dir_sd, start_date, end_date, x, y)
-    tp = extra_variable_list(dir_var, "tp", start_date, end_date, x, y)
-    sw = extra_variable_list(dir_var, "sw", start_date, end_date, x, y)
-    fig, axes = plt.subplots(2, 2, figsize=(18, 5))
-    axes[0, 0].plot(time, et_sd, color="green")
-    axes[0, 0].set_title("daily evapotranspiration")
-    axes[0, 1].plot(time, tp, color="blue")
-    axes[0, 1].set_title("daily precipitation")
-    axes[1, 0].plot(time, rad, color="orange")
-    axes[1, 0].set_title("daily surface radiation")
-    axes[1, 1].plot(time, sw, color="purple")
-    axes[1, 1].set_title("volumetric soil water")
-    plt.tight_layout()
-    plt.show()
+    if dir_var is not None:
+        tp = extra_variable_list(dir_var, "tp", start_date, end_date, x, y)
+        sw = extra_variable_list(dir_var, "sw", start_date, end_date, x, y)
+    plot_pixel_evolution(time, et_sd, rad, tp, sw)
 
 
 # ==============================================================
@@ -133,20 +163,22 @@ def plot_daily_et_comparison(dir_sd: str, dir_ts: str, date: str) -> None:
     date : str
         date in `YYYY-MM-DD` format.
     """
+    # Get data
     date_dt = dt.datetime.strptime(date, "%Y-%m-%d")  # noqa: DTZ007
     et_sd = get_et_single_date(dir_sd, date_dt)
     et_ts = get_et_time_series(dir_ts, date_dt)
     diff = et_ts - et_sd
-    fig, axes = plt.subplots(1, 3, figsize=(18, 5))
-    im0 = axes[0].imshow(et_sd.values, origin="lower", cmap="viridis")
+    # Determine the limits for the color scale
+    vmin = min(et_sd.min(), et_ts.min())
+    vmax = max(et_sd.max(), et_ts.max())
+    # Plot
+    _, axes = plt.subplots(1, 3, figsize=(18, 5))
+    et_sd.plot(ax=axes[0], cmap="viridis", vmin=vmin, vmax=vmax)
     axes[0].set_title(f"Observed ET on {date}")
-    fig.colorbar(im0, ax=axes[0])
-    im1 = axes[1].imshow(et_ts.values, origin="lower", cmap="viridis")
+    et_ts.plot(ax=axes[1], cmap="viridis", vmin=vmin, vmax=vmax)
     axes[1].set_title(f"Simulated ET on {date}")
-    fig.colorbar(im1, ax=axes[1])
-    im2 = axes[2].imshow(diff.values, origin="lower", cmap="RdBu")
+    diff.plot(ax=axes[2], cmap="RdBu")
     axes[2].set_title("Difference")
-    fig.colorbar(im2, ax=axes[2])
     plt.tight_layout()
     plt.show()
 
@@ -171,29 +203,24 @@ def plot_spatial_distribution_error(
     end_date : str
         End date of the period in `YYYY-MM-DD` format.
     """
+    # Compute metrics
     mbe_pxl = mbe_roi(dir_sd, dir_ts, start_date, end_date)
     mae_pxl = mae_roi(dir_sd, dir_ts, start_date, end_date)
     rmse_pxl = mae_roi(dir_sd, dir_ts, start_date, end_date)
     r2_pxl = r2_roi(dir_sd, dir_ts, start_date, end_date)
+    # Plot
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
     fig.suptitle(
         f"Error Metrics per Pixel from {start_date} to {end_date}", fontsize=18
     )
-    im0 = axes[0, 0].imshow(mae_pxl.values, origin="lower", cmap="viridis")
+    mae_pxl.plot(ax=axes[0, 0], cmap="viridis")
     axes[0, 0].set_title("Mean Absolute Error")
-    fig.colorbar(im0, ax=axes[0, 0])
-    im1 = axes[0, 1].imshow(mbe_pxl.values, origin="lower", cmap="viridis")
+    mbe_pxl.plot(ax=axes[0, 1], cmap="viridis")
     axes[0, 1].set_title("Mean Bias Error")
-    fig.colorbar(im1, ax=axes[0, 1])
-    im2 = axes[1, 0].imshow(rmse_pxl.values, origin="lower", cmap="viridis")
+    rmse_pxl.plot(ax=axes[1, 0], cmap="viridis")
     axes[1, 0].set_title("Root Mean Squared Error")
-    fig.colorbar(im2, ax=axes[1, 0])
-    im3 = axes[1, 1].imshow(
-        r2_pxl.values, origin="lower", cmap="RdBu", vmin=0, vmax=1
-    )
-    axes[1, 1].set_title("Coefficient of Determination")
-    fig.colorbar(im3, ax=axes[1, 1])
-
+    r2_pxl.plot(ax=axes[1, 1], cmap="RdBu", vmin=0, vmax=1)
+    axes[1, 1].set_title("R2")
     plt.tight_layout()
     plt.show()
 
@@ -222,17 +249,28 @@ def plot_time_evolution_error(
     y: int
         Second axis coordinate (UTM)
     """
+    # Get data
     ae, _, time = list_error(
         dir_sd, dir_ts, start_date, end_date, x, y, absolute=True
     )
     be, _, _ = list_error(
         dir_sd, dir_ts, start_date, end_date, x, y, absolute=False
     )
-
+    # Plot
     fig, axes = plt.subplots(1, 2, figsize=(10, 7))
     fig.suptitle(
-        f"Evolution of daily error from {start_date} to {end_date} "
-        f"for pixel [{x},{y}]",
+        "Evolution of daily error from "
+        f"{
+            start_date
+            if isinstance(start_date, str)
+            else start_date.strftime('%Y-%m-%d')
+        }"
+        f" to {
+            end_date
+            if isinstance(end_date, str)
+            else end_date.strftime('%Y-%m-%d')
+        }"
+        f" for pixel [{x},{y}]",
         fontsize=12,
     )
     axes[0].bar(time, ae, color="green", width=0.25)
@@ -242,9 +280,11 @@ def plot_time_evolution_error(
     axes[1].bar(time, be, color="purple", width=0.25)
     axes[1].set_title("Bias Error")
     axes[1].set_ylabel("mm/day")
+    # Set the x-axis limits
     for ax in axes.flatten():
+        ax.set_xlim(time[0], time[-1])
         ax.xaxis.set_major_locator(mdates.AutoDateLocator())
-        ax.xaxis.set_major_formatter(mdates.DateFormatter("%d-%b"))
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
         plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
     fig.subplots_adjust(top=0.92)
     plt.tight_layout()
@@ -513,12 +553,22 @@ def plot_time_error_characteristic_pixels(
     plt.ylabel(description)
     plt.title(
         f"Evolution of daily {description} for selected pixels "
-        f"from {start_date} to {end_date}"
+        f" from {
+            start_date
+            if isinstance(start_date, str)
+            else start_date.strftime('%Y-%m-%d')
+        }"
+        f" to {
+            end_date
+            if isinstance(end_date, str)
+            else end_date.strftime('%Y-%m-%d')
+        }"
     )
     plt.legend(loc="upper center", bbox_to_anchor=(0.5, -0.15), ncol=3)
     plt.grid(True, linestyle="--", alpha=0.4)
 
     ax = plt.gca()
+    ax.set_xlim(time[0], time[-1])
     ax.xaxis.set_major_locator(mdates.AutoDateLocator())
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%d-%m"))
 
@@ -530,6 +580,22 @@ def plot_time_error_characteristic_pixels(
 def daily_error_table(
     date: dt.datetime, dir_sd: str, dir_ts: str, absolute: bool | None = False
 ) -> pd.DataFrame:
+    """
+    Compute error table
+    Parameters
+    ----------
+    date : str
+        date in `YYYY-MM-DD` format.
+    dir_sd : str
+        Directory where the observed evapotranspiration product files
+        are stored.
+    dir_ts : str
+        Directory where the simulated evapotranspiration product file
+        are stored.
+    absolute: bool
+        If True, displays the absolute error.
+        If False, displays the bias error.
+    """
     et_sd: xr.DataArray = get_et_single_date(dir_sd, date)
     et_ts: xr.DataArray = get_et_time_series(dir_ts, date)
 
@@ -560,7 +626,7 @@ def daily_error_table(
 
 def print_daily_statistics(dir_sd: str, dir_ts: str, date: str) -> None:
     """
-    Compute and returns the errors between simulated and observed ET
+    Compute and return the errors between simulated and observed ET
     for a given date.
 
     Parameters
@@ -602,6 +668,29 @@ def pixel_time_stats(
     y: int,
     absolute: bool,
 ) -> pd.DataFrame:
+    """
+    Compute pixel statistics
+
+    Parameters
+    ----------
+    dir_sd : str
+        Directory where the observed evapotranspiration product files
+        are stored.
+    dir_ts : str
+        Directory where the simulated evapotranspiration product file
+        are stored.
+    start_date : str
+        Start date of the period in `YYYY-MM-DD` format.
+    end_date : str
+        End date of the period in `YYYY-MM-DD` format.
+    x: int
+        First axis coordinate (UTM)
+    y: int
+        Second axis coordinate (UTM)
+    absolute: bool
+        If True, displays the absolute error.
+        If False, displays the bias error.
+    """
     errors, _, filtered_time = list_error(
         dir_sd, dir_ts, start_date, end_date, x, y, absolute, to_filter=True
     )
@@ -822,13 +911,35 @@ def plot_et_time_comparison(dir_sd, dir_ts, start_date, end_date, x, y):
     y: int
         Second axis coordinate (UTM)
     """
+    # Get data
     time = xr.date_range(start_date, end=end_date, freq="1D")
     et_sd = et_sd_list(dir_sd, start_date, end_date, x, y)
     et_ts = et_ts_list(dir_ts, start_date, end_date, x, y)
+    # Plot
     plt.plot(time, et_ts, color="red", label="Simulated ET")
     plt.plot(time, et_sd, color="blue", label="Observed ET")
-    plt.title(f"Simulated ET vs Observed ET from {start_date} to {end_date}")
+    plt.title(
+        "Simulated ET vs Observed ET from "
+        f"{
+            start_date
+            if isinstance(start_date, str)
+            else start_date.strftime('%Y-%m-%d')
+        }"
+        f" to {
+            end_date
+            if isinstance(end_date, str)
+            else end_date.strftime('%Y-%m-%d')
+        }"
+    )
     plt.xlabel("Date")
+    ax = plt.gca()
+    # Set the x-axis limits
+    ax.set_xlim(time[0], time[-1])
+    # Set major ticks format and locator
+    ax.xaxis.set_major_locator(mdates.DayLocator(interval=int(len(time) / 5)))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
+    # Rotate date labels
+    plt.xticks(rotation=45)
     plt.ylabel("ET (mm/day)")
     plt.legend()
     plt.show()
@@ -884,7 +995,7 @@ def plot_time_error_with_extra_variable(
         dir_var, variable, start_date, end_date, pix_x, pix_y
     )
 
-    fig, ax1 = plt.subplots(figsize=(8, 6))
+    _, ax1 = plt.subplots(figsize=(8, 6))
     x = mdates.date2num(time)
 
     ax1.plot(x, var_values, "-", color="blue", alpha=0.4, label=variable)
@@ -897,13 +1008,26 @@ def plot_time_error_with_extra_variable(
     ax2.set_ylabel(f"{error_name} error (mm/day)", color="tab:red")
     ax2.tick_params(axis="y", labelcolor="tab:red")
 
-    locator = mdates.AutoDateLocator()
-    formatter = mdates.ConciseDateFormatter(locator)
-    ax1.xaxis.set_major_locator(locator)
-    ax1.xaxis.set_major_formatter(formatter)
+    # Set the x-axis limits
+    ax1.set_xlim(time[0], time[-1])
+    # Set major ticks format and locator
+    ax1.xaxis.set_major_locator(mdates.DayLocator(interval=int(len(time) / 5)))
+    ax1.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
+    # Rotate date labels
+    plt.setp(ax1.xaxis.get_majorticklabels(), rotation=45, ha="right")
 
     plt.title(
-        f"{var_name} vs {error_name} errors from {start_date} to {end_date} "
+        f"{var_name} vs {error_name} errors from "
+        f"{
+            start_date
+            if isinstance(start_date, str)
+            else start_date.strftime('%Y-%m-%d')
+        }"
+        f" to {
+            end_date
+            if isinstance(end_date, str)
+            else end_date.strftime('%Y-%m-%d')
+        } "
         f"for pixel [{pix_x},{pix_y}]"
     )
     plt.tight_layout()
@@ -933,7 +1057,7 @@ def plot_et_comparison(
         End date of the period in `YYYY-MM-DD` format.
     """
     time = xr.date_range(start_date, end=end_date, freq="1D")
-    fig, ax = plt.subplots(figsize=(10, 5))
+    _, ax = plt.subplots(figsize=(10, 5))
     ax.plot(time, et_sd, color="blue", label="Observed ET")
     ax.plot(time, et_ts, color="red", label="Simulated ET")
     ax.set_title(f"Simulated ET vs Observed ET from {start_date} to {end_date}")

@@ -309,9 +309,9 @@ def list_error(
     return errors, index, filtered_time
 
 
-def find_directories(input_dir: str) -> tuple[str, str, str]:
+def find_directories(input_dir: str) -> tuple[str, str, str | None]:
     """
-    Returns the directories for simulated ET, daily radiation,
+    Returns the directories for single date ET, daily radiation,
     and extra ERA5-Land variables within the given input folder.
 
     Parameters
@@ -322,11 +322,19 @@ def find_directories(input_dir: str) -> tuple[str, str, str]:
     Returns
     -------
     tuple[str, str, str]
-        dir_sd  : Directory path for simulated evapotranspiration files.
+        dir_sd  : Directory path for daily evapotranspiration files.
         dir_rad : Directory path for daily radiation files.
         dir_var : Directory path for extra ERA5-Land variable files.
     """
     dir_sd = os.path.join(input_dir, "et")
+    if not os.path.isdir(dir_sd):
+        msg = f"Directory for daily ET files not found: {dir_sd}"
+        raise FileNotFoundError(msg)
     dir_rad = os.path.join(input_dir, "daily_radiation")
-    dir_var = os.path.join(input_dir, "extra")
+    if not os.path.isdir(dir_rad):
+        msg = f"Directory for daily radiation files not found: {dir_rad}"
+        raise FileNotFoundError(msg)
+    dir_var = None
+    if os.path.isdir(os.path.join(input_dir, "extra")):
+        dir_var = os.path.join(input_dir, "extra")
     return dir_sd, dir_rad, dir_var

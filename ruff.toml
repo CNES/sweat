@@ -554,7 +554,7 @@ select = [
   "S",
   "TID252",
 ]
-"**/notebooks/*.ipynb" = ["E501","T201","T203","SLF001","PLR2004"]
+"**/notebooks/*.ipynb" = ["E501","T201","T203","SLF001","PLR2004","DTZ007"]
 "**/raqrs/notebooks/*.ipynb" = ["E501","T201","T203","PLR2004","SLF001"]
 
 [lint.flake8-tidy-imports]
