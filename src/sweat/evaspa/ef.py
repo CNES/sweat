@@ -493,7 +493,7 @@ def compute(models: list[EFModel], data: xr.Dataset) -> xr.Dataset:
     ef = {}
     for m in models:
         m.fit(data, mask=mask)
-        ef[m.name] = m.compute(data)
+        ef[m.name] = m.compute(data, mask=mask)
     return xr.Dataset(ef, coords=data.coords.copy(), attrs=data.attrs.copy())
 
 
