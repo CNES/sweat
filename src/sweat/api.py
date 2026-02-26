@@ -263,7 +263,7 @@ def run_evaspa(
     configure_debugging(**debug_config.model_dump())
     logger.debug("Check configuration: OK")
     # Initialize EF models
-    models, options = ef.initialize(params_config.ef.model_dump())
+    models, options = ef.initialize(params_config.ef.model_dump(by_alias=True))
     # Filter data
     data = filter_data_for_evaspa(
         data=data,
@@ -286,7 +286,10 @@ def run_evaspa(
     # Compute LE
     _, merged_xr = seb.run(data, ef_xr, **params_config.seb.model_dump())
     inst_xr = merged_xr.merge(
-        inst_xr, join="override", combine_attrs="no_conflicts"
+        inst_xr,
+        join="override",
+        compat="override",
+        combine_attrs="no_conflicts",
     )
     logger.debug("Compute LE: OK")
     # Extrapolate at daily scale

@@ -24,8 +24,12 @@ from pydantic import (
     model_validator,
 )
 
-from sweat.common.constant import ETVar
-from sweat.common.filter import find_valid_pixels
+from sweat.common.constant import (
+    MSK_INPUT_FILTERED,
+    MSK_INPUT_FILTERED_FOR_PROCESSING,
+    ETVar,
+)
+from sweat.common.filter import FilteringConfig, find_valid_pixels
 from sweat.debugging import register_debugging
 from sweat.evaspa.edge import Edge, EdgeConfig, EdgeError
 from sweat.evaspa.merging import MergeMethod, merge_to_dataset
@@ -52,6 +56,7 @@ class EFOptionsConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    filtering: FilteringConfig = Field(default=FilteringConfig({}))
     selection: bool = Field(default=False)
     merging: MergeMethod = Field(default=MergeMethod.MEDIAN)
 
@@ -156,7 +161,7 @@ class EFModel:
     dry_edge: Edge
     var: str
 
-    def fit(self, data: xr.Dataset, mask: str | None = None) -> None:
+    def fit(self, data: xr.Dataset, mask: xr.DataArray | None = None) -> None:
         """
         Method to estimate dry and wet edges.
         data is a xarray.Dataset which must conatin "lst"
@@ -166,8 +171,8 @@ class EFModel:
         ----------
         data : xr.Datset
             Dataset containing the data
-        mask : str
-            Name of the data variables used for masking
+        mask : xr.DataArray
+            Data used for masking
         """
         if self.var not in data.data_vars:
             msg = f"{self.var} not in the dataset"
@@ -175,13 +180,7 @@ class EFModel:
         if ETVar.LST.value not in data.data_vars:
             msg = "lst not in the dataset"
             raise EFModelError(msg)
-        if mask is not None:
-            if mask not in data.data_vars:
-                msg = f"No mask {mask}"
-                raise ValueError(msg)
-            data_masked = data.where(data[mask])
-        else:
-            data_masked = data
+        data_masked = data.where(mask) if mask is not None else data
         self.wet_edge.fit(data_masked[self.var], data_masked[ETVar.LST.value])
         self.dry_edge.fit(data_masked[self.var], data_masked[ETVar.LST.value])
 
@@ -218,7 +217,9 @@ class EFModel:
         return self.wet_edge.get(var)
 
     def compute(
-        self, data: xr.Dataset, mask: str | None = None
+        self,
+        data: xr.Dataset,
+        mask: xr.DataArray | None = None,
     ) -> xr.DataArray:
         """
         Method to compute evaporative fraction
@@ -227,8 +228,8 @@ class EFModel:
         ----------
         data : xr.Datset
             Dataset containing the data
-        mask : str
-            Name of the data variables used for masking
+        mask : xr.DataArray
+            Data used for masking
         var : np.array_like
             Data
 
@@ -243,13 +244,7 @@ class EFModel:
         if ETVar.LST.value not in data.data_vars:
             msg = "lst not in the dataset"
             raise EFModelError(msg)
-        if mask is not None:
-            if mask not in data.data_vars:
-                msg = f"No mask {mask}"
-                raise ValueError(msg)
-            data_masked = data.where(data[mask])
-        else:
-            data_masked = data
+        data_masked = data.where(mask) if mask is not None else data
         ef = (
             self.tdry(data_masked[self.var])
             - np.array(data_masked[ETVar.LST.value])
@@ -448,7 +443,7 @@ def initialize(config: dict) -> tuple[list[EFModel], dict[str, Any]]:
         msg = "Error in EF configuration"
         raise EFConfigError(msg) from e
     models = [EFModel.create(cfg.model_dump()) for cfg in efconfig.models]
-    return (models, efconfig.options.model_dump())
+    return (models, efconfig.options.model_dump(by_alias=True))
 
 
 def get_variables_from_models(models: list[EFModel]) -> list[str]:
@@ -471,7 +466,12 @@ def get_variables_from_models(models: list[EFModel]) -> list[str]:
     return list(set(variables))
 
 
-def compute(models: list[EFModel], data: xr.Dataset) -> xr.Dataset:
+def compute(
+    models: list[EFModel],
+    data: xr.Dataset,
+    mask: xr.DataArray | None = None,
+    model_mask: xr.DataArray | None = None,
+) -> xr.Dataset:
     """
     Compute evaporative fraction of a list of EF models
 
@@ -481,18 +481,22 @@ def compute(models: list[EFModel], data: xr.Dataset) -> xr.Dataset:
         List of EF models
     data : xr. Dataset
         Data
+    mask : xr. DataArray
+        Mask used for EF computation
+    model_mask : xr.DataArray
+        Mask used for edge computation,
+        if not provided mask for EF computation is used
 
     Returns
     -------
     ef: xr.Dataset
         Evaporative fraction
     """
-    mask = None
-    if ETVar.VALID.value in data.data_vars:
-        mask = ETVar.VALID.value
+    if mask is not None and model_mask is None:
+        model_mask = mask
     ef = {}
     for m in models:
-        m.fit(data, mask=mask)
+        m.fit(data, mask=model_mask)
         ef[m.name] = m.compute(data, mask=mask)
     return xr.Dataset(ef, coords=data.coords.copy(), attrs=data.attrs.copy())
 
@@ -519,6 +523,7 @@ def select(ef: xr.Dataset) -> xr.Dataset:
 def run(
     models: list[EFModel],
     data: xr.Dataset,
+    filtering: dict | None = None,
     selection: bool = False,
     merging: MergeMethod = MergeMethod.MEAN,
 ) -> tuple[xr.Dataset, xr.Dataset]:
@@ -551,10 +556,23 @@ def run(
         if v not in data.data_vars:
             msg = f"Variable {v} is missing to compute EF from EF models"
             raise KeyError(msg)
-    ef = compute(models, data)
+    mask = None
+    if ETVar.VALID.value in data.data_vars:
+        mask = data[ETVar.VALID.value]
+    # Filter data for EF models
+    model_mask, model_flags = find_valid_pixels(
+        data,
+        nan_config=variables,
+        valid_config=filtering,
+    )
+    # Compute EF models
+    ef = compute(models, data, mask=mask, model_mask=model_mask)
+    # Select EF models
     if selection:
         ef = select(ef)
-    # Get valid and flags
+    # Merge EF models
+    merged = merge_to_dataset(ef, method=merging, name=ETVar.EF.value)
+    # Propagate masks
     if ETVar.FLAGS.value in data.data_vars:
         flags = data[ETVar.FLAGS.value]
     if ETVar.VALID.value in data.data_vars:
@@ -567,7 +585,10 @@ def run(
             nan_config=[ETVar.LST.value],
             valid_config=None,
         )
-    merged = merge_to_dataset(ef, method=merging, name=ETVar.EF.value)
+    flags = flags.where(
+        (model_flags & MSK_INPUT_FILTERED) == 0,
+        flags | MSK_INPUT_FILTERED_FOR_PROCESSING,
+    )
     ef[ETVar.VALID.value] = valid
     ef[ETVar.FLAGS.value] = flags
     merged[ETVar.VALID.value] = valid

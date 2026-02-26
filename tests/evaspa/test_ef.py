@@ -246,7 +246,7 @@ def test_efmodel_fit_with_mask() -> None:
         ),
         var="albedo",
     )
-    model.fit(data, mask="mask")
+    model.fit(data, mask=data["mask"])
     np.testing.assert_allclose(model.dry_edge.coeffs[1], 330.0, atol=5)  # type: ignore
     np.testing.assert_allclose(model.dry_edge.coeffs[0], -10, atol=5)  # type: ignore
     np.testing.assert_allclose(model.wet_edge.coeffs[1], 310.0, atol=5)  # type: ignore
@@ -255,13 +255,12 @@ def test_efmodel_fit_with_mask() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
-    ("data_vars", "mask", "expected_error", "expected_msg"),
+    ("data_vars", "expected_error", "expected_msg"),
     [
         pytest.param(
             {
                 "lst": (["y", "x"], np.ones((2, 2))),
             },
-            None,
             EFModelError,
             "albedo not in the dataset",
         ),
@@ -269,23 +268,13 @@ def test_efmodel_fit_with_mask() -> None:
             {
                 "albedo": (["y", "x"], np.ones((2, 2))),
             },
-            None,
             EFModelError,
             "lst not in the dataset",
-        ),
-        pytest.param(
-            {
-                "lst": (["y", "x"], np.ones((2, 2))),
-                "albedo": (["y", "x"], np.ones((2, 2))),
-            },
-            "mask",
-            ValueError,
-            "No mask",
         ),
     ],
 )
 def test_efmodel_fit_with_error(
-    data_vars, mask, expected_error, expected_msg
+    data_vars, expected_error, expected_msg
 ) -> None:
     """
     Test EFModel.fit method with error
@@ -320,7 +309,7 @@ def test_efmodel_fit_with_error(
         var="albedo",
     )
     with pytest.raises(expected_error, match=expected_msg):
-        model.fit(data, mask=mask)
+        model.fit(data)
 
 
 @pytest.mark.unit
@@ -461,19 +450,18 @@ def test_efmodel_compute_with_mask(valid) -> None:
         wet=(300.0, 15.0),
     )
     # Compute EF
-    ef = model.compute(data, mask="valid")
+    ef = model.compute(data, mask=data["valid"])
     np.testing.assert_allclose(ef, data["ef_albedo"].where(data["valid"] == 1))
 
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
-    ("data_vars", "mask", "expected_error", "expected_msg"),
+    ("data_vars", "expected_error", "expected_msg"),
     [
         pytest.param(
             {
                 "lst": (["y", "x"], np.ones((2, 2))),
             },
-            None,
             EFModelError,
             "albedo not in the dataset",
         ),
@@ -481,23 +469,13 @@ def test_efmodel_compute_with_mask(valid) -> None:
             {
                 "albedo": (["y", "x"], np.ones((2, 2))),
             },
-            None,
             EFModelError,
             "lst not in the dataset",
-        ),
-        pytest.param(
-            {
-                "lst": (["y", "x"], np.ones((2, 2))),
-                "albedo": (["y", "x"], np.ones((2, 2))),
-            },
-            "mask",
-            ValueError,
-            "No mask",
         ),
     ],
 )
 def test_efmodel_compute_with_error(
-    data_vars, mask, expected_error, expected_msg
+    data_vars, expected_error, expected_msg
 ) -> None:
     """
     Test EFModel.compute method with error
@@ -534,7 +512,7 @@ def test_efmodel_compute_with_error(
     )
     # Compute EF
     with pytest.raises(expected_error, match=expected_msg):
-        model.compute(data, mask=mask)
+        model.compute(data)
 
 
 @pytest.mark.unit
@@ -900,6 +878,12 @@ def test_check_variability(lst, mask, expected) -> None:
     [
         pytest.param(
             {
+                "models": "default_evaspa",
+            },
+            2,
+        ),
+        pytest.param(
+            {
                 "models": [
                     {
                         "name": "model1",
@@ -950,7 +934,32 @@ def test_check_variability(lst, mask, expected) -> None:
         pytest.param(
             {
                 "models": "default_evaspa",
+                "options": {},
+            },
+            2,
+        ),
+        pytest.param(
+            {
+                "models": "default_evaspa",
                 "options": {
+                    "selection": False,
+                    "merging": "mean",
+                },
+            },
+            2,
+        ),
+        pytest.param(
+            {
+                "models": "default_evaspa",
+                "options": {
+                    "filtering": {
+                        "albedo": {
+                            "and": [
+                                {"op": ">=", "value": 0.1},
+                                {"op": "<=", "value": 0.3},
+                            ]
+                        }
+                    },
                     "selection": False,
                     "merging": "mean",
                 },
@@ -964,13 +973,23 @@ def test_initialize(config, expected) -> None:
     Test initialize function
     """
     models, options = initialize(config)
+    options_keys = ["filtering", "selection", "merging"]
     assert len(models) == expected
-    assert not options["selection"]
-    assert options["merging"].value == "mean"
+    assert options
+    assert list(options.keys()).sort() == options_keys.sort()
 
 
 @pytest.mark.functional
-def test_compute() -> None:
+@pytest.mark.parametrize(
+    ("mask", "model_mask"),
+    [
+        pytest.param(None, None),
+        pytest.param("mask", None),
+        pytest.param(None, "model_mask"),
+        pytest.param("mask", "model_mask"),
+    ],
+)
+def test_compute(mask, model_mask) -> None:
     """
     Test compute function
     """
@@ -980,34 +999,18 @@ def test_compute() -> None:
     data = setup_data(
         albedo=(0.0, 0.6),
         fcover=(0, 1.0),
-        valid=(0.0, 1.0),
+        valid=(0.2, 0.8),
         dry=(330.0, -10.0),
         wet=(300.0, 15.0),
     )
-    data = data.drop_vars("valid")
+    if mask is not None:
+        mask = data["valid"]
+    if model_mask is not None:
+        model_mask = np.random.choice(
+            [0, 1], size=data["valid"].shape, p=[0.5, 0.5]
+        )
     # Compute EF
-    ef = compute(models, data)
-    assert ef
-    assert len(ef.data_vars) == 2
-
-
-@pytest.mark.functional
-def test_compute_with_mask() -> None:
-    """
-    Test compute function
-    """
-    # Generate models
-    models = setup_models()
-    # Generate data
-    data = setup_data(
-        albedo=(0.0, 0.6),
-        fcover=(0, 1.0),
-        valid=(0.0, 1.0),
-        dry=(330.0, -10.0),
-        wet=(300.0, 15.0),
-    )
-    # Compute EF
-    ef = compute(models, data)
+    ef = compute(models, data, mask=mask, model_mask=model_mask)
     assert ef
     assert len(ef.data_vars) == 2
 
@@ -1046,14 +1049,6 @@ def test_select() -> None:
         ),
         pytest.param(
             True,
-            True,
-            {
-                "selection": True,
-                "merging": MergeMethod.MEAN,
-            },
-        ),
-        pytest.param(
-            True,
             False,
             {
                 "selection": False,
@@ -1064,6 +1059,14 @@ def test_select() -> None:
             False,
             True,
             {
+                "filtering": {
+                    "albedo": {
+                        "and": [
+                            {"op": ">=", "value": 0.1},
+                            {"op": "<=", "value": 0.3},
+                        ]
+                    }
+                },
                 "selection": False,
                 "merging": MergeMethod.MEDIAN,
             },
@@ -1166,6 +1169,14 @@ def test_all() -> None:
             },
         ],
         "options": {
+            "filtering": {
+                "albedo": {
+                    "and": [
+                        {"op": ">=", "value": 0.1},
+                        {"op": "<=", "value": 0.3},
+                    ]
+                }
+            },
             "selection": False,
             "merging": "mean",
         },
@@ -1184,22 +1195,52 @@ def test_all() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
-    ("config", "selection_expected", "merging_expected"),
+    ("config", "filtering_expected", "selection_expected", "merging_expected"),
     [
-        pytest.param({}, False, "median"),
-        pytest.param({"selection": True}, True, "median"),
-        pytest.param({"merging": "mean"}, False, "mean"),
+        pytest.param({}, {}, False, "median"),
+        pytest.param({"selection": True}, {}, True, "median"),
+        pytest.param({"merging": "mean"}, {}, False, "mean"),
         pytest.param(
-            {"selection": False, "merging": "median"}, False, "median"
+            {"filtering": {}, "selection": False, "merging": "median"},
+            {},
+            False,
+            "median",
         ),
-        pytest.param({"selection": True, "merging": "mean"}, True, "mean"),
+        pytest.param(
+            {
+                "filtering": {
+                    "albedo": {
+                        "and": [
+                            {"op": ">=", "value": 0.1},
+                            {"op": "<=", "value": 0.3},
+                        ]
+                    }
+                },
+                "selection": True,
+                "merging": "mean",
+            },
+            {
+                "albedo": {
+                    "and": [
+                        {"op": ">=", "value": 0.1},
+                        {"op": "<=", "value": 0.3},
+                    ],
+                    "or": None,
+                }
+            },
+            True,
+            "mean",
+        ),
     ],
 )
-def test_efoptionsconfig(config, selection_expected, merging_expected) -> None:
+def test_efoptionsconfig(
+    config, filtering_expected, selection_expected, merging_expected
+) -> None:
     """
     Test EFOptionsConfig
     """
     options = EFOptionsConfig.model_validate(config)
+    assert options.filtering.model_dump(by_alias=True) == filtering_expected
     assert options.selection == selection_expected
     assert options.merging.value == merging_expected
 
