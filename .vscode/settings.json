@@ -16,6 +16,9 @@
   "flake8.enabled": false,
   "python.testing.pytestEnabled": true,
   "python.testing.pytestPath": "${workspaceFolder}/.pixi/envs/dev/bin/pytest",
+  "python.testing.pytestArgs": [
+    "--cache-clear"
+  ],
   "python.testing.unittestEnabled": false,
   "mypy-type-checker.args": [
     "--ignore-missing-imports",
