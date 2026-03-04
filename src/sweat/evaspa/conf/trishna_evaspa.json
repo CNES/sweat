@@ -19,7 +19,9 @@
                         100,
                         1000000
                     ],
-                    "selection": "median"
+                    "selection": "median",
+                    "fit_breakpoint": 0.25,
+                    "slope_correction": true
                 }
             },
             "wet_edge": {
@@ -39,7 +41,9 @@
                         100,
                         1000000
                     ],
-                    "selection": "median"
+                    "selection": "median",
+                    "fit_breakpoint": 0.2,
+                    "slope_correction": true
                 }
             },
             "var": "albedo"
@@ -63,7 +67,9 @@
                         100,
                         1000000
                     ],
-                    "selection": "median"
+                    "selection": "median",
+                    "fit_breakpoint": 0.25,
+                    "slope_correction": true
                 }
             },
             "wet_edge": {
@@ -83,7 +89,7 @@
                         100,
                         1000000
                     ],
-                    "selection": "median"
+                    "selection": "min"
                 }
             },
             "var": "albedo"
@@ -107,7 +113,7 @@
                         100,
                         1000000
                     ],
-                    "selection": "median"
+                    "selection": "max"
                 }
             },
             "wet_edge": {
@@ -127,7 +133,9 @@
                         100,
                         1000000
                     ],
-                    "selection": "median"
+                    "selection": "median",
+                    "fit_breakpoint": 0.2,
+                    "slope_correction": true
                 }
             },
             "var": "albedo"
@@ -151,7 +159,7 @@
                         100,
                         1000000
                     ],
-                    "selection": "median"
+                    "selection": "max"
                 }
             },
             "wet_edge": {
@@ -171,7 +179,7 @@
                         100,
                         1000000
                     ],
-                    "selection": "median"
+                    "selection": "min"
                 }
             },
             "var": "albedo"
@@ -259,7 +267,7 @@
                         100,
                         1000000
                     ],
-                    "selection": "median"
+                    "selection": "min"
                 }
             },
             "var": "fcover"
@@ -267,7 +275,7 @@
         {
             "name": "EF7",
             "dry_edge": {
-                "type": "FlatRegressionEdge",
+                "type": "ThresholdLinearEdge",
                 "config": {
                     "interval_type": "size",
                     "interval_nb": 10,
@@ -306,12 +314,12 @@
                     "selection": "median"
                 }
             },
-            "var": "fcover"
+            "var": "ndvi"
         },
         {
             "name": "EF8",
             "dry_edge": {
-                "type": "FlatRegressionEdge",
+                "type": "ThresholdLinearEdge",
                 "config": {
                     "interval_type": "size",
                     "interval_nb": 10,
@@ -347,15 +355,15 @@
                         100,
                         1000000
                     ],
-                    "selection": "median"
+                    "selection": "min"
                 }
             },
-            "var": "fcover"
+            "var": "ndvi"
         },
         {
             "name": "EF9",
             "dry_edge": {
-                "type": "LinearEdge",
+                "type": "FlatLinearEdge",
                 "config": {
                     "interval_type": "size",
                     "interval_nb": 10,
@@ -399,7 +407,7 @@
         {
             "name": "EF10",
             "dry_edge": {
-                "type": "LinearEdge",
+                "type": "FlatLinearEdge",
                 "config": {
                     "interval_type": "size",
                     "interval_nb": 10,
@@ -435,7 +443,7 @@
                         100,
                         1000000
                     ],
-                    "selection": "median"
+                    "selection": "min"
                 }
             },
             "var": "ndvi"
@@ -459,7 +467,7 @@
                         100,
                         1000000
                     ],
-                    "selection": "median"
+                    "selection": "max"
                 }
             },
             "wet_edge": {
@@ -503,7 +511,7 @@
                         100,
                         1000000
                     ],
-                    "selection": "median"
+                    "selection": "max"
                 }
             },
             "wet_edge": {
@@ -523,7 +531,7 @@
                         100,
                         1000000
                     ],
-                    "selection": "median"
+                    "selection": "min"
                 }
             },
             "var": "ndvi"
