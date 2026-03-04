@@ -141,4 +141,3 @@ nav:
     - ET time series notebook: notebooks/run_timeseries.ipynb
     - ET time series over a period notebook: notebooks/run_window_timeseries.ipynb
   - API: api/
-  - todo.md

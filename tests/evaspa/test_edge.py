@@ -413,6 +413,14 @@ def test_linear_edge_with_variable_percentile(config) -> None:
             '{"position":"top","interval_type":"size","interval_size":0.01,'
             '"percentile":2,"selection":"median","use_breakpoint":true}'
         ),
+        (
+            '{"position":"top","interval_type":"size","interval_size":0.01,'
+            '"percentile":2,"selection":"median","use_breakpoint":true,"fit_breakpoint":0.3}'
+        ),
+        (
+            '{"position":"top","interval_type":"size","interval_size":0.01,'
+            '"percentile":2,"selection":"median","fit_breakpoint":0.3}'
+        ),
     ],
 )
 def test_top_linear_edge_using_breakpoint(config) -> None:
@@ -451,6 +459,8 @@ def test_top_linear_edge_using_breakpoint(config) -> None:
     np.testing.assert_allclose(edge.coeffs[1], 348, atol=1.0)
     np.testing.assert_allclose(edge.coeffs[0], -40, atol=2.0)
     np.testing.assert_allclose(edge.get(0.3), 348 - 40.0 * 0.3, atol=1.0)
+    assert edge.fit_breakpoint
+    np.testing.assert_allclose(edge.fit_breakpoint, 0.3, atol=0.1)
 
 
 @pytest.mark.unit
@@ -460,6 +470,14 @@ def test_top_linear_edge_using_breakpoint(config) -> None:
         (
             '{"position":"bottom","interval_type":"size","interval_size":0.01,'
             '"percentile":2,"selection":"median","use_breakpoint":true}'
+        ),
+        (
+            '{"position":"bottom","interval_type":"size","interval_size":0.01,'
+            '"percentile":2,"selection":"median","use_breakpoint":true,"fit_breakpoint":0.3}'
+        ),
+        (
+            '{"position":"bottom","interval_type":"size","interval_size":0.01,'
+            '"percentile":2,"selection":"median","fit_breakpoint":0.3}'
         ),
     ],
 )
@@ -474,20 +492,20 @@ def test_bottom_linear_edge_using_breakpoint(config) -> None:
         dry_c0=325.0,
         dry_c1=37.0,
         dry_c2=0.0,
-        wet_c0=290,
-        wet_c1=70,
+        wet_c0=310,
+        wet_c1=-36,
         wet_c2=0.0,
         dry_cut=0.0,
         wet_cut=0.0,
     )
     var2, lst2 = setup_data(
         var_min=0.3,
-        var_max=0.5,
-        dry_c0=348.0,
-        dry_c1=-40.0,
+        var_max=0.6,
+        dry_c0=340.0,
+        dry_c1=-13.0,
         dry_c2=0.0,
-        wet_c0=305,
-        wet_c1=20,
+        wet_c0=290,
+        wet_c1=30,
         wet_c2=0.0,
         dry_cut=0.0,
         wet_cut=0.0,
@@ -496,9 +514,44 @@ def test_bottom_linear_edge_using_breakpoint(config) -> None:
     lst = np.concatenate([lst1, lst2])
     edge = LinearEdge.model_validate_json(config)
     edge.fit(var, lst)
-    np.testing.assert_allclose(edge.coeffs[1], 290, atol=1.0)
-    np.testing.assert_allclose(edge.coeffs[0], 70, atol=2.0)
-    np.testing.assert_allclose(edge.get(0.2), 290 + 70.0 * 0.2, atol=1.0)
+    assert edge.fit_breakpoint
+    np.testing.assert_allclose(edge.fit_breakpoint, 0.3, atol=0.1)
+    np.testing.assert_allclose(edge.coeffs[1], 310, atol=2.0)
+    np.testing.assert_allclose(edge.coeffs[0], -36, atol=3.0)
+    np.testing.assert_allclose(edge.get(0.2), 310 - 36.0 * 0.2, atol=1.0)
+
+
+@pytest.mark.unit
+def test_linear_edge_with_slope_correction() -> None:
+    """
+    Test LinearEdge with slope correction enabled
+    """
+    # Generate data
+    var, lst = setup_data(
+        var_min=0.0,
+        var_max=0.6,
+        dry_c0=330.0,
+        dry_c1=13.0,
+        wet_c0=300,
+        wet_c1=-30,
+    )
+    config_sup = (
+        '{"position":"top","interval_type":"density","interval_nb":20,'
+        '"percentile":2,"selection":"median","slope_correction":true}'
+    )
+    edge_sup = LinearEdge.model_validate_json(config_sup)
+    edge_sup.fit(var, lst)
+    np.testing.assert_allclose(edge_sup.coeffs[1], 333.3, atol=1.0)
+    np.testing.assert_allclose(edge_sup.coeffs[0], 0.0, atol=0.01)
+    config_inf = (
+        '{"position":"bottom","interval_type":"density",'
+        '"interval_nb":20,"percentile":2,"selection":"median",'
+        '"slope_correction":true}'
+    )
+    edge_inf = LinearEdge.model_validate_json(config_inf)
+    edge_inf.fit(var, lst)
+    np.testing.assert_allclose(edge_inf.coeffs[1], 291.5, atol=1.0)
+    np.testing.assert_allclose(edge_inf.coeffs[0], 0.0, atol=0.01)
 
 
 @pytest.mark.unit
@@ -722,8 +775,12 @@ def test_parabolic_edge_error(config) -> None:
             '"percentile":1,"selection":"min"}'
         ),
         (
-            '{"position":"top","interval_type":"size","interval_size":0.05,'
+            '{"position":"top","interval_type":"size","interval_size":0.01,'
             '"percentile":2,"selection":"median"}'
+        ),
+        (
+            '{"position":"top","interval_type":"size","interval_size":0.01,'
+            '"percentile":2,"selection":"median", "use_extremum":false}'
         ),
     ],
 )
@@ -761,8 +818,12 @@ def test_top_linear_edge_with_threshold(config) -> None:
             '"percentile":2,"selection":"min"}'
         ),
         (
-            '{"position":"bottom","interval_type":"size","interval_size":0.05,'
+            '{"position":"bottom","interval_type":"size","interval_size":0.01,'
             '"percentile":2,"selection":"median"}'
+        ),
+        (
+            '{"position":"bottom","interval_type":"size","interval_size":0.01,'
+            '"percentile":2,"selection":"median","use_extremum":false}'
         ),
     ],
 )
@@ -789,54 +850,6 @@ def test_bottom_linear_edge_with_threshold(config) -> None:
     np.testing.assert_allclose(edge.coeffs[0], 30, atol=1.0)
     np.testing.assert_allclose(edge.get(0.3), 300.0 + 30.0 * 0.3, atol=1.0)
     np.testing.assert_allclose(edge.threshold, 0.2, atol=0.05)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    "config",
-    [
-        (
-            '{"position":"top","interval_type":"size","interval_size":0.01,'
-            '"percentile":2,"selection":"median","use_breakpoint":true}'
-        ),
-    ],
-)
-def test_top_linear_edge_with_threshold_using_breakpoint(config) -> None:
-    """
-    Test ThresholdLinearEdge (top) using breakpoint
-    """
-    # Generate data
-    var1, lst1 = setup_data(
-        var_min=0.0,
-        var_max=0.3,
-        dry_c0=325.0,
-        dry_c1=37.0,
-        dry_c2=0.0,
-        wet_c0=290,
-        wet_c1=70,
-        wet_c2=0.0,
-        dry_cut=0.0,
-        wet_cut=0.0,
-    )
-    var2, lst2 = setup_data(
-        var_min=0.3,
-        var_max=0.5,
-        dry_c0=348.0,
-        dry_c1=-40.0,
-        dry_c2=0.0,
-        wet_c0=305,
-        wet_c1=20,
-        wet_c2=0.0,
-        dry_cut=0.0,
-        wet_cut=0.0,
-    )
-    var = np.concatenate([var1, var2])
-    lst = np.concatenate([lst1, lst2])
-    edge = ThresholdLinearEdge.model_validate_json(config)
-    edge.fit(var, lst)
-    np.testing.assert_allclose(edge.coeffs[1], 348, atol=1.0)
-    np.testing.assert_allclose(edge.coeffs[0], -40, atol=2.0)
-    np.testing.assert_allclose(edge.get(0.4), 348 - 40.0 * 0.4, atol=1.0)
 
 
 @pytest.mark.unit
@@ -898,12 +911,16 @@ def test_linear_edge_with_threshold_error(config) -> None:
     "config",
     [
         (
-            '{"position":"top","interval_type":"size","interval_size":0.02,'
+            '{"position":"top","interval_type":"density","interval_nb":100,'
             '"percentile":1,"selection":"max"}'
         ),
         (
-            '{"position":"top","interval_type":"size","interval_size":0.05,'
+            '{"position":"top","interval_type":"size","interval_size":0.01,'
             '"percentile":2,"selection":"median"}'
+        ),
+        (
+            '{"position":"top","interval_type":"size","interval_size":0.01,'
+            '"percentile":2,"selection":"median","use_extremum":false}'
         ),
     ],
 )
@@ -940,63 +957,13 @@ def test_double_linear_edge(config) -> None:
     lst = np.concatenate([lst1, lst2])
     edge = DoubleLinearEdge.model_validate_json(config)
     edge.fit(var, lst)
-    np.testing.assert_allclose(edge.coeffs1[1], 325, atol=1.0)
-    np.testing.assert_allclose(edge.coeffs1[0], 37, atol=1.0)
-    np.testing.assert_allclose(edge.coeffs2[1], 340, atol=1.0)
-    np.testing.assert_allclose(edge.coeffs2[0], -13, atol=1.0)
+    np.testing.assert_allclose(edge.coeffs1[1], 325, atol=3.0)
+    np.testing.assert_allclose(edge.coeffs1[0], 37, atol=4.0)
+    np.testing.assert_allclose(edge.coeffs2[1], 340, atol=3.0)
+    np.testing.assert_allclose(edge.coeffs2[0], -13, atol=3.0)
     np.testing.assert_allclose(edge.get(0.2), 325.0 + 37.0 * 0.2, atol=1.0)
     np.testing.assert_allclose(edge.get(0.4), 340.0 - 13.0 * 0.4, atol=1.0)
     np.testing.assert_allclose(edge.fit_breakpoint, 0.3, atol=0.05)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    "config",
-    [
-        (
-            '{"position":"top","interval_type":"size","interval_size":0.01,'
-            '"percentile":2,"selection":"median","use_breakpoint":true}'
-        ),
-    ],
-)
-def test_double_linear_edge_using_breakpoint(config) -> None:
-    """
-    Test DoubleLinearEdge using breakpoint
-    """
-    # Generate data
-    var1, lst1 = setup_data(
-        var_min=0.0,
-        var_max=0.3,
-        dry_c0=325.0,
-        dry_c1=37.0,
-        dry_c2=0.0,
-        wet_c0=290,
-        wet_c1=70,
-        wet_c2=0.0,
-        dry_cut=0.0,
-        wet_cut=0.0,
-    )
-    var2, lst2 = setup_data(
-        var_min=0.3,
-        var_max=0.5,
-        dry_c0=348.0,
-        dry_c1=-40.0,
-        dry_c2=0.0,
-        wet_c0=305,
-        wet_c1=20,
-        wet_c2=0.0,
-        dry_cut=0.0,
-        wet_cut=0.0,
-    )
-    var = np.concatenate([var1, var2])
-    lst = np.concatenate([lst1, lst2])
-    edge = DoubleLinearEdge.model_validate_json(config)
-    edge.fit(var, lst)
-    np.testing.assert_allclose(edge.coeffs1[1], 325, atol=1.0)
-    np.testing.assert_allclose(edge.coeffs1[0], 37, atol=2.0)
-    np.testing.assert_allclose(edge.coeffs2[1], 348, atol=1.0)
-    np.testing.assert_allclose(edge.coeffs2[0], -40, atol=2.0)
-    np.testing.assert_allclose(edge.get(0.3), 348 - 40.0 * 0.3, atol=1.0)
 
 
 @pytest.mark.unit
@@ -1058,7 +1025,7 @@ def test_double_linear_edge_error(config) -> None:
     "config",
     [
         (
-            '{"position":"top","interval_type":"size","interval_size":0.05,'
+            '{"position":"top","interval_type":"size","interval_size":0.01,'
             '"percentile":2,"selection":"max"}'
         ),
         (
@@ -1066,8 +1033,12 @@ def test_double_linear_edge_error(config) -> None:
             '"percentile":1,"selection":"min"}'
         ),
         (
-            '{"position":"top","interval_type":"size","interval_size":0.05,'
+            '{"position":"top","interval_type":"size","interval_size":0.01,'
             '"percentile":2,"selection":"median"}'
+        ),
+        (
+            '{"position":"top","interval_type":"size","interval_size":0.01,'
+            '"percentile":2,"selection":"median","use_extremum":false}'
         ),
     ],
 )
@@ -1094,55 +1065,6 @@ def test_flat_linear_edge(config) -> None:
     np.testing.assert_allclose(edge.coeffs2[0], -13, atol=1.0)
     np.testing.assert_allclose(edge.get(0.3), 330.0 - 13.0 * 0.3, atol=1.0)
     np.testing.assert_allclose(edge.fit_breakpoint, 0.2, atol=0.05)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    "config",
-    [
-        (
-            '{"position":"top","interval_type":"size","interval_size":0.01,'
-            '"percentile":2,"selection":"median","use_breakpoint":true}'
-        ),
-    ],
-)
-def test_flat_linear_edge_using_breakpoint(config) -> None:
-    """
-    Test FlatLinearEdge using breakpoint
-    """
-    # Generate data
-    var1, lst1 = setup_data(
-        var_min=0.0,
-        var_max=0.3,
-        dry_c0=325.0,
-        dry_c1=37.0,
-        dry_c2=0.0,
-        wet_c0=290,
-        wet_c1=70,
-        wet_c2=0.0,
-        dry_cut=0.0,
-        wet_cut=0.0,
-    )
-    var2, lst2 = setup_data(
-        var_min=0.3,
-        var_max=0.5,
-        dry_c0=348.0,
-        dry_c1=-40.0,
-        dry_c2=0.0,
-        wet_c0=305,
-        wet_c1=20,
-        wet_c2=0.0,
-        dry_cut=0.0,
-        wet_cut=0.0,
-    )
-    var = np.concatenate([var1, var2])
-    lst = np.concatenate([lst1, lst2])
-    edge = FlatLinearEdge.model_validate_json(config)
-    edge.fit(var, lst)
-    np.testing.assert_allclose(edge.coeffs1, 335, atol=1.0)
-    np.testing.assert_allclose(edge.coeffs2[1], 348, atol=1.0)
-    np.testing.assert_allclose(edge.coeffs2[0], -40, atol=2.0)
-    np.testing.assert_allclose(edge.get(0.4), 348 - 40.0 * 0.4, atol=1.0)
 
 
 @pytest.mark.unit

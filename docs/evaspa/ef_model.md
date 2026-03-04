@@ -13,18 +13,34 @@ By varying the characteristics of the EF model, we can create a wide range of mo
 ## Generic method to estimate edges
 
 ### Definition
-The methods for estimating dry and wet edges in the literature share common mathematical basis. May it be wet or dry, an edge's shape is picked amongst six possible shapes, each with a unique mathematical function:
+The methods for estimating dry and wet edges in the literature share common mathematical basis. May it be wet or dry, an edge's shape is picked amongst four possible shapes, each with a unique mathematical function:
 
-* Flat edges: *FlatEdge*, *FlatRegressionEdge*, *FlatPercentileEdge*
-* Linear edge: *LinearEdge*
-* Linear edge with threshold: *ThresholdLinearEdge*
-* Linear edge with break point : *FlatLinearEdge*
-* Double regression edge: *DoubleLinearEdge*
-* Parabolic edge: *ParabolicEdge*
+* Flat edges: *FlatEdge*, *FlatRegressionEdge*, *FlatPercentileEdge*. The flat edges are represented by a constant function whose value depends on the flat edge class considered.
 
-![edge](images/edge.png){ width="400" }
+![edge](images/flat_edge.png){ width="400" }
 /// caption
-Different dry edge types: flat edge (orange line), linear edge (red line), linear edge with threshold (dashed red line), linear edge with break point (dotted red line), double regression edge (dashed red line), parabolic edge (yellow line)
+Flat edge
+///
+
+* Linear edge: *LinearEdge*, *ThresholdLinearEdge*. These edges are represented by a linear function. Depending on the edge class considered or the configuration used, all or part of the selected points can be used for linear regression.
+
+![edge](images/linear_edge.png){ width="400" }
+/// caption
+Linear edge types: linear edge (red line), linear edge with threshold (dotted red line), linear edge considering a part of the variable space (dashed red line)
+///
+
+* Piecewise regression edge: *FlatLinearEdge*, *DoubleLinearEdge*. These edges are represented by a piecewise linear function (two parts). The *FlatLinearEdge* consists of a constant function followed by a linear function. The *DoubleLinearEdge* consists of two linear functions.
+
+![edge](images/piecewise_linear_edge.png){ width="400" }
+/// caption
+Piecewise regression edge types: flat linear edge (dotted red line),double linear edge (dashed red line)
+///
+
+* Parabolic edge: *ParabolicEdge*. This edge is represented by a parabolic function.
+
+![edge](images/parabolic_edge.png){ width="400" }
+/// caption
+Parabolic edge
 ///
 
 
@@ -67,13 +83,20 @@ Therefore, an edge is characterized by:
     - **percentile_bounds**: Percentiles used for sparse and dense intervals (logarithmic regression to compute percentile used between bounds)
     - **percentile_intervals**: Number of points to consider a sparse interval and dense intervals
     - **selection**: a regression point selection criteria (*median*,*mean*,*max*,*min*)
-    - **use_breakpoint**: Use the breakpoint to compute the edge (to be used only with albedo). The mean temperature increases when
-     albedo increases for low albedo values (not necessarily linearly), and the mean temperature decreases when albedo increases
-     for high albedo values (linearly). The break point occurs around 0.25 and 0.3. Once the option is activated, the breakpoint
-     is used to computed the edge. For *LinearEdge*, if the option use_break_point is activated, the regression occurs only on a
-     part of the selected point: after the break point for top edge and before the break point for bottom edge.
-     For *ThresholdLinearEdge* and *FlatLinearEdge*, if the option use_break_point is activated, the breakpoint is used as guess
-     during the regression.
+    - **use_breakpoint** (only for *LinearEdge*): Use this option to calculate the edge
+    considering only a portion of the space. In other words, for a dry edge, only points
+    above the breakpoint are taken into account, and for a wet edge, only points below.
+    The breakpoint value can be specified with the **fit_breakpoint** option. Otherwise,
+    it is estimated, but this method only works for albedo. In that case, the mean
+    temperature increases when albedo increases for low albedo values (not necessarily
+    linearly), and the mean temperature decreases when albedo increases for high albedo
+    values (linearly). The break point occurs around 0.25 and 0.3. Once the option is
+    activated, the breakpoint is used to computed the edge. This option is disabled by default.
+    - **use_extremum** (for *ThresholdLinearEdge*, *FlatLinearEdge* and *DoubleLinearEdge*),
+    if the option is activated, the extremum of the selected points is used during the edge computation. Otherwise, the break is estimated during the regression. This option is enable by default.
+    - **slope_correction** (only for *LinearEdge*): If slope correction is enabled,
+    the slope of a top edge cannot be positive and that of a bottom edge cannot be negative.
+    This option is disabled by default.
 
 * for flat edge with percentile, a configuration **config**:
     - **percentile**: a percentile interval to considered for point selection
@@ -146,6 +169,23 @@ or
 }
 ```
 
+or
+
+```json
+{
+    "type": "LinearEdge",
+    "config": {
+        "interval_type": "size",
+        "interval_nb": 10,
+        "percentile_bounds": [5,1],
+        "percentile_intervals": [100,10000],
+        "selection": "median",
+        "use_breakpoint": true,
+        "slope_correction": true
+    }
+}
+```
+
 * Linear edge with threshold:
 
 ```json
@@ -160,7 +200,23 @@ or
 }
 ```
 
- * Linear edge with break point :
+or
+
+
+```json
+{
+    "type": "ThresholdLinearEdge",
+    "config": {
+        "interval_type": "size",
+        "interval_size": 0.01,
+        "percentile": 5,
+        "selection": "median",
+        "use_extremum":false
+    }
+}
+```
+
+ * Piecewise linear edge (Flat then linear edge) :
 
 ```json
 {
@@ -174,7 +230,7 @@ or
 }
 ```
 
-* Double regression edge:
+* Double linear edge:
 
 ```json
 {
@@ -312,10 +368,11 @@ See [EF model](#generic-ef-model) for detail to describe an EF model.
 
 But, it is also possible to use pre-defined configuration:
 
-- "default_evaspa"
-- "hsm_evaspa"
-- "avignon_evaspa"
-- "global_evaspa" (Merge of HSM and Avignon configurations)
+- `"default_evaspa"`
+- `"hsm_evaspa"`
+- `"avignon_evaspa"`
+- `"global_evaspa"` (Merge of HSM and Avignon configurations)
+- `"trishna_evaspa"`
 
 For instance
 

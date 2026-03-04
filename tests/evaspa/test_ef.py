@@ -1266,8 +1266,10 @@ def test_efconfig(config) -> None:
     """
     Test EFCheckConfig
     """
-    cfg = EFConfig.model_validate(config)
+    cfg = EFConfig.model_validate(config).model_dump()
+    models = [EFModel.create(m) for m in cfg["models"]]
     assert cfg
+    assert models
 
 
 @pytest.mark.unit
