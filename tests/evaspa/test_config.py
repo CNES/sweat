@@ -49,6 +49,27 @@ from sweat.__about__ import __version__
             "seb": {"use_topo": True},
             "daily": {"use_topo": True, "method": "toa"},
         },
+        {
+            "filtering": {"cloud": {"op": "==", "value": 0}},
+            "ef": {
+                "check": {"threshold": 0.02},
+                "models": "default_evaspa",
+                "options": {
+                    "filtering": {
+                        "albedo": {
+                            "and": [
+                                {"op": ">=", "value": 0.1},
+                                {"op": "<=", "value": 0.3},
+                            ]
+                        }
+                    },
+                    "selection": True,
+                    "merging": "mean",
+                },
+            },
+            "seb": {"use_topo": True},
+            "daily": {"use_topo": True, "method": "toa"},
+        },
     ],
 )
 def test_paramsconfig(config) -> None:
@@ -169,7 +190,11 @@ def test_check() -> None:
                         "var": "albedo",
                     },
                 ],
-                "options": {"selection": False, "merging": "median"},
+                "options": {
+                    "filtering": {},
+                    "selection": False,
+                    "merging": "median",
+                },
                 "check": {"threshold": 0.02},
             },
             "seb": {

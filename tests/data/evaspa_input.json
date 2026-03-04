@@ -7,7 +7,20 @@
         "path": "out"
     },
     "params": {
-        "filtering": {},
+        "filtering": {
+            "albedo": {
+                "and": [
+                    {
+                        "op": ">=",
+                        "value": 0.05
+                    },
+                    {
+                        "op": "<=",
+                        "value": 0.99
+                    }
+                ]
+            }
+        },
         "ef": {
             "check": {
                 "threshold": 0.02
@@ -53,6 +66,20 @@
                 }
             ],
             "options": {
+                "filtering": {
+                    "albedo": {
+                        "and": [
+                            {
+                                "op": ">=",
+                                "value": 0.1
+                            },
+                            {
+                                "op": "<=",
+                                "value": 0.3
+                            }
+                        ]
+                    }
+                },
                 "selection": false,
                 "merging": "mean"
             }
