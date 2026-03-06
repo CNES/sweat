@@ -1,11 +1,13 @@
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
+import logging
 from pathlib import Path
 
 import pytest
 
 import sweat.evaspa.config as cfg
 from sweat.__about__ import __version__
+from sweat.evaspa import merging
 
 
 @pytest.mark.unit
@@ -64,7 +66,7 @@ from sweat.__about__ import __version__
                         }
                     },
                     "selection": True,
-                    "merging": "mean",
+                    "merging": {"merging_method": "mean"},
                 },
             },
             "seb": {"use_topo": True},
@@ -74,9 +76,87 @@ from sweat.__about__ import __version__
 )
 def test_paramsconfig(config) -> None:
     """
-    Test FilterConfig
+    Test EVASPA ParamsConfig
     """
     assert cfg.EVASPAParamsConfig.model_validate(config)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("config", "merging_expected", "uncertainty_expected"),
+    [
+        pytest.param(
+            {
+                "ef": {
+                    "models": "default_evaspa",
+                    "options": {
+                        "merging": {
+                            "merging_method": "median",
+                            "uncertainty_method": "interquartile",
+                        }
+                    },
+                }
+            },
+            merging.MergingMethod.MEDIAN,
+            merging.UncertaintyMethod.INTERQUARTILE,
+        ),
+        pytest.param(
+            {
+                "ef": {"models": "default_evaspa"},
+                "seb": {
+                    "merging": {
+                        "merging_method": "mean",
+                        "uncertainty_method": "std",
+                    }
+                },
+            },
+            merging.MergingMethod.MEDIAN,
+            merging.UncertaintyMethod.INTERQUARTILE,
+        ),
+        pytest.param(
+            {
+                "ef": {
+                    "models": "default_evaspa",
+                    "options": {
+                        "merging": {
+                            "merging_method": "mean",
+                            "uncertainty_method": "interquartile",
+                        }
+                    },
+                },
+                "seb": {
+                    "merging": {
+                        "merging_method": "median",
+                        "uncertainty_method": "nmad",
+                    }
+                },
+            },
+            merging.MergingMethod.MEAN,
+            merging.UncertaintyMethod.INTERQUARTILE,
+        ),
+    ],
+)
+def test_paramsconfig_check_merging(
+    config, merging_expected, uncertainty_expected, caplog
+) -> None:
+    """
+    Test check merging for EVASPA ParamsConfig
+    """
+    caplog.set_level(logging.WARNING)
+    res = cfg.EVASPAParamsConfig.model_validate(config)
+    assert "Merging methods differ, use the one from EF step" in caplog.text
+    assert "Uncertainty methods differ, use the one from EF step" in caplog.text
+    assert res.ef.options.merging.merging_method.value == merging_expected.value
+    assert res.ef.options.merging.uncertainty_method
+    assert (
+        res.ef.options.merging.uncertainty_method.value
+        == uncertainty_expected.value
+    )
+    assert res.seb.merging.merging_method.value == merging_expected.value
+    assert res.seb.merging.uncertainty_method
+    assert (
+        res.seb.merging.uncertainty_method.value == uncertainty_expected.value
+    )
 
 
 @pytest.mark.unit
@@ -193,14 +273,20 @@ def test_check() -> None:
                 "options": {
                     "filtering": {},
                     "selection": False,
-                    "merging": "median",
+                    "merging": {
+                        "merging_method": "median",
+                        "uncertainty_method": "interquartile",
+                    },
                 },
                 "check": {"threshold": 0.02},
             },
             "seb": {
                 "use_topo": True,
                 "models": ["kustas"],
-                "merging": "median",
+                "merging": {
+                    "merging_method": "median",
+                    "uncertainty_method": "interquartile",
+                },
             },
             "daily": {"use_topo": True, "method": "toa"},
         },
@@ -225,7 +311,7 @@ def test_check_debug() -> None:
             "ef": {
                 "check": {"threshold": 10},
                 "models": "default_evaspa",
-                "options": {"merging": "mean"},
+                "options": {"merging": {"merging_method": "mean"}},
             },
         },
         "debug": {"profile": True, "verbose": True},

@@ -20,7 +20,6 @@ from sweat.evaspa.ef import (
     EFModel,
     EFModelError,
     EFOptionsConfig,
-    MergeMethod,
     check_variability,
     compute,
     get_available_configuration,
@@ -30,6 +29,7 @@ from sweat.evaspa.ef import (
     select,
     update_efconfig,
 )
+from sweat.evaspa.merging import MergingMethod, UncertaintyMethod
 
 
 def setup_data(
@@ -926,7 +926,7 @@ def test_check_variability(lst, mask, expected) -> None:
                 ],
                 "options": {
                     "selection": False,
-                    "merging": "mean",
+                    "merging": {"merging_method": "mean"},
                 },
             },
             2,
@@ -943,7 +943,7 @@ def test_check_variability(lst, mask, expected) -> None:
                 "models": "default_evaspa",
                 "options": {
                     "selection": False,
-                    "merging": "mean",
+                    "merging": {"merging_method": "median"},
                 },
             },
             2,
@@ -961,7 +961,10 @@ def test_check_variability(lst, mask, expected) -> None:
                         }
                     },
                     "selection": False,
-                    "merging": "mean",
+                    "merging": {
+                        "merging_method": "median",
+                        "uncertainty_method": "interquartile",
+                    },
                 },
             },
             2,
@@ -1044,7 +1047,10 @@ def test_select() -> None:
             False,
             {
                 "selection": False,
-                "merging": MergeMethod.MEAN,
+                "merging": {
+                    "merging_method": MergingMethod.MEAN,
+                    "uncertainty_method": UncertaintyMethod.STD,
+                },
             },
         ),
         pytest.param(
@@ -1052,7 +1058,10 @@ def test_select() -> None:
             False,
             {
                 "selection": False,
-                "merging": MergeMethod.MEDIAN,
+                "merging": {
+                    "merging_method": MergingMethod.MEDIAN,
+                    "uncertainty_method": UncertaintyMethod.NMAD,
+                },
             },
         ),
         pytest.param(
@@ -1068,7 +1077,10 @@ def test_select() -> None:
                     }
                 },
                 "selection": False,
-                "merging": MergeMethod.MEDIAN,
+                "merging": {
+                    "merging_method": MergingMethod.MEDIAN,
+                    "uncertainty_method": UncertaintyMethod.NMAD,
+                },
             },
         ),
     ],
@@ -1178,7 +1190,10 @@ def test_all() -> None:
                 }
             },
             "selection": False,
-            "merging": "mean",
+            "merging": {
+                "merging_method": "mean",
+                "uncertainty_method": "interquartile",
+            },
         },
     }
     # Generate data
@@ -1197,14 +1212,45 @@ def test_all() -> None:
 @pytest.mark.parametrize(
     ("config", "filtering_expected", "selection_expected", "merging_expected"),
     [
-        pytest.param({}, {}, False, "median"),
-        pytest.param({"selection": True}, {}, True, "median"),
-        pytest.param({"merging": "mean"}, {}, False, "mean"),
         pytest.param(
-            {"filtering": {}, "selection": False, "merging": "median"},
+            {},
             {},
             False,
-            "median",
+            {
+                "merging_method": "median",
+                "uncertainty_method": "interquartile",
+            },
+        ),
+        pytest.param(
+            {"selection": True},
+            {},
+            True,
+            {
+                "merging_method": "median",
+                "uncertainty_method": "interquartile",
+            },
+        ),
+        pytest.param(
+            {"merging": {"merging_method": "mean"}},
+            {},
+            False,
+            {
+                "merging_method": "mean",
+                "uncertainty_method": "std",
+            },
+        ),
+        pytest.param(
+            {
+                "filtering": {},
+                "selection": False,
+                "merging": {"merging_method": "median"},
+            },
+            {},
+            False,
+            {
+                "merging_method": "median",
+                "uncertainty_method": "nmad",
+            },
         ),
         pytest.param(
             {
@@ -1217,7 +1263,7 @@ def test_all() -> None:
                     }
                 },
                 "selection": True,
-                "merging": "mean",
+                "merging": {"merging_method": "mean"},
             },
             {
                 "albedo": {
@@ -1229,7 +1275,10 @@ def test_all() -> None:
                 }
             },
             True,
-            "mean",
+            {
+                "merging_method": "mean",
+                "uncertainty_method": "std",
+            },
         ),
     ],
 )
@@ -1242,7 +1291,7 @@ def test_efoptionsconfig(
     options = EFOptionsConfig.model_validate(config)
     assert options.filtering.model_dump(by_alias=True) == filtering_expected
     assert options.selection == selection_expected
-    assert options.merging.value == merging_expected
+    assert options.merging.model_dump(mode="json") == merging_expected
 
 
 @pytest.mark.unit

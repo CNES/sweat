@@ -212,6 +212,7 @@ def extrapolate_at_daily_scale(
             dtype=FLAGS_TYPE,
         )
 
+    # Propagate flags
     daily[ETVar.VALID.value] = valid
     daily[ETVar.FLAGS.value] = flags
     return daily

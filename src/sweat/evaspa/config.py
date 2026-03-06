@@ -6,6 +6,7 @@ Module for EVASPA configuration management
 from __future__ import annotations
 
 import os
+from typing import Self
 
 from packaging.version import Version
 from pydantic import (
@@ -54,7 +55,7 @@ class EVASPAInputFile(BaseModel):
         return str(__version__)
 
     @model_validator(mode="after")
-    def update_debug(self):
+    def update_debug(self) -> Self:
         """
         Update debug path with output path
         """
@@ -76,6 +77,38 @@ class EVASPAParamsConfig(BaseModel):
     ef: EFConfig
     seb: SEBConfig = Field(default=SEBConfig())
     daily: DailyConfig = Field(default=DailyConfig())
+
+    @model_validator(mode="after")
+    def check_merging(self) -> Self:
+        """
+        Check coherency between merging configuration
+        for "ef" and "seb" steps
+        """
+        # Verify merging method
+        if (
+            self.ef.options.merging.merging_method.value
+            != self.seb.merging.merging_method.value
+        ):
+            msg = "Merging methods differ, use the one from EF step"
+            logger.warning(msg)
+            self.seb.merging.merging_method = (
+                self.ef.options.merging.merging_method
+            )
+        # Verify uncertainty method
+        if (
+            self.ef.options.merging.uncertainty_method is not None
+            and self.seb.merging.uncertainty_method is not None
+            and (
+                self.ef.options.merging.uncertainty_method.value
+                != self.seb.merging.uncertainty_method.value
+            )
+        ):
+            msg = "Uncertainty methods differ, use the one from EF step"
+            logger.warning(msg)
+            self.seb.merging.uncertainty_method = (
+                self.ef.options.merging.uncertainty_method
+            )
+        return self
 
 
 def check_config_evaspa(config: dict) -> dict:

@@ -304,7 +304,12 @@ def run_evaspa(
         dem = data[dem_data]
     daily_xr = daily.extrapolate_at_daily_scale(
         inst_xr,
-        variables=[ETVar.LE.value, ETVar.ET.value],
+        variables=[
+            ETVar.LE.value,
+            ETVar.ET.value,
+            ETVar.UNCERTAINTY_LE.value,
+            ETVar.UNCERTAINTY_ET.value,
+        ],
         dem=dem,
         **params_config.daily.model_dump(),
     )

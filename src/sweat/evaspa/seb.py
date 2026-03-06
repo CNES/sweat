@@ -20,7 +20,7 @@ from sweat.common.flux import (
     correct_shortwave_radiation,
 )
 from sweat.debugging import register_debugging
-from sweat.evaspa.merging import MergeMethod, merge_to_dataset
+from sweat.evaspa.merging import MergingConfig, merge_to_dataset
 from sweat.logging import LoggerManager
 
 logger = LoggerManager.get_logger(__name__)
@@ -47,7 +47,7 @@ class SEBConfig(BaseModel):
 
     use_topo: bool = Field(default=False)
     models: list[RatioModel] = Field(default=DEFAULT_MODELS)
-    merging: MergeMethod = Field(default=MergeMethod.MEDIAN)
+    merging: MergingConfig = Field(default=MergingConfig())
 
 
 @register_debugging
@@ -391,9 +391,9 @@ def create_le(ef: xr.Dataset, rn: xr.Dataset, ratio: xr.Dataset) -> xr.Dataset:
 def run(
     data: xr.Dataset,
     ef: xr.Dataset,
-    use_topo=False,
-    models=DEFAULT_MODELS,
-    merging: MergeMethod = MergeMethod.MEAN,
+    use_topo: bool = False,
+    models: list[RatioModel] = DEFAULT_MODELS,
+    merging: dict | None = None,
 ) -> tuple[xr.Dataset, xr.Dataset]:
     """
     Compute latent heat flux dataset for all EF models.
@@ -415,8 +415,8 @@ def run(
         Topography to take into account
     models: list[str]
         List of G models
-    merging : MergeMethod
-        Method used for merging
+    merging : dict
+        Merging configuration used
 
     Returns
     -------
@@ -458,10 +458,20 @@ def run(
         rn_xr,
         ratio_xr,
     )
-    merged_xr = merge_to_dataset(le_xr, method=merging, name="le")
-    merged_xr["et"] = merged_xr["le"].copy(
-        data=compute_et_from_le(merged_xr["le"])
+    if merging is None:
+        merging_config = MergingConfig().model_dump()
+    else:
+        merging_config = MergingConfig.model_validate(merging).model_dump()
+    merged_xr = merge_to_dataset(le_xr, name=ETVar.LE.value, **merging_config)
+    # Compute ET from LE
+    merged_xr[ETVar.ET.value] = merged_xr[ETVar.LE.value].copy(
+        data=compute_et_from_le(merged_xr[ETVar.LE.value])
     )
+    # Compute ET uncertainty from LE uncertainty
+    merged_xr[ETVar.UNCERTAINTY_ET.value] = merged_xr[
+        ETVar.UNCERTAINTY_LE.value
+    ].copy(data=compute_et_from_le(merged_xr[ETVar.UNCERTAINTY_LE.value]))
+    # Propagate flags
     le_xr[ETVar.VALID.value] = valid
     le_xr[ETVar.FLAGS.value] = flags
     merged_xr[ETVar.VALID.value] = valid

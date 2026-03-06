@@ -32,7 +32,12 @@ from sweat.common.constant import (
 from sweat.common.filter import FilteringConfig, find_valid_pixels
 from sweat.debugging import register_debugging
 from sweat.evaspa.edge import Edge, EdgeConfig, EdgeError
-from sweat.evaspa.merging import MergeMethod, merge_to_dataset
+from sweat.evaspa.merging import (
+    MergingConfig,
+    MergingMethod,
+    UncertaintyMethod,
+    merge_to_dataset,
+)
 from sweat.logging import LoggerManager
 
 logger = LoggerManager.get_logger(__name__)
@@ -58,7 +63,12 @@ class EFOptionsConfig(BaseModel):
 
     filtering: FilteringConfig = Field(default=FilteringConfig({}))
     selection: bool = Field(default=False)
-    merging: MergeMethod = Field(default=MergeMethod.MEDIAN)
+    merging: MergingConfig = Field(
+        default=MergingConfig(
+            merging_method=MergingMethod.MEDIAN,
+            uncertainty_method=UncertaintyMethod.INTERQUARTILE,
+        )
+    )
 
 
 class EFCheckConfig(BaseModel):
@@ -525,7 +535,7 @@ def run(
     data: xr.Dataset,
     filtering: dict | None = None,
     selection: bool = False,
-    merging: MergeMethod = MergeMethod.MEAN,
+    merging: dict | None = None,
 ) -> tuple[xr.Dataset, xr.Dataset]:
     """
     Compute evaporative fraction using models.
@@ -540,8 +550,8 @@ def run(
         Flag to apply selection
     keep : bool
         Flag to keep intermediate computations
-    merging : MergeMethod
-        Method used for merging
+    merging : dict
+        Configuration used for merging
 
     Returns
     -------
@@ -571,7 +581,11 @@ def run(
     if selection:
         ef = select(ef)
     # Merge EF models
-    merged = merge_to_dataset(ef, method=merging, name=ETVar.EF.value)
+    if merging is None:
+        merging_config = MergingConfig().model_dump()
+    else:
+        merging_config = MergingConfig.model_validate(merging).model_dump()
+    merged = merge_to_dataset(ef, name=ETVar.EF.value, **merging_config)
     # Propagate masks
     if ETVar.FLAGS.value in data.data_vars:
         flags = data[ETVar.FLAGS.value]

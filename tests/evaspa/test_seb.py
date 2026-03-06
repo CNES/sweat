@@ -333,4 +333,11 @@ def test_run(config):
     """
     data = setup_data(nb=1)
     ef = setup_dataset(["m1", "m2", "m3"])
-    seb.run(data, ef, **config)
+    res, merged = seb.run(data, ef, **config)
+    nb = len(config.get("models", seb.DEFAULT_MODELS))
+    assert (
+        len(res.data_vars) == nb * len(ef.data_vars) + 2
+    )  # Number of combinations plus flags
+    assert sorted(
+        ["le", "uncertainty_le", "et", "uncertainty_et", "valid", "flags"]
+    ) == sorted(merged.data_vars)

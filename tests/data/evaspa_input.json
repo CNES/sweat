@@ -81,7 +81,10 @@
                     }
                 },
                 "selection": false,
-                "merging": "mean"
+                "merging": {
+                    "merging_method": "median",
+                    "uncertainty_method": "interquartile"
+                }
             }
         },
         "seb": {
@@ -89,7 +92,10 @@
             "models": [
                 "kustas"
             ],
-            "merging": "mean"
+            "merging": {
+                "merging_method": "median",
+                "uncertainty_method": "interquartile"
+            }
         },
         "daily": {
             "use_topo": true,

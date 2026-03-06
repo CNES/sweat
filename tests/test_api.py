@@ -210,12 +210,15 @@ def test_filter_data_for_evaspa():
                             "var": "albedo",
                         },
                     ],
-                    "options": {"selection": False, "merging": "mean"},
+                    "options": {
+                        "selection": False,
+                        "merging": {"merging_method": "mean"},
+                    },
                 },
                 "seb": {
                     "use_topo": True,
                     "models": ["kustas"],
-                    "merging": "mean",
+                    "merging": {"merging_method": "mean"},
                 },
                 "daily": {"use_topo": True, "method": "toa"},
             },
@@ -227,7 +230,14 @@ def test_filter_data_for_evaspa():
                 "date": "2018-05-16T10:00:00-00:00",
             },
             {
-                "filtering": {},
+                "filtering": {
+                    "albedo": {
+                        "and": [
+                            {"op": ">=", "value": 0.05},
+                            {"op": "<=", "value": 0.99},
+                        ]
+                    }
+                },
                 "ef": {
                     "check": {"threshold": 0.02},
                     "models": [
@@ -270,12 +280,29 @@ def test_filter_data_for_evaspa():
                             "var": "albedo",
                         },
                     ],
-                    "options": {"selection": False, "merging": "mean"},
+                    "options": {
+                        "filtering": {
+                            "albedo": {
+                                "and": [
+                                    {"op": ">=", "value": 0.1},
+                                    {"op": "<=", "value": 0.3},
+                                ]
+                            }
+                        },
+                        "selection": False,
+                        "merging": {
+                            "merging_method": "median",
+                            "uncertainty_method": "interquartile",
+                        },
+                    },
                 },
                 "seb": {
                     "use_topo": True,
                     "models": ["kustas"],
-                    "merging": "mean",
+                    "merging": {
+                        "merging_method": "median",
+                        "uncertainty_method": "interquartile",
+                    },
                 },
                 "daily": {"use_topo": True, "method": "toa"},
             },

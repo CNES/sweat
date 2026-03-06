@@ -36,6 +36,9 @@ class ETVar(Enum):
     RSD = "rsd"
     SLOPE = "slope"
     TEMPERATURE = "ta"
+    UNCERTAINTY_EF = "uncertainty_ef"
+    UNCERTAINTY_ET = "uncertainty_et"
+    UNCERTAINTY_LE = "uncertainty_le"
     VALID = "valid"
 
 

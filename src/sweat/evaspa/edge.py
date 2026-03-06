@@ -1059,19 +1059,20 @@ class LinearEdge(RegressionEdge):
     @model_validator(mode="after")
     def check_use_breakpoint(self) -> Self:
         """
-        If breakpoint is provided, use_breakpoint is set to True
+        Check use_breakpoint option
+
+        If fit_breakpoint option is provided,
+        use_breakpoint is set to True
 
         Parameters
         ----------
-        use_bp: bool
-            Use breakpoint option
-        info: ValidationInfo
-            Information
+        self: LinearEdge
+            LinearEdge instance
 
         Returns
         -------
-        use_bp_checked: bool
-            Check use breakpoint
+        self: LinearEdge
+            Checked instance
         """
         if self.fit_breakpoint is not None:
             self.use_breakpoint = True

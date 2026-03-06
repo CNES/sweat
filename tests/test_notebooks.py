@@ -14,6 +14,7 @@ def get_notebooks():
         for path in Path("notebooks").rglob("*.ipynb")
         if (".ipynb_checkpoints") not in path.parts
         and ("Untitled" not in path.parts)
+        and ("test" not in path.parts)
     ]
 
 
