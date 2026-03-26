@@ -238,8 +238,9 @@ def _hour_angle(
     delta_time = local_time - midnight
     # local solar time (in hours)
     f = np.vectorize(
-        lambda x: (delta_time + dt.timedelta(hours=x) / 60.0).total_seconds()
-        / 3600
+        lambda x: (
+            (delta_time + dt.timedelta(hours=x) / 60.0).total_seconds() / 3600
+        )
     )
     lst = f(tc)
     return np.deg2rad(15.0 * (lst - 12.0))
@@ -301,8 +302,9 @@ def convert_to_local_time(
     delta_time = local_time - midnight
     # local solar time (in hours)
     f = np.vectorize(
-        lambda x: (delta_time + dt.timedelta(hours=x) / 60.0).total_seconds()
-        / 3600
+        lambda x: (
+            (delta_time + dt.timedelta(hours=x) / 60.0).total_seconds() / 3600
+        )
     )
     time_ls = f(tc)
     return time_ls * 3600
