@@ -82,6 +82,7 @@ class STICModelConfig(BaseModel):
         f32,
         f32,
         i64,
+        boolean,
     ),
     nogil=True,
     cache=True,
@@ -98,6 +99,7 @@ def run_stic_model_pixel(
     local_time: float,
     threshold: float,
     nb_steps: int,
+    debug: boolean,
 ) -> tuple[float, float, bool]:
     """
     STIC model calulation function for a single pixel
@@ -126,6 +128,8 @@ def run_stic_model_pixel(
         Threshold value
     nb_steps: int
         Maximum of ietration number
+    debug: bool
+        Mode debug to print intermediate results
 
 
     Returns
@@ -157,6 +161,8 @@ def run_stic_model_pixel(
         rho,
         cp,
     ) = compute_psychrometrics(ts, ta, td, rh)
+    if debug:
+        print("Psychrometrics = ", esstar, ea, da, slope, rho, cp)  # noqa T201
 
     # 2. Initialize
     # -------------
@@ -183,6 +189,9 @@ def run_stic_model_pixel(
         s3,
         s4,
     )
+    if debug:
+        print("Init SM = ", m, m_soil, s1, s2, s3, s4, es, ds)  # noqa T201
+
     # Initialize saturation vapor pressure at t0
     e0star = esstar
     # Initialize vapor pressure at t0
@@ -193,18 +202,26 @@ def run_stic_model_pixel(
     t0d_old = t0d
     # Compute G flux
     g_flux = compute_g_flux(rn, lai, local_time, m_soil)
+    if debug:
+        print("g_flux = ", g_flux)  # noqa T201
+
     # Compute available energy
     available_energy = rn - g_flux
     # Compute state equations
     (g_aero, g_surf, delta_t, ef) = compute_state_equations(
         rho, cp, alpha, slope, available_energy, e0, ea, e0star, m
     )
+    if debug:
+        print("State Eq. = ", g_aero, g_surf, delta_t, ef)  # noqa T201
+
     # Initialize t0
     t0 = delta_t + ta
     # Compute LE and H fluxes
     le_flux, h_flux = initiate_le_h_fluxes(
         slope, g_aero, g_surf, available_energy, da, rho, cp
     )
+    if debug:
+        print("LE/H Fluxes = ", le_flux, h_flux)  # noqa T201
 
     # 3. Iteration
     # ------------
@@ -217,15 +234,21 @@ def run_stic_model_pixel(
 
     # Iteration step
     while le_error > threshold and steps < nb_steps:
+        if debug:
+            print("step = ", steps)  # noqa T201
         # Re-estimate saturated vapor pressure at canopy/air height
         e0star = compute_canopy_air_saturation_vapor_pressure(
             le_flux, ea, esstar, g_aero, g_surf, rho, cp, f32(PSYCHROMETRIC_CST)
         )
+        if debug:
+            print("e0star = ", e0star)  # noqa T201
 
         # Re-estimate vapor pressure deficit at canopy/air height
         d0 = compute_canopy_air_vapor_pressure_deficit(
             slope, g_aero, g_surf, available_energy, da, ds, rho, cp
         )
+        if debug:
+            print("d0 = ", d0)  # noqa T201
 
         # Re-estimate vapor pressure at canopy/air height (hPa)
         e0 = e0star - d0
@@ -235,6 +258,8 @@ def run_stic_model_pixel(
             e0 = es
         if e0 > e0star:
             e0 = es
+        if debug:
+            print("e0 = ", e0)  # noqa T201
 
         # Re-estimate dewpoint temperature at source/sink height
         t0d = td + (f32(PSYCHROMETRIC_CST) * le_flux) / (rho * cp * g_aero * s1)
@@ -242,6 +267,8 @@ def run_stic_model_pixel(
             t0d = td
         if t0d > ts:
             t0d = t0d_old
+        if debug:
+            print("t0d = ", t0d)  # noqa T201
 
         # Re-estimate M (direct LST feedback into M computation)
         (m, _, _, m_soil, _) = iterate_soil_moisture(
@@ -264,15 +291,21 @@ def run_stic_model_pixel(
             e0star,
             esstar,
         )
+        if debug:
+            print("SM = ", m, m_soil)  # noqa T201
 
         # Re-estimate PT coefficient
         alpha = compute_alpha_coefficient(
             slope, g_aero, g_surf, ta, t0, e0star, ea, m
         )
+        if debug:
+            print("alpha = ", alpha)  # noqa T201
 
         # Re-estimate net available energy
         g_flux = compute_g_flux(rn, lai, local_time, m)
         available_energy = rn - g_flux
+        if debug:
+            print("G flux = ", g_flux)  # noqa T201
 
         # Re-estimate conductances and states
         (g_aero, g_surf, delta_t, ef) = compute_state_equations(
@@ -286,6 +319,8 @@ def run_stic_model_pixel(
             e0star,
             m,
         )
+        if debug:
+            print("State Eq. = ", g_aero, g_surf, delta_t, ef)  # noqa T201
 
         t0 = delta_t + ta
 
@@ -293,6 +328,8 @@ def run_stic_model_pixel(
         le_flux, h_flux = compute_le_h_fluxes(
             slope, g_aero, g_surf, available_energy, da, ta, t0, ea, e0, rho, cp
         )
+        if debug:
+            print("LE/H fluxes = ", le_flux, h_flux)  # noqa T201
 
         # Error
         le_error = np.abs(le_flux_old - le_flux)
@@ -301,6 +338,8 @@ def run_stic_model_pixel(
 
         converged = le_error < threshold
 
+    if debug:
+        print("nb steps = ", steps, ", converged = ", converged)  # noqa T201
     # Final output from the STIC model
     # Compute EF
     ef = le_flux / (le_flux + h_flux)
@@ -402,6 +441,7 @@ def run_stic_model(
                         local_time[i, j],
                         threshold,
                         nb_steps,
+                        False,
                     )
                 )
             else:

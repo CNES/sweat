@@ -272,7 +272,18 @@ def test_run_stic_model_pixel(
     Test function for STIC model calulation function for a single pixel
     """
     le, ef, converged = main.run_stic_model_pixel(
-        ts, ta, td, rh, fc, lai, rn, ln, local_time, threshold, nb_steps
+        ts,
+        ta,
+        td,
+        rh,
+        fc,
+        lai,
+        rn,
+        ln,
+        local_time,
+        threshold,
+        nb_steps,
+        debug=False,
     )
     np.testing.assert_almost_equal(le, le_expected, decimal=2)
     np.testing.assert_almost_equal(ef, ef_expected, decimal=2)
