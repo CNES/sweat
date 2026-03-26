@@ -84,7 +84,7 @@ def convert_to_local_time(
     crs: CRS | None = None,
 ) -> npt.NDArray:
     """
-    Converting time from UTM to local solar time (in seconds)
+    Converting time from UTC to local solar time (in seconds)
 
     Parameters
     ----------
@@ -151,9 +151,9 @@ def convert_to_rh(
     Parameters
     ----------
     t2m: np.array_like
-        2m air temperature (in Kelvin)
-    d2m : np.array_like (in Kelvin)
-        dewpoint temperature
+        2m air temperature (in Celsius)
+    d2m : np.array_like
+        dewpoint temperature (in Celsius)
     b : float
         Parameter
     C : float
