@@ -50,6 +50,8 @@ notebook = [
   "jupyterlab",
   "notebook",
   "contextily",
+  "openpyxl",
+  "plotly",
 ]
 docs = [
   "mkdocs",
