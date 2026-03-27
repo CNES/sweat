@@ -1,6 +1,7 @@
 # Temporary files
 *.swp
 *_cache/
+.cache/
 .DS_Store/
 
 # Python
