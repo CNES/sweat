@@ -70,7 +70,7 @@ class STICModelConfig(BaseModel):
 
 
 @njit(
-    Tuple((f32, f32, boolean))(
+    Tuple((f32, f32, f32, f32, f32, f32, f32, boolean))(
         f32,
         f32,
         f32,
@@ -100,7 +100,7 @@ def run_stic_model_pixel(
     threshold: float,
     nb_steps: int,
     debug: boolean,
-) -> tuple[float, float, bool]:
+) -> tuple[float, float, float, float, float, float, float, bool]:
     """
     STIC model calulation function for a single pixel
 
@@ -345,7 +345,7 @@ def run_stic_model_pixel(
     ef = le_flux / (le_flux + h_flux)
     ef = min(max(ef, f32(0.0)), f32(1.0))
 
-    return le_flux, ef, converged
+    return le_flux, h_flux, ef, g_flux, g_aero, g_surf, t0, converged
 
 
 @njit(
@@ -428,21 +428,28 @@ def run_stic_model(
     for i in prange(shape[0]):
         for j in prange(shape[1]):
             if valid[i, j] == 1:
-                le_arr[i, j], ef_arr[i, j], converged_arr[i, j] = (
-                    run_stic_model_pixel(
-                        lst[i, j],
-                        ta[i, j],
-                        td[i, j],
-                        rh[i, j],
-                        fc[i, j],
-                        lai[i, j],
-                        rn[i, j],
-                        ln[i, j],
-                        local_time[i, j],
-                        threshold,
-                        nb_steps,
-                        False,
-                    )
+                (
+                    le_arr[i, j],
+                    _,
+                    ef_arr[i, j],
+                    _,
+                    _,
+                    _,
+                    _,
+                    converged_arr[i, j],
+                ) = run_stic_model_pixel(
+                    lst[i, j],
+                    ta[i, j],
+                    td[i, j],
+                    rh[i, j],
+                    fc[i, j],
+                    lai[i, j],
+                    rn[i, j],
+                    ln[i, j],
+                    local_time[i, j],
+                    threshold,
+                    nb_steps,
+                    False,
                 )
             else:
                 le_arr[i, j], ef_arr[i, j], converged_arr[i, j] = (

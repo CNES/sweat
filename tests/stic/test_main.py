@@ -271,7 +271,7 @@ def test_run_stic_model_pixel(
     """
     Test function for STIC model calulation function for a single pixel
     """
-    le, ef, converged = main.run_stic_model_pixel(
+    le, _, ef, _, _, _, _, converged = main.run_stic_model_pixel(
         ts,
         ta,
         td,
