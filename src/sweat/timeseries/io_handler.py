@@ -367,6 +367,10 @@ def read_radiation_time_series(filenames: list[str]) -> xr.Dataset:
     """
     # Read the time series
     ts = read_time_series(filenames)
+    # TODO: Workaround to avoid NaN in radiation data (fill hole)
+    ts[TSVar.RADIATION.value] = ts[TSVar.RADIATION.value].interpolate_na(
+        dim="x", method="linear"
+    )
     # Convert type
     ts[TSVar.RADIATION.value] = ts[TSVar.RADIATION.value].astype("float32")
     return ts
