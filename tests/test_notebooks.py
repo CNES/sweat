@@ -1,5 +1,6 @@
 # Copyright: (c) 2025 CESBIO / Centre National d'Etudes Spatiales
 
+import os
 from pathlib import Path
 
 import nbformat
@@ -29,6 +30,7 @@ def get_main_notebooks():
 @pytest.mark.require_test_data
 @pytest.mark.parametrize("notebook_path", get_notebooks())
 def test_notebook_execution(notebook_path):
+    os.environ["NB_CONVERT"] = "1"
     with open(notebook_path, encoding="utf-8") as f:
         nb = nbformat.read(f, as_version=4)
 
