@@ -3,9 +3,72 @@
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
 import sweat.stic.config as cfg
 from sweat.__about__ import __version__
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("config", "expected"),
+    [
+        pytest.param(
+            {},
+            {
+                "use_topo": False,
+                "selected_radiation": None,
+            },
+        ),
+        pytest.param(
+            {
+                "use_topo": True,
+                "selected_radiation": "msg",
+            },
+            {
+                "use_topo": True,
+                "selected_radiation": "msg",
+            },
+        ),
+        pytest.param(
+            {
+                "use_topo": True,
+            },
+            {
+                "use_topo": True,
+                "selected_radiation": None,
+            },
+        ),
+    ],
+)
+def test_sticprepareconfig(config, expected) -> None:
+    """
+    Test STICModelConfig
+    """
+    res = cfg.STICPrepareConfig.model_validate(config)
+    assert res.model_dump() == expected
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "config",
+    [
+        {
+            "foo": False,
+            "use_topo": True,
+        },
+        {
+            "use_topo": True,
+            "selected_radiation": 10,
+        },
+    ],
+)
+def test_sticprepareconfig_error(config) -> None:
+    """
+    Test STICModelConfig
+    """
+    with pytest.raises(ValidationError):
+        cfg.STICPrepareConfig.model_validate(config)
 
 
 @pytest.mark.unit
@@ -47,6 +110,71 @@ def test_filteringconfig(config, expected) -> None:
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
+    ("config", "expected"),
+    [
+        pytest.param(
+            {},
+            {
+                "version": "1.3",
+                "threshold": 0.01,
+                "nb_steps": 15,
+            },
+        ),
+        pytest.param(
+            {
+                "threshold": 0.01,
+                "nb_steps": 15,
+            },
+            {
+                "version": "1.3",
+                "threshold": 0.01,
+                "nb_steps": 15,
+            },
+        ),
+        pytest.param(
+            {"version": "1.3"},
+            {
+                "version": "1.3",
+                "threshold": 0.01,
+                "nb_steps": 15,
+            },
+        ),
+        pytest.param(
+            {"version": "1.3", "threshold": 0.05},
+            {
+                "version": "1.3",
+                "threshold": 0.05,
+                "nb_steps": 15,
+            },
+        ),
+    ],
+)
+def test_sticmodelconfig(config, expected) -> None:
+    """
+    Test STICModelConfig
+    """
+    res = cfg.STICModelConfig.model_validate(config)
+    assert res.model_dump() == expected
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "config",
+    [
+        {"version": "1.0"},
+        {"version": "1.4", "foo": 20},
+    ],
+)
+def test_sticmodelconfig_error(config) -> None:
+    """
+    Test STICModelConfig
+    """
+    with pytest.raises(ValidationError):
+        cfg.STICModelConfig.model_validate(config)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
     "config",
     [
         {
@@ -63,7 +191,7 @@ def test_filteringconfig(config, expected) -> None:
         },
         {
             "filtering": {"cloud": {"op": "!=", "value": 1}},
-            "stic": {"threshold": 0.5},
+            "stic": {"version": "1.3", "threshold": 0.05},
             "daily": {"method": "toa"},
         },
     ],

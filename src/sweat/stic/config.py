@@ -23,9 +23,19 @@ from sweat.common.filter import FilteringConfig
 from sweat.common.io import InputConfig, OutputConfig
 from sweat.debugging import DebuggingConfig
 from sweat.logging import LoggerManager
-from sweat.stic.main import STICModelConfig, STICPrepareConfig
+from sweat.stic.runner import DEFAULT_VERSION, VERSIONS
 
 logger = LoggerManager.get_logger(__name__)
+
+
+class STICPrepareConfig(BaseModel):
+    """
+    Configuration for data preparation in STIC model
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    use_topo: bool = Field(default=False)
+    selected_radiation: str | None = Field(default=None)
 
 
 class STICFilteringConfig(FilteringConfig):
@@ -33,7 +43,6 @@ class STICFilteringConfig(FilteringConfig):
     Configuration for STIC filtering
     """
 
-    # @field_validator("root", mode="before")
     @model_validator(mode="before")
     @classmethod
     def update_config(cls, v):
@@ -43,6 +52,41 @@ class STICFilteringConfig(FilteringConfig):
             return {
                 ETVar.DEWPOINT_TEMPERATURE.value: {"op": ">=", "value": -30}
             } | v
+        return v
+
+
+class STICModelConfig(BaseModel):
+    """
+    Configuration for STIC model
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    version: str = Field(default=DEFAULT_VERSION)
+    threshold: float = Field(default=0.01)
+    nb_steps: int = Field(default=15)
+
+    @field_validator("version")
+    @classmethod
+    def check_version(cls, v):
+        if v not in VERSIONS:
+            msg = f"Unknown version: {v}"
+            raise ValueError(msg)
+        return v
+
+    @field_validator("threshold")
+    @classmethod
+    def check_threshold(cls, v):
+        if v < 1.0e-6 or v > 1.0e-1:  # noqa PLR2004
+            msg = "Threshold must be between 1.e-6 and 1.e-1"
+            raise ValueError(msg)
+        return v
+
+    @field_validator("nb_steps")
+    @classmethod
+    def check_nb_steps(cls, v):
+        if v < 0 or v > 20:  # noqa PLR2004
+            msg = "Nb steps must be between 0 and 20"
+            raise ValueError(msg)
         return v
 
 

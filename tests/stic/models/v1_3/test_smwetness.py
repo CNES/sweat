@@ -4,14 +4,14 @@
 import numpy as np
 import pytest
 
-from sweat.stic import smwetness
+from sweat.stic.models.v1_3 import smwetness
 
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
     (
         "slope",
-        "ts",
+        "lst",
         "ta",
         "td",
         "rn",
@@ -158,7 +158,7 @@ from sweat.stic import smwetness
 )
 def test_initialize_soilmoisture(
     slope,
-    ts,
+    lst,
     ta,
     td,
     rn,
@@ -194,7 +194,7 @@ def test_initialize_soilmoisture(
         ds,
     ) = smwetness.initialize_soil_moisture(
         slope,
-        ts,
+        lst,
         ta,
         td,
         rn,
@@ -226,7 +226,7 @@ def test_initialize_soilmoisture(
         "s2",
         "s3",
         "s4",
-        "ts",
+        "lst",
         "ta",
         "delta_t",
         "td",
@@ -354,7 +354,7 @@ def test_iterate_soilmoisture(
     s2,
     s3,
     s4,
-    ts,
+    lst,
     ta,
     delta_t,
     td,
@@ -388,7 +388,7 @@ def test_iterate_soilmoisture(
         s2,
         s3,
         s4,
-        ts,
+        lst,
         ta,
         delta_t,
         td,

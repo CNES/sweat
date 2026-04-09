@@ -6,7 +6,6 @@ import warnings
 import numpy as np
 import pytest
 import xarray as xr
-from pydantic import ValidationError
 
 from sweat.common.constant import ETVar
 from sweat.stic import main
@@ -93,270 +92,6 @@ def setup_data(
     )
 
 
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    ("config", "expected"),
-    [
-        pytest.param(
-            {},
-            {
-                "use_topo": False,
-                "selected_radiation": None,
-            },
-        ),
-        pytest.param(
-            {
-                "use_topo": True,
-                "selected_radiation": "msg",
-            },
-            {
-                "use_topo": True,
-                "selected_radiation": "msg",
-            },
-        ),
-        pytest.param(
-            {
-                "use_topo": True,
-            },
-            {
-                "use_topo": True,
-                "selected_radiation": None,
-            },
-        ),
-    ],
-)
-def test_sticprepareconfig(config, expected) -> None:
-    """
-    Test STICModelConfig
-    """
-    res = main.STICPrepareConfig.model_validate(config)
-    assert res.model_dump() == expected
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    "config",
-    [
-        {
-            "foo": False,
-            "use_topo": True,
-        },
-        {
-            "use_topo": True,
-            "selected_radiation": 10,
-        },
-    ],
-)
-def test_sticprepareconfig_error(config) -> None:
-    """
-    Test STICModelConfig
-    """
-    with pytest.raises(ValidationError):
-        main.STICPrepareConfig.model_validate(config)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    ("config", "expected"),
-    [
-        pytest.param(
-            {},
-            {
-                "threshold": 0.01,
-                "nb_steps": 15,
-            },
-        ),
-        pytest.param(
-            {
-                "threshold": 0.01,
-                "nb_steps": 10,
-            },
-            {
-                "threshold": 0.01,
-                "nb_steps": 10,
-            },
-        ),
-        pytest.param(
-            {
-                "threshold": 0.05,
-            },
-            {
-                "threshold": 0.05,
-                "nb_steps": 15,
-            },
-        ),
-    ],
-)
-def test_sticmodelconfig(config, expected) -> None:
-    """
-    Test STICModelConfig
-    """
-    res = main.STICModelConfig.model_validate(config)
-    assert res.model_dump() == expected
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    "config",
-    [
-        {
-            "foo": False,
-            "use_topo": True,
-            "threshold": 0.01,
-            "nb_steps": 15,
-        },
-    ],
-)
-def test_sticmodelconfig_error(config) -> None:
-    """
-    Test STICModelConfig
-    """
-    with pytest.raises(ValidationError):
-        main.STICModelConfig.model_validate(config)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    (
-        "ts",
-        "ta",
-        "td",
-        "rh",
-        "fc",
-        "lai",
-        "rn",
-        "ln",
-        "local_time",
-        "threshold",
-        "nb_steps",
-        "le_expected",
-        "ef_expected",
-        "converged_expected",
-    ),
-    [
-        pytest.param(
-            30,
-            25,
-            19,
-            69.36,
-            0.86,
-            4,
-            300,
-            100,
-            20000,
-            0.01,
-            15,
-            210.369,
-            0.6925,
-            True,
-        ),
-    ],
-)
-def test_run_stic_model_pixel(
-    ts,
-    ta,
-    td,
-    rh,
-    fc,
-    lai,
-    rn,
-    ln,
-    local_time,
-    threshold,
-    nb_steps,
-    le_expected,
-    ef_expected,
-    converged_expected,
-) -> None:
-    """
-    Test function for STIC model calulation function for a single pixel
-    """
-    le, _, ef, _, _, _, _, converged = main.run_stic_model_pixel(
-        ts,
-        ta,
-        td,
-        rh,
-        fc,
-        lai,
-        rn,
-        ln,
-        local_time,
-        threshold,
-        nb_steps,
-        debug=False,
-    )
-    np.testing.assert_almost_equal(le, le_expected, decimal=2)
-    np.testing.assert_almost_equal(ef, ef_expected, decimal=2)
-    np.testing.assert_equal(converged, converged_expected)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    (
-        "ts",
-        "ta",
-        "td",
-        "rh",
-        "fc",
-        "lai",
-        "rn",
-        "ln",
-        "local_time",
-        "valid",
-        "threshold",
-        "nb_steps",
-        "le_expected",
-        "ef_expected",
-        "converged_expected",
-    ),
-    [
-        pytest.param(
-            np.array([[30.0, 30.0], [30.0, 30.0]], dtype=np.float32),
-            np.array([[25, 25], [25, 25]], dtype=np.float32),
-            np.array([[19, 19], [19, 19]], dtype=np.float32),
-            np.array([[69.36, 69.36], [69.36, 69.36]], dtype=np.float32),
-            np.array([[0.86, 0.86], [0.86, 0.86]], dtype=np.float32),
-            np.array([[4, 4], [4, 4]], dtype=np.float32),
-            np.array([[300, 300], [300, 300]], dtype=np.float32),
-            np.array([[100, 100], [100, 100]], dtype=np.float32),
-            np.array([[20000, 20000], [20000, 20000]], dtype=np.float32),
-            np.array([[1, 1], [1, 1]], dtype=np.int64),
-            0.01,
-            15,
-            np.array([[210.37, 210.37], [210.37, 210.37]]),
-            np.array([[0.6925, 0.6925], [0.6925, 0.6925]]),
-            np.array([[True, True], [True, True]]),
-        ),
-    ],
-)
-def test_run_stic_model(
-    ts,
-    ta,
-    td,
-    rh,
-    fc,
-    lai,
-    rn,
-    ln,
-    local_time,
-    valid,
-    threshold,
-    nb_steps,
-    le_expected,
-    ef_expected,
-    converged_expected,
-) -> None:
-    """
-    Test function for STIC model calulation funtion
-    """
-    le, ef, cv = main.run_stic_model(
-        ts, ta, td, rh, fc, lai, rn, ln, local_time, valid, threshold, nb_steps
-    )
-    np.testing.assert_almost_equal(le, le_expected, decimal=2)
-    np.testing.assert_almost_equal(ef, ef_expected, decimal=2)
-    np.testing.assert_equal(cv, converged_expected)
-
-
 @pytest.mark.functional
 def test_prepare():
     """
@@ -414,8 +149,90 @@ def test_prepare_exc():
         main.prepare(data)
 
 
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    (
+        "ts",
+        "ta",
+        "td",
+        "rh",
+        "fc",
+        "lai",
+        "rn",
+        "ln",
+        "local_time",
+        "threshold",
+        "nb_steps",
+        "version",
+        "le_expected",
+        "ef_expected",
+    ),
+    [
+        pytest.param(
+            np.array([[30.0, 30.0], [30.0, 30.0]], dtype=np.float32),
+            np.array([[25, 25], [25, 25]], dtype=np.float32),
+            np.array([[19, 19], [19, 19]], dtype=np.float32),
+            np.array([[69.36, 69.36], [69.36, 69.36]], dtype=np.float32),
+            np.array([[0.86, 0.86], [0.86, 0.86]], dtype=np.float32),
+            np.array([[4, 4], [4, 4]], dtype=np.float32),
+            np.array([[300, 300], [300, 300]], dtype=np.float32),
+            np.array([[100, 100], [100, 100]], dtype=np.float32),
+            np.array([[20000, 20000], [20000, 20000]], dtype=np.float32),
+            0.01,
+            15,
+            "1.3",
+            np.array([[210.37, 210.37], [210.37, 210.37]]),
+            np.array([[0.6925, 0.6925], [0.6925, 0.6925]]),
+        ),
+    ],
+)
+def test_run_stic_model(
+    ts,
+    ta,
+    td,
+    rh,
+    fc,
+    lai,
+    rn,
+    ln,
+    local_time,
+    threshold,
+    nb_steps,
+    version,
+    le_expected,
+    ef_expected,
+) -> None:
+    """
+    Test function for STIC run function
+    """
+    data = xr.Dataset(
+        data_vars={
+            ETVar.LST.value: (["y", "x"], ts),
+            ETVar.TEMPERATURE.value: (["y", "x"], ta),
+            ETVar.DEWPOINT_TEMPERATURE.value: (["y", "x"], td),
+            ETVar.RH.value: (["y", "x"], rh),
+            ETVar.FCOVER.value: (["y", "x"], fc),
+            ETVar.LAI.value: (["y", "x"], lai),
+            ETVar.NET_RADIATION.value: (["y", "x"], rn),
+            ETVar.LONGWAVE_NET_RADIATION.value: (["y", "x"], ln),
+            ETVar.LOCAL_TIME.value: (["y", "x"], local_time),
+        },
+        coords={
+            "y": ("y", np.array([0, 1])),
+            "x": ("x", np.array([0, 1])),
+        },
+        attrs={"description": "Test data"},
+    )
+    res = main.run(
+        data=data, threshold=threshold, nb_steps=nb_steps, version=version
+    )
+    np.testing.assert_almost_equal(res["le"], le_expected, decimal=2)
+    np.testing.assert_almost_equal(res["ef"], ef_expected, decimal=2)
+
+
 @pytest.mark.functional
-def test_run():
+@pytest.mark.parametrize(("version"), ["1.3"])
+def test_run(version):
     """
     Test function for STIC run function
     """
@@ -435,9 +252,5 @@ def test_run():
         valid=(0, 1),
     )
 
-    res = main.run(
-        data,
-        threshold=0.01,
-        nb_steps=15,
-    )
+    res = main.run(data, threshold=0.01, nb_steps=15, version=version)
     assert res
