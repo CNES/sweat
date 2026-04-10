@@ -28,7 +28,6 @@ from sweat.stic.functions import (
     compute_psychrometrics,
     compute_state_equations,
 )
-from sweat.stic.models.registry import register_model, register_model_pixel
 from sweat.stic.models.v1_3.smwetness import (
     initialize_soil_moisture,
     iterate_soil_moisture,
@@ -507,7 +506,6 @@ def run_stic_model_pixel(
     return le_flux, h_flux, ef, g_flux, g_aero, g_surf, t0, m, converged
 
 
-@register_model(version=VERSION, inputs=VARIABLES_MAPPING)
 @njit(
     Tuple((Array(f32, 2, "C"), Array(f32, 2, "C"), Array(f32, 2, "C")))(
         Array(f32, 2, "C"),
@@ -622,7 +620,6 @@ def run_stic_model(
     return le_arr, ef_arr, converged_arr
 
 
-@register_model_pixel(version=VERSION, inputs=VARIABLES_MAPPING)
 def run_batch_stic_model(
     data: npt.NDArray,
     threshold: float,

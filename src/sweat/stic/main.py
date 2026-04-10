@@ -17,7 +17,8 @@ from sweat.stic.functions import (
     convert_to_local_time,
     convert_to_rh,
 )
-from sweat.stic.runner import DEFAULT_VERSION, run_model
+from sweat.stic.registry import DEFAULT_VERSION
+from sweat.stic.runner import run_model
 
 logger = LoggerManager.get_logger(__name__)
 

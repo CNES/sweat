@@ -23,7 +23,7 @@ from sweat.common.filter import FilteringConfig
 from sweat.common.io import InputConfig, OutputConfig
 from sweat.debugging import DebuggingConfig
 from sweat.logging import LoggerManager
-from sweat.stic.runner import DEFAULT_VERSION, VERSIONS
+from sweat.stic.registry import DEFAULT_VERSION, MODEL_REGISTRY
 
 logger = LoggerManager.get_logger(__name__)
 
@@ -68,7 +68,7 @@ class STICModelConfig(BaseModel):
     @field_validator("version")
     @classmethod
     def check_version(cls, v):
-        if v not in VERSIONS:
+        if v not in MODEL_REGISTRY:
             msg = f"Unknown version: {v}"
             raise ValueError(msg)
         return v

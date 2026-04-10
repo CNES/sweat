@@ -8,27 +8,9 @@ import xarray as xr
 
 from sweat.common.constant import ETVar
 from sweat.stic.runner import (
-    DEFAULT_VERSION,
-    VERSIONS,
     run_batch_model,
     run_model,
 )
-
-
-@pytest.mark.unit
-def test_versions() -> None:
-    """
-    Test versions available
-    """
-    assert sorted(VERSIONS.keys()) == ["1.3"]  # , "1.4"]
-
-
-@pytest.mark.unit
-def test_default_version() -> None:
-    """
-    Test model registry
-    """
-    assert DEFAULT_VERSION == "1.3"
 
 
 @pytest.mark.unit

@@ -3,39 +3,15 @@
 Module containing methods for running STIC models
 """
 
-import pkgutil
-from importlib import import_module
-from typing import Any
-
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
 import xarray as xr
 
-from sweat.stic import models
-from sweat.stic.models.registry import (
-    MODEL_PIXEL_REGISTRY,
+from sweat.stic.registry import (
+    DEFAULT_VERSION,
     MODEL_REGISTRY,
 )
-
-VERSIONS: dict[str, Any] = {}
-DEFAULT_VERSION = "none"
-
-for module in pkgutil.iter_modules(models.__path__):
-    if module.ispkg:
-        imported_module = import_module(
-            f"sweat.stic.models.{module.name}.model"
-        )
-
-        version = imported_module.VERSION
-        VERSIONS[version] = imported_module
-
-        if getattr(imported_module, "IS_DEFAULT", False):
-            DEFAULT_VERSION = version
-
-if DEFAULT_VERSION == "none":
-    msg = "No default version defined"
-    raise ValueError(msg)
 
 
 def check_model(data: xr.Dataset, version: str | None) -> bool:
@@ -111,7 +87,7 @@ def run_model(
     inputs = [data[v].data.astype(np.float32) for v in spec.inputs]
     if valid is None:
         valid = np.ones_like(inputs[0], dtype=np.int64)
-    return spec.func(
+    return spec.raster_func(
         *inputs,
         valid=np.array(valid).astype(np.int64),
         threshold=threshold,
@@ -153,7 +129,7 @@ def run_batch_model(
         msg = f"Unknown run_batch_stic_model version: {version}"
         raise ValueError(msg)
 
-    spec = MODEL_PIXEL_REGISTRY[version]
+    spec = MODEL_REGISTRY[version]
     col_inputs = list(spec.inputs.keys())
     if mapping:
         col_inputs = list(spec.inputs.values())
@@ -166,4 +142,4 @@ def run_batch_model(
     inputs = data[col_inputs].to_numpy()
 
     # Return un dataframe
-    return spec.func(inputs, threshold=threshold, nb_steps=nb_steps)
+    return spec.batch_func(inputs, threshold=threshold, nb_steps=nb_steps)
