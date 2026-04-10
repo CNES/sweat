@@ -1,7 +1,7 @@
-# Copyright: (c) 2025 CESBIO / Centre National d'Etudes Spatiales
+# Copyright: (c) 2026 CESBIO / Centre National d'Etudes Spatiales
 """
 Module containing functions to compute soil moisture
-for STIC model v1.3
+for STIC model v1.4
 """
 
 from numba import float32 as f32  # to define f32
@@ -12,7 +12,7 @@ from sweat.stic.constant import PSYCHROMETRIC_CST, PT_CST
 
 
 @njit(
-    Tuple((f32,) * 8)(*(f32,) * 14),
+    Tuple((f32,) * 8)(*(f32,) * 17),
     nogil=True,
     cache=True,
 )
@@ -31,6 +31,9 @@ def initialize_soil_moisture(
     s2: float,
     s3: float,
     s4: float,
+    nir: float,
+    swir: float,
+    vari_green_index: float,
 ) -> tuple[float, float, float, float, float, float, float, float]:
     """
     Initiate soil moisture
@@ -113,6 +116,12 @@ def initialize_soil_moisture(
         Slope of saturation vapor pressure versus temperature (hPa/degC)
     s4: float
         Slope of saturation vapor pressure versus temperature (hPa/degC)
+    nir: float
+        Near infrared
+    swir: float
+        Shortwave infrared
+    vari_green_index: float,
+        VARI green index
 
     Returns
     -------
@@ -170,7 +179,7 @@ def initialize_soil_moisture(
     ep_pt = (f32(PT_CST) * slope * rn) / (slope + f32(PSYCHROMETRIC_CST))
 
     # Temperature difference
-    dts = ts - ta
+    # dts = ts - ta
 
     # Surface wetness comes from the soil, vegetation contribution is negligible
     if (fc <= f32(0.25)) & (tdew_index < f32(1)):
@@ -191,30 +200,14 @@ def initialize_soil_moisture(
     # Combine soil moisture to account for hysteresis
     # and initial estimation of surface vapor pressure
     m = m_surf
-    if (ep_pt > rn) & (dts > f32(0)):
-        m = m_rz
-    if (ep_pt > rn) & (fc <= f32(0.25)):
-        m = m_rz
-    if (ep_pt > rn) & (ds > da):
-        m = m_rz
 
-    if (
-        (fc <= f32(0.25))
-        & (dts > f32(0))
-        & (ta > f32(10))
-        & (td < f32(0))
-        & (ln < f32(-125))
-    ):
+    if (fc < f32(0.25)) and (swir > nir) and (vari_green_index < f32(0)):
         m = m_rz
-    if (
-        (fc <= f32(0.25))
-        & (dts > f32(0))
-        & (ta > f32(10))
-        & (td < f32(0))
-        & (ds > da)
-    ):
+    if (ds > da) and (swir > nir) and (vari_green_index < f32(0)):
         m = m_rz
-    if (ep_pt < rn) & (fc <= f32(0.25)) & (ds > da):
+    if (ep_pt < rn) and (swir > nir) and (vari_green_index < f32(0)):
+        m = m_rz
+    if (td < f32(0)) and (swir > nir) and (vari_green_index < f32(0)):
         m = m_rz
 
     # Update vapor pressure at surface
@@ -227,7 +220,7 @@ def initialize_soil_moisture(
 
 
 @njit(
-    Tuple((f32,) * 5)(*(f32,) * 18),
+    Tuple((f32,) * 5)(*(f32,) * 20),
     nogil=True,
     cache=True,
 )
@@ -239,7 +232,6 @@ def iterate_soil_moisture(
     s4: float,
     ts: float,
     ta: float,
-    delta_t: float,
     td: float,
     t0d: float,
     rn: float,
@@ -250,6 +242,9 @@ def iterate_soil_moisture(
     ea: float,
     e0star: float,
     esstar: float,
+    nir: float,
+    swir: float,
+    vari_green_index: float,
 ) -> tuple[float, float, float, float, float]:
     """
     Compute soil moisture during iteration loop
@@ -344,6 +339,12 @@ def iterate_soil_moisture(
         at reference height (hPa)
     esstar: float
         Saturation vapor pressure at surface temperature (hPa)
+    nir: float
+        Near infrared
+    swir: float
+        Shortwave infrared
+    vari_green_index: float,
+        VARI green index
 
     Returns
     -------
@@ -396,22 +397,13 @@ def iterate_soil_moisture(
     # Combine M to account for Hysteresis and
     # initial estimation of surface vapor pressure
     m = m_surf
-    if (
-        (ep_pt > rn)
-        & (delta_t > f32(0))
-        & (fc <= f32(0.25))
-        & (d0 > da)
-        & (tdew_index < f32(1))
-    ):
+    if (fc < f32(0.25)) and (swir > nir) and (vari_green_index < f32(0)):
         m = m_rz
-    if (
-        (fc <= f32(0.25))
-        & (delta_t > f32(0))
-        & (d0 > da)
-        & (ta > f32(10))
-        & (td < f32(0))
-        & (ln < f32(-125))
-    ):
+    if (d0 > da) and (swir > nir) and (vari_green_index < f32(0)):
+        m = m_rz
+    if (ep_pt < rn) and (swir > nir) and (vari_green_index < f32(0)):
+        m = m_rz
+    if (td < f32(0)) and (swir > nir) and (vari_green_index < f32(0)):
         m = m_rz
 
     return (m, m_surf, m_canopy, m_soil, m_rz)

@@ -8,7 +8,7 @@ import numpy.typing as npt
 
 
 def compute_ndvi(
-    nir: npt.ArrayLike, red: npt.ArrayLike, delta: float = 0.05
+    nir: npt.ArrayLike, red: npt.ArrayLike, delta: float = 0.005
 ) -> npt.NDArray:
     """
     Compute Normalized Difference Vegetation Index NDVI
@@ -39,9 +39,45 @@ def compute_ndvi(
     ndvi: np.array
         NDVI
     """
-    return (np.array(nir) - (np.array(red) + delta)) / (
+    ndvi = (np.array(nir) - (np.array(red) + delta)) / (
         np.array(nir) + np.array(red) + delta
     )
+    return np.clip(ndvi, -1.0, 1.0)
+
+
+def compute_vari_green_index(
+    red: npt.ArrayLike,
+    green: npt.ArrayLike,
+    blue: npt.ArrayLike,
+) -> npt.NDArray:
+    """
+    Compute  the Visible Atmospherically Resistant Index (VARI)
+
+    Notes
+    -----
+    Visible Atmospherically Resistant Index (VARI) is computed
+    with the following formula:
+    $$
+    VARI = \\frac{GREEN - RED}{GREEN + RED - BLUE}
+    $$
+    Where RED, GREEN, BLUE are the reflectances.
+
+    Parameters
+    ----------
+    nir: np.array_like
+        NIR reflectance
+    red: np.array_like
+        RED reflectance
+
+    Returns
+    -------
+    ndvi: np.array
+        NDVI
+    """
+    vari = (np.array(green) - np.array(red)) / (
+        np.array(green) + np.array(red) - np.array(blue)
+    )
+    return np.nan_to_num(vari, nan=0.0, posinf=0.0, neginf=0.0)
 
 
 def compute_broadband_emissivity():

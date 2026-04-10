@@ -21,4 +21,4 @@ def test_model_registry() -> None:
     """
     Test model registry
     """
-    assert sorted(MODEL_REGISTRY.keys()) == ["1.3"]  # , "1.4"]
+    assert sorted(MODEL_REGISTRY.keys()) == ["1.3", "1.4"]

@@ -25,3 +25,5 @@ trishna
 use_topo
 esstar
 eastar
+vari
+swir

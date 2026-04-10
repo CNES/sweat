@@ -1,6 +1,6 @@
 # Copyright: (c) 2025 CESBIO / Centre National d'Etudes Spatiales
 """
-Module containing STIC model v1.3
+Module containing STIC model v1.4
 """
 
 import numpy as np
@@ -28,13 +28,13 @@ from sweat.stic.models.functions import (
     compute_psychrometrics,
     compute_state_equations,
 )
-from sweat.stic.models.v1_3.smwetness import (
+from sweat.stic.models.v1_4.smwetness import (
     initialize_soil_moisture,
     iterate_soil_moisture,
 )
 
-VERSION = "1.3"
-IS_DEFAULT = True
+VERSION = "1.4"
+IS_DEFAULT = False
 
 # List of variables required by the model
 VARIABLES_MAPPING: dict[str, str] = {
@@ -46,12 +46,18 @@ VARIABLES_MAPPING: dict[str, str] = {
     ETVar.LAI.value: "lai",
     ETVar.NET_RADIATION.value: "rn",
     ETVar.LONGWAVE_NET_RADIATION.value: "ln",
+    ETVar.NIR.value: "nir",
+    ETVar.SWIR.value: "swir",
+    ETVar.VARI.value: "vari_green_index",
     ETVar.LOCAL_TIME.value: "local_time",
 }
 
 
 @njit(
     Tuple((f32,) * 26)(
+        f32,
+        f32,
+        f32,
         f32,
         f32,
         f32,
@@ -75,6 +81,9 @@ def init_stic_model_pixel(
     lai: float,
     rn: float,
     ln: float,
+    nir: float,
+    swir: float,
+    vari_green_index: float,
     local_time: float,
     debug: boolean,
 ) -> tuple[float, ...]:
@@ -101,6 +110,12 @@ def init_stic_model_pixel(
         Longwave net radiation
     local_time: float
         Local time in seconds
+    nir: float
+        Near infrared
+    swir: float
+        Shortwave infrared
+    vari_green_index: float,
+        VARI green index
     threshold: float
         Threshold value
     nb_steps: int
@@ -165,6 +180,9 @@ def init_stic_model_pixel(
         s2,
         s3,
         s4,
+        nir,
+        swir,
+        vari_green_index,
     )
     if debug:
         print("Init SM = ", m, m_soil, s1, s2, s3, s4, es, ds)  # noqa T201
@@ -240,6 +258,9 @@ def init_stic_model_pixel(
         f32,
         f32,
         f32,
+        f32,
+        f32,
+        f32,
         i64,
         boolean,
     ),
@@ -255,6 +276,9 @@ def run_stic_model_pixel(
     lai: float,
     rn: float,
     ln: float,
+    nir: float,
+    swir: float,
+    vari_green_index: float,
     local_time: float,
     threshold: float,
     nb_steps: int,
@@ -281,6 +305,12 @@ def run_stic_model_pixel(
         Net radiation
     ln: float
         Longwave net radiation
+    nir: float
+        Near infrared
+    swir: float
+        Shortwave infrared
+    vari_green_index: float,
+        VARI green index
     local_time: float
         Local time in seconds
     threshold: float
@@ -332,7 +362,7 @@ def run_stic_model_pixel(
     # es: vapor pressure at surface temperature
     # t0d: dewpoint temperature at source/sink height
     # ds: vapor pressure deficit of the air at the surface
-    (m, m_canopy, m_soil, m_surf, m_rz, es, t0d, ds) = initialize_soil_moisture(
+    (m, _, m_soil, _, _, es, t0d, ds) = initialize_soil_moisture(
         slope,
         ts,
         ta,
@@ -347,6 +377,9 @@ def run_stic_model_pixel(
         s2,
         s3,
         s4,
+        nir,
+        swir,
+        vari_green_index,
     )
     if debug:
         print("Init SM = ", m, m_soil, s1, s2, s3, s4, es, ds)  # noqa T201
@@ -357,6 +390,8 @@ def run_stic_model_pixel(
     e0 = es
     # Initialize alpha to Priestley taylor parameter
     alpha = f32(PT_CST)
+    # Save dewpoint temperature at source/sink height
+    t0d_old = t0d
     # Compute G flux
     g_flux = compute_g_flux(rn, lai, local_time, m_soil)
     if debug:
@@ -380,15 +415,14 @@ def run_stic_model_pixel(
     if debug:
         print("LE/H Fluxes = ", le_flux, h_flux)  # noqa T201
 
-    # 2. Iteration
+    # 3. Iteration
     # ------------
 
     # Initialize iteration loop
     le_flux_old = le_flux
-    le_error = f32(5) * threshold
+    le_error = f32(0.05)
     steps = 0
     converged = False
-    t0d_old = t0d
 
     # Iteration step
     while le_error > threshold and steps < nb_steps:
@@ -415,7 +449,7 @@ def run_stic_model_pixel(
         if e0 < ea:
             e0 = es
         if e0 > e0star:
-            e0 = es
+            e0 = esstar
         if debug:
             print("e0 = ", e0)  # noqa T201
 
@@ -428,7 +462,7 @@ def run_stic_model_pixel(
         if debug:
             print("t0d = ", t0d)  # noqa T201
 
-        # Re-estimate M (direct ts feedback into M computation)
+        # Re-estimate M (direct LST feedback into M computation)
         (m, _, _, m_soil, _) = iterate_soil_moisture(
             slope,
             s1,
@@ -437,7 +471,6 @@ def run_stic_model_pixel(
             s4,
             ts,
             ta,
-            delta_t,
             td,
             t0d,
             rn,
@@ -448,6 +481,9 @@ def run_stic_model_pixel(
             ea,
             e0star,
             esstar,
+            nir,
+            swir,
+            vari_green_index,
         )
         if debug:
             print("SM = ", m, m_soil)  # noqa T201
@@ -517,6 +553,9 @@ def run_stic_model_pixel(
         Array(f32, 2, "C"),
         Array(f32, 2, "C"),
         Array(f32, 2, "C"),
+        Array(f32, 2, "C"),
+        Array(f32, 2, "C"),
+        Array(f32, 2, "C"),
         Array(i64, 2, "C"),
         f32,
         i64,
@@ -534,6 +573,9 @@ def run_stic_model(
     lai: npt.NDArray,
     rn: npt.NDArray,
     ln: npt.NDArray,
+    nir: npt.NDArray,
+    swir: npt.NDArray,
+    vari_green_index: npt.NDArray,
     local_time: npt.NDArray,
     valid: npt.NDArray,
     threshold: float,
@@ -605,6 +647,9 @@ def run_stic_model(
                     lai[i, j],
                     rn[i, j],
                     ln[i, j],
+                    nir[i, j],
+                    swir[i, j],
+                    vari_green_index[i, j],
                     local_time[i, j],
                     threshold,
                     nb_steps,
@@ -642,7 +687,10 @@ def run_batch_stic_model(
             lai=data[i, 5],
             rn=data[i, 6],
             ln=data[i, 7],
-            local_time=data[i, 8],
+            nir=data[i, 8],
+            swir=data[i, 9],
+            vari_green_index=data[i, 10],
+            local_time=data[i, 11],
             threshold=threshold,
             nb_steps=nb_steps,
             debug=False,

@@ -140,9 +140,9 @@ def test_filteringconfig(config, expected) -> None:
             },
         ),
         pytest.param(
-            {"version": "1.3", "threshold": 0.05},
+            {"version": "1.4", "threshold": 0.05},
             {
-                "version": "1.3",
+                "version": "1.4",
                 "threshold": 0.05,
                 "nb_steps": 15,
             },
