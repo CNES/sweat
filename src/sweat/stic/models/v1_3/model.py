@@ -16,12 +16,12 @@ from numba.types import Array, Tuple
 
 from sweat.common.constant import ETVar
 from sweat.stic.constant import PSYCHROMETRIC_CST, PT_CST
-from sweat.stic.flux import (
+from sweat.stic.models.flux import (
     compute_g_flux,
     compute_le_h_fluxes,
     initiate_le_h_fluxes,
 )
-from sweat.stic.functions import (
+from sweat.stic.models.functions import (
     compute_alpha_coefficient,
     compute_canopy_air_saturation_vapor_pressure,
     compute_canopy_air_vapor_pressure_deficit,

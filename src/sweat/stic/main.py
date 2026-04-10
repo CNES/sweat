@@ -12,7 +12,7 @@ from sweat.common.constant import (
 )
 from sweat.common.flux import compute_et_from_le, create_net_radiation
 from sweat.logging import LoggerManager
-from sweat.stic.functions import (
+from sweat.stic.convert import (
     convert_kelvin_to_celsius,
     convert_to_local_time,
     convert_to_rh,

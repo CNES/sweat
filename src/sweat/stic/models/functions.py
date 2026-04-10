@@ -6,174 +6,26 @@ for STIC model
 
 from __future__ import annotations
 
-import datetime as dt
 from math import exp
 
-import numpy as np
-import numpy.typing as npt
 from numba import float32 as f32  # to define f32
 from numba import njit
 from numba.types import Tuple
-from pyproj import CRS, Transformer
-from scipy.constants import c, h, k, pi
 
-# ruff: noqa: PLR2004
+from sweat.stic.constant import (
+    CP_DRY,
+    CP_WET,
+    KELVIN_CST,
+    MWRATIO,
+    PSYCHROMETRIC_CST,
+    R_DRY,
+    STANDARD_PRESSURE,
+)
 
-# Stefan-Boltzmann constant
-CST_SB = ((2 * pi**5) * (k**4)) / (15 * (c**2) * (h**3))
-# Ratio molecular weight of water vapor/dry air
-MWRATIO = 0.622
-# Standard pressure (hPa)
-STANDARD_PRESSURE = 1013.25
-# Specific gas constant for dry air (J/kg/K)
-R_DRY = 286.9
-# Specific gas constant for wet air (J/kg/K)
-R_WET = 461.5
-# Kelvin
-CST_KELVIN = 273.15
-# Specific heat of wet air (J/kg/K)
-CP_WET = 1846.0
-# Specific heat of air at constant pressure (J/kg/K)
-CP_DRY = 1005.0
-# Psychrometric constant (hpa/K)
-PSYCHROMETRIC_CST = 0.67
 # Tetens parameters, see https://en.wikipedia.org/wiki/Tetens_equation
 A_TETENS = 6.13753
 B_TETENS = 17.27
 C_TETENS = 237.3
-
-
-def convert_kelvin_to_celsius(lst: npt.ArrayLike) -> npt.NDArray:
-    """
-    Converting from Kelvin to Celsius degree
-
-    Parameters
-    ----------
-    lst: np.array_like
-        Temperature in kelvin
-
-    Returns
-    -------
-    lst: np.array
-        Temperature in Celsius
-    """
-    return np.array(lst) - CST_KELVIN
-
-
-def convert_celsius_to_kelvin(lst: npt.ArrayLike) -> npt.NDArray:
-    """
-    Converting from Celsius to Kelvin degree
-
-    Parameters
-    ----------
-    lst: np.array_like
-        Temperature in kelvin
-
-    Returns
-    -------
-    lst: np.array
-        Temperature in Celsius
-    """
-    return np.array(lst) + CST_KELVIN
-
-
-def convert_to_local_time(
-    date: dt.datetime,
-    x: npt.ArrayLike,
-    y: npt.ArrayLike,
-    crs: CRS | None = None,
-) -> npt.NDArray:
-    """
-    Converting time from UTC to local solar time (in seconds)
-
-    Parameters
-    ----------
-    date: np.array_like
-        List of dates
-    x : np.array_like
-        X coordinate / Longitude (in degrees)
-    y : np.array_like
-        Y coordinate / Latitude (in degrees)
-    crs : pyproj.CRS
-        Coordinate Reference System
-
-    Returns
-    -------
-    local_time: np.array
-        Local solar time
-    """
-    # Convert to lat/lon
-    if crs is None:
-        crs = CRS(4326)
-    x_grid, y_grid = np.meshgrid(x, y)
-    if np.isscalar(x) and np.isscalar(y):
-        x_grid = x  # type: ignore
-        y_grid = y  # type: ignore
-    # Convert to lat/lon
-    transformer = Transformer.from_crs(crs, "EPSG:4326", always_xy=True)
-    # Apply transformation to the grid
-    lon, _ = transformer.transform(x_grid, y_grid)
-    # Time delta
-    time_delta = lon / 15.0
-    time_ls = (
-        float(date.hour)
-        + float(date.minute) / 60.0
-        + float(date.second) / 3600.0
-        + time_delta
-    )
-    time_ls = np.where(time_ls < 0, time_ls + 24, time_ls)
-    time_ls = np.where(time_ls >= 24, time_ls % 24, time_ls)
-    return time_ls * 3600
-
-
-def convert_to_rh(
-    t2m: npt.ArrayLike, d2m: npt.ArrayLike, b: float = 17.625, c: float = 243.04
-) -> npt.NDArray:
-    """
-    Converting 2m air temperature and dewpoint temprature
-    to relative humidity in percentage.
-
-    Notes
-    -----
-    The relative humidity is calculated from air temperature and
-    dew-point temperature with the following formula:
-
-    $$
-    RH = 100 \\times e^{bc\\frac{T_{D} - T_{a}}{\\left( T_{D} + c \\right)
-    \\left( c + T_{a} \\right)}}
-    $$
-
-    with b and c coefficient values are provided by
-    Alduchov, O. A., and R. E. Eskridge, 1996:
-    Improved Magnus Form Approximation of Saturation Vapor Pressure.
-    J. Appl. Meteor. Climatol., 35, 601-609
-
-    Parameters
-    ----------
-    t2m: np.array_like
-        2m air temperature (in Celsius)
-    d2m : np.array_like
-        dewpoint temperature (in Celsius)
-    b : float
-        Parameter
-    C : float
-        Parameter
-
-    Returns
-    -------
-    rh: np.array
-        Relative humidity in percentage
-    """
-    # Converting from dewpoint temperature to rh (0-1)
-    rh = np.exp(
-        b
-        * c
-        * (np.array(d2m) - np.array(t2m))
-        / ((c + np.array(d2m)) * (c + np.array(t2m)))
-    )
-    rh = np.clip(rh, 0.0, 1.0)
-    # Return in percentage
-    return rh * 100
 
 
 @njit(
@@ -225,7 +77,7 @@ def _tetens_derivative(t: float) -> float:
     versus temperature using the derivative of Tetens equation
 
     See:
-    - [Tetens' eqaution](https://en.wikipedia.org/wiki/Tetens_equation)
+    - [Tetens' equation](https://en.wikipedia.org/wiki/Tetens_equation)
 
     Parameters
     ----------
@@ -422,7 +274,7 @@ def compute_psychrometrics(
     rho_dry = (
         f32(100)
         * f32(STANDARD_PRESSURE)
-        / (f32(R_DRY) * (ta + f32(CST_KELVIN)))
+        / (f32(R_DRY) * (ta + f32(KELVIN_CST)))
     )
     # Density of air computed with the equation of state for moist air
     rho = rho_dry * ((f32(1) + r) / (f32(1) + r / f32(MWRATIO)))
@@ -511,7 +363,7 @@ def compute_state_equations(
     ea: float
         Atmosphere vapor pressure (hPa)
     e0star: float
-        Saturation vapor pressure at the refence height (hPa)
+        Saturation vapor pressure at the reference height (hPa)
     m: float
         Surface moisture (0-1)
 
@@ -545,6 +397,7 @@ def compute_state_equations(
     )
     # Adjust the abnormal conductances
     g_aero = min(max(g_aero, f32(0.0001)), f32(0.2))
+    # g_aero = min(max(g_aero, f32(0.0001)), f32(0.1))
 
     # Surface conductance
     g_surf_den = (
@@ -570,6 +423,7 @@ def compute_state_equations(
     ) / (g_surf_den)
     # Adjust the abnormal conductances
     g_surf = min(max(g_surf, f32(0.0001)), f32(0.06))
+    # g_surf = min(max(g_surf, f32(0.0001)), f32(0.1))
 
     # T0 - TA
     delta_t_den = f32(2) * alpha * slope * f32(PSYCHROMETRIC_CST)
