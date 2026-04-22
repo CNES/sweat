@@ -247,7 +247,7 @@ def detect_nan_pixels(
         if variables != "all":
             msg = "Only 'all' can be provided"
             raise ValueError(msg)
-        variables = list(data.data_vars)
+        variables = [str(v) for v in data.data_vars]
     # Initialize nan mask
     nan_mask = xr.full_like(next(iter(data.data_vars.values())), 0, dtype=int)
 

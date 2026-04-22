@@ -52,7 +52,8 @@ def test_get_dem_from_tiles() -> None:
     assert dem.crs == "EPSG:32632"
     assert dem.resolution == 60
     np.testing.assert_array_equal(
-        sorted(dem.data_vars), ["aspect", "height", "slope"]
+        sorted(dem.data_vars),  # type: ignore
+        ["aspect", "height", "slope"],
     )
 
     dem = get_dem_from_tiles(["32TML", "32TNL"], base_dir=get_test_data_path())
@@ -62,5 +63,6 @@ def test_get_dem_from_tiles() -> None:
     assert dem.crs == "EPSG:32632"
     assert dem.resolution == 60
     np.testing.assert_array_equal(
-        sorted(dem.data_vars), ["aspect", "height", "slope"]
+        sorted(dem.data_vars),  # type: ignore
+        ["aspect", "height", "slope"],
     )

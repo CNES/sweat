@@ -236,7 +236,7 @@ def test_create_le() -> None:
     )
     le = seb.create_le(ef, rn, ratio)
     assert len(le.data_vars) == 18
-    assert sorted(le.data_vars) == sorted(
+    assert sorted(le.data_vars) == sorted(  # type: ignore
         [
             "ef1_rn1_model1",
             "ef1_rn1_model2",
@@ -274,7 +274,7 @@ def test_create_le_with_masks() -> None:
     )
     le = seb.create_le(ef, rn, ratio)
     assert len(le.data_vars) == 20
-    assert sorted(le.data_vars) == sorted(
+    assert sorted(le.data_vars) == sorted(  # type: ignore
         [
             "ef1_rn1_model1",
             "ef1_rn1_model2",
