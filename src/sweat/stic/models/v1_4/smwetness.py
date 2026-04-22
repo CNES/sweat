@@ -122,11 +122,11 @@ def initialize_soil_moisture(
     gli: float
         Green Leaf Index
     ndvi: float
-        VARI green index
+        NDVI
     gndvi: float
-        VARI green index
+        GNDVI
     msavi: float
-        VARI green index
+        MSAVI
 
 
     Returns
@@ -365,11 +365,11 @@ def iterate_soil_moisture(
     gli: float
         Green Leaf Index
     ndvi: float
-        VARI green index
+        NDVI
     gndvi: float
-        VARI green index
+        GNDVI
     msavi: float
-        VARI green index
+        MSAVI
 
     Returns
     -------
