@@ -15,7 +15,7 @@ from numba import int64 as i64  # to define i64
 from numba.types import Array, Tuple
 
 from sweat.common.constant import ETVar
-from sweat.stic.constant import PSYCHROMETRIC_CST, PT_CST
+from sweat.stic.constant import PSYCHROMETRIC_CST
 from sweat.stic.models.flux import (
     compute_g_flux,
     compute_le_h_fluxes,
@@ -29,6 +29,7 @@ from sweat.stic.models.functions import (
     compute_saturated_vapor_pressure,
     compute_state_equations,
     compute_wet_surface_temperature,
+    initialize_alpha_coefficient,
 )
 from sweat.stic.models.v1_4.smwetness import (
     initialize_soil_moisture,
@@ -55,12 +56,14 @@ VARIABLES_MAPPING: dict[str, str] = {
     ETVar.NDVI.value: "ndvi",
     ETVar.GNDVI.value: "gndvi",
     ETVar.MSAVI.value: "msavi",
+    ETVar.EMISSIVITY.value: "emis",
     ETVar.LOCAL_TIME.value: "local_time",
 }
 
 
 @njit(
     Tuple((f32,) * 29)(
+        f32,
         f32,
         f32,
         f32,
@@ -98,6 +101,7 @@ def init_stic_model_pixel(
     ndvi: float,
     gndvi: float,
     msavi: float,
+    emis: float,
     local_time: float,
     debug: boolean,
 ) -> tuple[float, ...]:
@@ -135,11 +139,13 @@ def init_stic_model_pixel(
     gli: float
         Green Leaf Index
     ndvi: float
-        VARI green index
+        NDVI
     gndvi: float
-        VARI green index
+        GNDVI
     msavi: float
-        VARI green index
+        MSAVI
+    emis: float
+        Emissivity
     debug: bool
         Mode debug to print intermediate results
 
@@ -217,7 +223,9 @@ def init_stic_model_pixel(
     tw = compute_wet_surface_temperature(ta, ea)
     esstar_w = compute_saturated_vapor_pressure(tw)
     # Initialize alpha to Priestley taylor parameter
-    alpha = PT_CST
+    alpha = initialize_alpha_coefficient(slope, ta, da, cp, rho, emis, rn)
+    if debug:
+        print("alpha = ", alpha)  # noqa T201
     # Compute G flux
     g_flux = compute_g_flux(rn, lai, local_time, m_soil)
     if debug:
@@ -293,6 +301,7 @@ def init_stic_model_pixel(
         f32,
         f32,
         f32,
+        f32,
         i64,
         boolean,
     ),
@@ -315,6 +324,7 @@ def run_stic_model_pixel(
     ndvi: float,
     gndvi: float,
     msavi: float,
+    emis: float,
     local_time: float,
     threshold: float,
     nb_steps: int,
@@ -350,11 +360,13 @@ def run_stic_model_pixel(
     gli: float
         Green Leaf Index
     ndvi: float
-        VARI green index
+        NDVI
     gndvi: float
-        VARI green index
+        GNDVI
     msavi: float
-        VARI green index
+        MSAVI
+    emis: float
+        Emissivity
     local_time: float
         Local time in seconds
     threshold: float
@@ -438,7 +450,7 @@ def run_stic_model_pixel(
     tw = compute_wet_surface_temperature(ta, ea)
     estar_w = compute_saturated_vapor_pressure(tw)
     # Initialize alpha to Priestley taylor parameter
-    alpha = PT_CST
+    alpha = initialize_alpha_coefficient(slope, ta, da, cp, rho, emis, rn)
     if debug:
         print("Alpha = ", alpha, tw, estar_w)  # noqa T201
     # Save dewpoint temperature at source/sink height
@@ -612,6 +624,7 @@ def run_stic_model_pixel(
         Array(f32, 2, "C"),
         Array(f32, 2, "C"),
         Array(f32, 2, "C"),
+        Array(f32, 2, "C"),
         Array(i64, 2, "C"),
         f32,
         i64,
@@ -636,6 +649,7 @@ def run_stic_model(
     ndvi: npt.NDArray,
     gndvi: npt.NDArray,
     msavi: npt.NDArray,
+    emis: npt.NDArray,
     local_time: npt.NDArray,
     valid: npt.NDArray,
     threshold: float,
@@ -675,11 +689,13 @@ def run_stic_model(
     gli: float
         Green Leaf Index
     ndvi: float
-        VARI green index
+        NDVI
     gndvi: float
-        VARI green index
+        GNDVI
     msavi: float
-        VARI green index
+        MSAVI
+    emis: float
+        Emissivity
     local_time: float
         Local time in seconds
     threshold: float
@@ -728,6 +744,7 @@ def run_stic_model(
                     ndvi[i, j],
                     gndvi[i, j],
                     msavi[i, j],
+                    emis[i, j],
                     local_time[i, j],
                     threshold,
                     nb_steps,
@@ -773,7 +790,8 @@ def run_batch_stic_model(
             ndvi=data[i, 12],
             gndvi=data[i, 13],
             msavi=data[i, 14],
-            local_time=data[i, 15],
+            emis=data[i, 15],
+            local_time=data[i, 16],
             threshold=threshold,
             nb_steps=nb_steps,
             debug=debug,
@@ -848,7 +866,8 @@ def run_batch_init_stic_model(
             ndvi=data[i, 12],
             gndvi=data[i, 13],
             msavi=data[i, 14],
-            local_time=data[i, 15],
+            emis=data[i, 15],
+            local_time=data[i, 16],
             debug=debug,
         )
         out[i, 0] = le
