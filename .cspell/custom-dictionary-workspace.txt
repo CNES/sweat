@@ -34,3 +34,4 @@ estar
 eastar
 vari
 swir
+emis
