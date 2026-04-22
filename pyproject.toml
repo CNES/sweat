@@ -52,6 +52,8 @@ notebook = [
   "contextily",
   "openpyxl",
   "plotly",
+  "tqdm",
+  "ipywidgets",
 ]
 docs = [
   "mkdocs",
