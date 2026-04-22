@@ -26,7 +26,9 @@ from sweat.stic.models.functions import (
     compute_canopy_air_saturation_vapor_pressure,
     compute_canopy_air_vapor_pressure_deficit,
     compute_psychrometrics,
+    compute_saturated_vapor_pressure,
     compute_state_equations,
+    compute_wet_surface_temperature,
 )
 from sweat.stic.models.v1_4.smwetness import (
     initialize_soil_moisture,
@@ -48,13 +50,21 @@ VARIABLES_MAPPING: dict[str, str] = {
     ETVar.LONGWAVE_NET_RADIATION.value: "ln",
     ETVar.NIR.value: "nir",
     ETVar.SWIR.value: "swir",
-    ETVar.VARI.value: "vari_green_index",
+    ETVar.VARI.value: "vari_green",
+    ETVar.GLI.value: "gli",
+    ETVar.NDVI.value: "ndvi",
+    ETVar.GNDVI.value: "gndvi",
+    ETVar.MSAVI.value: "msavi",
     ETVar.LOCAL_TIME.value: "local_time",
 }
 
 
 @njit(
-    Tuple((f32,) * 26)(
+    Tuple((f32,) * 29)(
+        f32,
+        f32,
+        f32,
+        f32,
         f32,
         f32,
         f32,
@@ -83,7 +93,11 @@ def init_stic_model_pixel(
     ln: float,
     nir: float,
     swir: float,
-    vari_green_index: float,
+    vari_green: float,
+    gli: float,
+    ndvi: float,
+    gndvi: float,
+    msavi: float,
     local_time: float,
     debug: boolean,
 ) -> tuple[float, ...]:
@@ -114,12 +128,18 @@ def init_stic_model_pixel(
         Near infrared
     swir: float
         Shortwave infrared
-    vari_green_index: float,
+    vari_green: float,
         VARI green index
     threshold: float
         Threshold value
-    nb_steps: int
-        Maximum of iteration number
+    gli: float
+        Green Leaf Index
+    ndvi: float
+        VARI green index
+    gndvi: float
+        VARI green index
+    msavi: float
+        VARI green index
     debug: bool
         Mode debug to print intermediate results
 
@@ -170,10 +190,8 @@ def init_stic_model_pixel(
         ts,
         ta,
         td,
-        rn,
         ln,
         fc,
-        da,
         ea,
         esstar,
         s1,
@@ -182,7 +200,11 @@ def init_stic_model_pixel(
         s4,
         nir,
         swir,
-        vari_green_index,
+        vari_green,
+        gli,
+        ndvi,
+        gndvi,
+        msavi,
     )
     if debug:
         print("Init SM = ", m, m_soil, s1, s2, s3, s4, es, ds)  # noqa T201
@@ -191,8 +213,11 @@ def init_stic_model_pixel(
     e0star = esstar
     # Initialize vapor pressure at t0
     e0 = es
+    # Compute wet surface temperature
+    tw = compute_wet_surface_temperature(ta, ea)
+    esstar_w = compute_saturated_vapor_pressure(tw)
     # Initialize alpha to Priestley taylor parameter
-    alpha = f32(PT_CST)
+    alpha = PT_CST
     # Compute G flux
     g_flux = compute_g_flux(rn, lai, local_time, m_soil)
     if debug:
@@ -243,11 +268,18 @@ def init_stic_model_pixel(
         s4,
         rho,
         cp,
+        alpha,
+        tw,
+        esstar_w,
     )
 
 
 @njit(
     Tuple((f32, f32, f32, f32, f32, f32, f32, f32, boolean))(
+        f32,
+        f32,
+        f32,
+        f32,
         f32,
         f32,
         f32,
@@ -278,7 +310,11 @@ def run_stic_model_pixel(
     ln: float,
     nir: float,
     swir: float,
-    vari_green_index: float,
+    vari_green: float,
+    gli: float,
+    ndvi: float,
+    gndvi: float,
+    msavi: float,
     local_time: float,
     threshold: float,
     nb_steps: int,
@@ -309,7 +345,15 @@ def run_stic_model_pixel(
         Near infrared
     swir: float
         Shortwave infrared
-    vari_green_index: float,
+    vari_green: float
+        VARI green index
+    gli: float
+        Green Leaf Index
+    ndvi: float
+        VARI green index
+    gndvi: float
+        VARI green index
+    msavi: float
         VARI green index
     local_time: float
         Local time in seconds
@@ -367,10 +411,8 @@ def run_stic_model_pixel(
         ts,
         ta,
         td,
-        rn,
         ln,
         fc,
-        da,
         ea,
         esstar,
         s1,
@@ -379,7 +421,11 @@ def run_stic_model_pixel(
         s4,
         nir,
         swir,
-        vari_green_index,
+        vari_green,
+        gli,
+        ndvi,
+        gndvi,
+        msavi,
     )
     if debug:
         print("Init SM = ", m, m_soil, s1, s2, s3, s4, es, ds)  # noqa T201
@@ -388,8 +434,13 @@ def run_stic_model_pixel(
     e0star = esstar
     # Initialize vapor pressure at t0
     e0 = es
+    # Compute wet surface temperature
+    tw = compute_wet_surface_temperature(ta, ea)
+    estar_w = compute_saturated_vapor_pressure(tw)
     # Initialize alpha to Priestley taylor parameter
-    alpha = f32(PT_CST)
+    alpha = PT_CST
+    if debug:
+        print("Alpha = ", alpha, tw, estar_w)  # noqa T201
     # Save dewpoint temperature at source/sink height
     t0d_old = t0d
     # Compute G flux
@@ -473,17 +524,18 @@ def run_stic_model_pixel(
             ta,
             td,
             t0d,
-            rn,
             ln,
             fc,
-            da,
-            d0,
             ea,
             e0star,
             esstar,
             nir,
             swir,
-            vari_green_index,
+            vari_green,
+            gli,
+            ndvi,
+            gndvi,
+            msavi,
         )
         if debug:
             print("SM = ", m, m_soil)  # noqa T201
@@ -556,6 +608,10 @@ def run_stic_model_pixel(
         Array(f32, 2, "C"),
         Array(f32, 2, "C"),
         Array(f32, 2, "C"),
+        Array(f32, 2, "C"),
+        Array(f32, 2, "C"),
+        Array(f32, 2, "C"),
+        Array(f32, 2, "C"),
         Array(i64, 2, "C"),
         f32,
         i64,
@@ -575,7 +631,11 @@ def run_stic_model(
     ln: npt.NDArray,
     nir: npt.NDArray,
     swir: npt.NDArray,
-    vari_green_index: npt.NDArray,
+    vari_green: npt.NDArray,
+    gli: npt.NDArray,
+    ndvi: npt.NDArray,
+    gndvi: npt.NDArray,
+    msavi: npt.NDArray,
     local_time: npt.NDArray,
     valid: npt.NDArray,
     threshold: float,
@@ -606,6 +666,20 @@ def run_stic_model(
         Net radiation
     ln: float
         Longwave net radiation
+    nir: float
+        Near infrared
+    swir: float
+        Shortwave infrared
+    vari_green: float
+        VARI green index
+    gli: float
+        Green Leaf Index
+    ndvi: float
+        VARI green index
+    gndvi: float
+        VARI green index
+    msavi: float
+        VARI green index
     local_time: float
         Local time in seconds
     threshold: float
@@ -649,7 +723,11 @@ def run_stic_model(
                     ln[i, j],
                     nir[i, j],
                     swir[i, j],
-                    vari_green_index[i, j],
+                    vari_green[i, j],
+                    gli[i, j],
+                    ndvi[i, j],
+                    gndvi[i, j],
+                    msavi[i, j],
                     local_time[i, j],
                     threshold,
                     nb_steps,
@@ -669,6 +747,7 @@ def run_batch_stic_model(
     data: npt.NDArray,
     threshold: float,
     nb_steps: int,
+    debug: bool = False,
 ) -> npt.NDArray:
     """
     Run
@@ -689,11 +768,15 @@ def run_batch_stic_model(
             ln=data[i, 7],
             nir=data[i, 8],
             swir=data[i, 9],
-            vari_green_index=data[i, 10],
-            local_time=data[i, 11],
+            vari_green=data[i, 10],
+            gli=data[i, 11],
+            ndvi=data[i, 12],
+            gndvi=data[i, 13],
+            msavi=data[i, 14],
+            local_time=data[i, 15],
             threshold=threshold,
             nb_steps=nb_steps,
-            debug=False,
+            debug=debug,
         )
         out[i, 0] = le
         out[i, 1] = h
@@ -703,5 +786,90 @@ def run_batch_stic_model(
         out[i, 5] = gs
         out[i, 6] = t0
         out[i, 7] = m
+
+    return out
+
+
+def run_batch_init_stic_model(
+    data: npt.NDArray,
+    debug: bool = False,
+) -> npt.NDArray:
+    """
+    Run
+
+    """
+    n = data.shape[0]
+    out = np.empty((n, 20))
+
+    for i in range(n):
+        (
+            le,
+            h,
+            g,
+            ga,
+            gs,
+            t0,
+            t0d,
+            m,
+            _,
+            _,
+            m_surf,
+            m_rz,
+            da,
+            ds,
+            es,
+            ea,
+            e0,
+            esstar,
+            e0star,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+            alpha,
+            tw,
+            esstar_w,
+        ) = init_stic_model_pixel(
+            ts=data[i, 0],
+            ta=data[i, 1],
+            td=data[i, 2],
+            rh=data[i, 3],
+            fc=data[i, 4],
+            lai=data[i, 5],
+            rn=data[i, 6],
+            ln=data[i, 7],
+            nir=data[i, 8],
+            swir=data[i, 9],
+            vari_green=data[i, 10],
+            gli=data[i, 11],
+            ndvi=data[i, 12],
+            gndvi=data[i, 13],
+            msavi=data[i, 14],
+            local_time=data[i, 15],
+            debug=debug,
+        )
+        out[i, 0] = le
+        out[i, 1] = h
+        out[i, 2] = g
+        out[i, 3] = ga
+        out[i, 4] = gs
+        out[i, 5] = t0
+        out[i, 6] = t0d
+        out[i, 7] = m
+        out[i, 8] = m_surf
+        out[i, 9] = m_rz
+        out[i, 10] = da
+        out[i, 11] = ds
+        out[i, 12] = es
+        out[i, 13] = ea
+        out[i, 14] = e0
+        out[i, 15] = esstar
+        out[i, 16] = e0star
+        out[i, 17] = alpha
+        out[i, 18] = tw
+        out[i, 19] = esstar_w
 
     return out

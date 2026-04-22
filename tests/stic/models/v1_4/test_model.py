@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 from sweat.stic.models.v1_4.model import (
+    run_batch_init_stic_model,
     run_batch_stic_model,
     run_stic_model,
     run_stic_model_pixel,
@@ -24,7 +25,11 @@ from sweat.stic.models.v1_4.model import (
         "ln",
         "nir",
         "swir",
-        "vari_green_index",
+        "vari_green",
+        "gli",
+        "ndvi",
+        "gndvi",
+        "msavi",
         "local_time",
         "threshold",
         "nb_steps",
@@ -43,8 +48,12 @@ from sweat.stic.models.v1_4.model import (
             300,
             100,
             0.5,
-            0.5,
-            0.5,
+            0.3,
+            0.8,
+            0.8,
+            0.8,
+            0.8,
+            0.8,
             20000,
             0.01,
             15,
@@ -65,7 +74,11 @@ def test_run_stic_model_pixel(
     ln,
     nir,
     swir,
-    vari_green_index,
+    vari_green,
+    gli,
+    ndvi,
+    gndvi,
+    msavi,
     local_time,
     threshold,
     nb_steps,
@@ -87,7 +100,11 @@ def test_run_stic_model_pixel(
         ln,
         nir,
         swir,
-        vari_green_index,
+        vari_green,
+        gli,
+        ndvi,
+        gndvi,
+        msavi,
         local_time,
         threshold,
         nb_steps,
@@ -111,7 +128,11 @@ def test_run_stic_model_pixel(
         "ln",
         "nir",
         "swir",
-        "vari_green_index",
+        "vari_green",
+        "gli",
+        "ndvi",
+        "gndvi",
+        "msavi",
         "local_time",
         "valid",
         "threshold",
@@ -131,8 +152,12 @@ def test_run_stic_model_pixel(
             np.array([[300, 300], [300, 300]], dtype=np.float32),
             np.array([[100, 100], [100, 100]], dtype=np.float32),
             np.array([[0.5, 0.5], [0.5, 0.5]], dtype=np.float32),
-            np.array([[0.5, 0.5], [0.5, 0.5]], dtype=np.float32),
-            np.array([[0.5, 0.5], [0.5, 0.5]], dtype=np.float32),
+            np.array([[0.3, 0.3], [0.3, 0.3]], dtype=np.float32),
+            np.array([[0.8, 0.8], [0.8, 0.8]], dtype=np.float32),
+            np.array([[0.8, 0.8], [0.8, 0.8]], dtype=np.float32),
+            np.array([[0.8, 0.8], [0.8, 0.8]], dtype=np.float32),
+            np.array([[0.8, 0.8], [0.8, 0.8]], dtype=np.float32),
+            np.array([[0.8, 0.8], [0.8, 0.8]], dtype=np.float32),
             np.array([[20000, 20000], [20000, 20000]], dtype=np.float32),
             np.array([[1, 1], [1, 1]], dtype=np.int64),
             0.01,
@@ -154,7 +179,11 @@ def test_run_stic_model(
     ln,
     nir,
     swir,
-    vari_green_index,
+    vari_green,
+    gli,
+    ndvi,
+    gndvi,
+    msavi,
     local_time,
     valid,
     threshold,
@@ -177,7 +206,11 @@ def test_run_stic_model(
         ln,
         nir,
         swir,
-        vari_green_index,
+        vari_green,
+        gli,
+        ndvi,
+        gndvi,
+        msavi,
         local_time,
         valid,
         threshold,
@@ -211,8 +244,12 @@ def test_run_stic_model(
                         300,
                         100,
                         0.5,
-                        0.5,
-                        0.5,
+                        0.3,
+                        0.8,
+                        0.8,
+                        0.8,
+                        0.8,
+                        0.8,
                         20000,
                     ]
                 ],
@@ -239,3 +276,50 @@ def test_run_batch_stic_model(
     assert res.shape == (1, 8)
     np.testing.assert_almost_equal(res[0, 0], le_expected, decimal=2)
     np.testing.assert_almost_equal(res[0, 2], ef_expected, decimal=2)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    (
+        "data",
+        "le_expected",
+    ),
+    [
+        pytest.param(
+            np.array(
+                [
+                    [
+                        30.0,
+                        25,
+                        19,
+                        69.36,
+                        0.86,
+                        4,
+                        300,
+                        100,
+                        0.5,
+                        0.3,
+                        0.8,
+                        0.8,
+                        0.8,
+                        0.8,
+                        0.8,
+                        20000,
+                    ]
+                ],
+                dtype=np.float32,
+            ),
+            209.45,
+        ),
+    ],
+)
+def test_run_batch_init_model(
+    data,
+    le_expected,
+) -> None:
+    """
+    Test function for STIC model calculation function
+    """
+    res = run_batch_init_stic_model(data)
+    assert res.shape == (1, 20)
+    np.testing.assert_almost_equal(res[0, 0], le_expected, decimal=2)

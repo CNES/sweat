@@ -8,11 +8,11 @@ from numba import float32 as f32  # to define f32
 from numba import njit
 from numba.types import Tuple
 
-from sweat.stic.constant import PSYCHROMETRIC_CST, PT_CST
+from sweat.stic.constant import PSYCHROMETRIC_CST
 
 
 @njit(
-    Tuple((f32,) * 8)(*(f32,) * 17),
+    Tuple((f32,) * 8)(*(f32,) * 19),
     nogil=True,
     cache=True,
 )
@@ -21,10 +21,8 @@ def initialize_soil_moisture(
     ts: float,
     ta: float,
     td: float,
-    rn: float,
     ln: float,
     fc: float,
-    da: float,
     ea: float,
     esstar: float,
     s1: float,
@@ -33,7 +31,11 @@ def initialize_soil_moisture(
     s4: float,
     nir: float,
     swir: float,
-    vari_green_index: float,
+    vari_green: float,
+    gli: float,
+    ndvi: float,
+    gndvi: float,
+    msavi: float,
 ) -> tuple[float, float, float, float, float, float, float, float]:
     """
     Initiate soil moisture
@@ -69,20 +71,19 @@ def initialize_soil_moisture(
     $$
     $M_{rz}$ must remain between 0 and 1.
 
-    The conditions to choose between the both equations for $M$ depends of the
-    following variables:
-
-    - The surface vapor pressure
-    - The vapor pressure deficit at the surface is as follows.
-    - The dew-point temperature index
-    - Latent heat flux computed with Priestley-Taylor equation
-    - The temperatures $T_{a}$, $T_{D}$ and the
-      difference between $T_{a}$ and $LST$
-    - The net radiation $R_{n}$
-    - The net longwave radiation
-    - The vegetation variable Fcover
-    - The vapor pressure deficit (VPD) of the air at the
-      reference height $D_{a}$
+    The conditions to choose between the both equations for $M$
+    depends of the following variables:
+      - swir,
+      - nir,
+      - vari_green,
+      - gli,
+      - ndvi,
+      - gndvi,
+      - msavi
+    and they reflect various cases:
+      - severely stressed vegetation
+      - stressed sparse vegetation
+      - stressed bare soil
 
     Parameters
     ----------
@@ -94,14 +95,10 @@ def initialize_soil_moisture(
         Air temperature (celsius)
     td: float
         Dewpoint temperature (celsius)
-    rn: float
-        Net radiation (W.m-2)
     ln: float
         Longwave net radiation (W.m-2)
     fc: float
         Fraction cover (0-1)
-    da: float
-        Atmosphere vapor pressure deficit (hPa)
     eastar: float
         Saturation vapor pressure at air temperature (hPa)
     ea: float
@@ -120,8 +117,17 @@ def initialize_soil_moisture(
         Near infrared
     swir: float
         Shortwave infrared
-    vari_green_index: float,
+    vari_green: float,
         VARI green index
+    gli: float
+        Green Leaf Index
+    ndvi: float
+        VARI green index
+    gndvi: float
+        VARI green index
+    msavi: float
+        VARI green index
+
 
     Returns
     -------
@@ -175,12 +181,6 @@ def initialize_soil_moisture(
     # Handle division by zero
     tdew_index = (ts - tsd) / (ta - td) if abs(ta - td) > epsilon else f32(0)
 
-    # Compute the potential evaporation (Priestley-Taylor eqn.)
-    ep_pt = (f32(PT_CST) * slope * rn) / (slope + f32(PSYCHROMETRIC_CST))
-
-    # Temperature difference
-    # dts = ts - ta
-
     # Surface wetness comes from the soil, vegetation contribution is negligible
     if (fc <= f32(0.25)) & (tdew_index < f32(1)):
         m_surf = m_soil
@@ -201,13 +201,34 @@ def initialize_soil_moisture(
     # and initial estimation of surface vapor pressure
     m = m_surf
 
-    if (fc < f32(0.25)) and (swir > nir) and (vari_green_index < f32(0)):
+    # Conditions to switch to root zone soil moisture
+    # Severely stressed vegetation
+    if (swir > nir) and (vari_green < f32(0)) and (gli > f32(0)):
         m = m_rz
-    if (ds > da) and (swir > nir) and (vari_green_index < f32(0)):
+    # Severely stressed vegetation
+    if (
+        (swir > nir)
+        and (vari_green < f32(0))
+        and (ndvi > gndvi)
+        and (ndvi > msavi)
+    ):
         m = m_rz
-    if (ep_pt < rn) and (swir > nir) and (vari_green_index < f32(0)):
+    # Stressed sparse vegetation
+    if (
+        (swir > nir)
+        and (vari_green > f32(0))
+        and (gli > f32(0))
+        and (ndvi > gndvi)
+        and (ndvi > msavi)
+    ):
         m = m_rz
-    if (td < f32(0)) and (swir > nir) and (vari_green_index < f32(0)):
+    # Special conditions for stressed bare case
+    if (
+        (swir > nir)
+        and (vari_green < f32(0))
+        and (gli < f32(0))
+        and (ndvi > msavi)
+    ):
         m = m_rz
 
     # Update vapor pressure at surface
@@ -220,7 +241,7 @@ def initialize_soil_moisture(
 
 
 @njit(
-    Tuple((f32,) * 5)(*(f32,) * 20),
+    Tuple((f32,) * 5)(*(f32,) * 21),
     nogil=True,
     cache=True,
 )
@@ -234,17 +255,18 @@ def iterate_soil_moisture(
     ta: float,
     td: float,
     t0d: float,
-    rn: float,
     ln: float,
     fc: float,
-    da: float,
-    d0: float,
     ea: float,
     e0star: float,
     esstar: float,
     nir: float,
     swir: float,
-    vari_green_index: float,
+    vari_green: float,
+    gli: float,
+    ndvi: float,
+    gndvi: float,
+    msavi: float,
 ) -> tuple[float, float, float, float, float]:
     """
     Compute soil moisture during iteration loop
@@ -280,18 +302,19 @@ def iterate_soil_moisture(
     $$
     $M_{rz}$ must remain between 0 and 1.
 
-    The conditions to choose between the both equations for $M$ depends of the
-    following variables:
-
-    - The dew-point temperature index
-    - Latent heat flux computed with Priestley-Taylor equation
-    - The temperatures $T_{a}$, $T_{D}$ and the
-      difference between $T_{a}$ and $LST$
-    - The net radiation $R_{n}$
-    - The net longwave radiation
-    - The vegetation variable Fcover
-    - The vapor pressure deficit (VPD) of the air at the
-      reference height $D_{a}$
+    The conditions to choose between the both equations for $M$
+    depends of the following variables:
+      - swir,
+      - nir,
+      - vari_green,
+      - gli,
+      - ndvi,
+      - gndvi,
+      - msavi
+    and they reflect various cases:
+      - severely stressed vegetation
+      - stressed sparse vegetation
+      - stressed bare soil
 
     Parameters
     ----------
@@ -320,16 +343,10 @@ def iterate_soil_moisture(
         Dewpoint temperature (degC)
     t0d: float
         Dewpoint temperature at reference height (degC)
-    rn: float
-        Net radiation (W.m-2)
     ln: float
         Longwave net radiation (W.m-2)
     fc: float
         Fraction cover (0-1)
-    da: float
-        Atmosphere vapor pressure deficit (hPa)
-    d0: float
-        Vapor pressure deficit at source/sink height (hPa)
     eastar: float
         Saturation vapor pressure at air temperature (hPa)
     ea: float
@@ -343,7 +360,15 @@ def iterate_soil_moisture(
         Near infrared
     swir: float
         Shortwave infrared
-    vari_green_index: float,
+    vari_green: float
+        VARI green index
+    gli: float
+        Green Leaf Index
+    ndvi: float
+        VARI green index
+    gndvi: float
+        VARI green index
+    msavi: float
         VARI green index
 
     Returns
@@ -374,9 +399,6 @@ def iterate_soil_moisture(
     tdew_index = (
         (ts - t0d) / (ta - td) if abs(ta - td) > f32(1.0e-7) else f32(0)
     )
-    ep_pt = (f32(PT_CST) * slope * rn) / (
-        slope + f32(PSYCHROMETRIC_CST)
-    )  # Potential evaporation (Priestley-Taylor eqn.)
 
     # Surface wetness comes from the soil, vegetation contribution is negligible
     if (fc <= f32(0.25)) & (tdew_index < f32(1)):
@@ -397,13 +419,35 @@ def iterate_soil_moisture(
     # Combine M to account for Hysteresis and
     # initial estimation of surface vapor pressure
     m = m_surf
-    if (fc < f32(0.25)) and (swir > nir) and (vari_green_index < f32(0)):
+
+    # Conditions to switch to root zone soil moisture
+    # Severely stressed vegetation
+    if (swir > nir) and (vari_green < f32(0)) and (gli > f32(0)):
         m = m_rz
-    if (d0 > da) and (swir > nir) and (vari_green_index < f32(0)):
+    # Severely stressed vegetation
+    if (
+        (swir > nir)
+        and (vari_green < f32(0))
+        and (ndvi > gndvi)
+        and (ndvi > msavi)
+    ):
         m = m_rz
-    if (ep_pt < rn) and (swir > nir) and (vari_green_index < f32(0)):
+    # Stressed sparse vegetation
+    if (
+        (swir > nir)
+        and (vari_green > f32(0))
+        and (gli > f32(0))
+        and (ndvi > gndvi)
+        and (ndvi > msavi)
+    ):
         m = m_rz
-    if (td < f32(0)) and (swir > nir) and (vari_green_index < f32(0)):
+    # Special conditions for stressed bare case
+    if (
+        (swir > nir)
+        and (vari_green < f32(0))
+        and (gli < f32(0))
+        and (ndvi > msavi)
+    ):
         m = m_rz
 
     return (m, m_surf, m_canopy, m_soil, m_rz)
