@@ -15,6 +15,12 @@ merra
 modis
 national
 ndvi
+gndvi
+arvi
+vari
+glai
+savi
+msavi
 Psychrometric
 psychrometrics
 Santanello
@@ -24,6 +30,7 @@ Tetens
 trishna
 use_topo
 esstar
+estar
 eastar
 vari
 swir
