@@ -6,12 +6,12 @@ for STIC model
 
 from __future__ import annotations
 
-from math import exp
+from math import copysign, exp
 
 from numba import float32 as f32  # to define f32
+from numba import int8 as i8
 from numba import njit
 from numba.types import Tuple
-from numpy import sign
 
 from sweat.common.flux import CST_SB
 from sweat.stic.constant import (
@@ -28,6 +28,15 @@ from sweat.stic.constant import (
 A_TETENS = 6.13753
 B_TETENS = 17.27
 C_TETENS = 237.3
+
+
+@njit(
+    (i8)(f32),
+    nogil=True,
+    cache=True,
+)
+def _sign(x):
+    return i8(copysign(f32(1), x))
 
 
 @njit(
@@ -393,7 +402,9 @@ def compute_state_equations(
         - cp * m * e0 * f32(PSYCHROMETRIC_CST) * rho
         + cp * m * e0star * f32(PSYCHROMETRIC_CST) * rho
     )
-    g_aero_den = g_aero_den if abs(g_aero_den) > epsilon else epsilon
+    g_aero_den = (
+        g_aero_den if abs(g_aero_den) > epsilon else _sign(g_aero_den) * epsilon
+    )
     g_aero = (f32(2) * phi * alpha * slope * f32(PSYCHROMETRIC_CST)) / (
         g_aero_den
     )
@@ -415,7 +426,9 @@ def compute_state_equations(
         + cp * m * e0star**2 * f32(PSYCHROMETRIC_CST) * rho
         - f32(2) * cp * m * e0 * e0star * f32(PSYCHROMETRIC_CST) * rho
     )
-    g_surf_den = g_surf_den if abs(g_surf_den) > epsilon else epsilon
+    g_surf_den = (
+        g_surf_den if abs(g_surf_den) > epsilon else _sign(g_surf_den) * epsilon
+    )
     g_surf = -(
         f32(2)
         * (
@@ -429,7 +442,11 @@ def compute_state_equations(
 
     # T0 - TA
     delta_t_den = f32(2) * alpha * slope * f32(PSYCHROMETRIC_CST)
-    delta_t_den = delta_t_den if abs(delta_t_den) > epsilon else epsilon
+    delta_t_den = (
+        delta_t_den
+        if abs(delta_t_den) > epsilon
+        else _sign(delta_t_den) * epsilon
+    )
     delta_t = (
         f32(2) * slope * e0
         - f32(2) * slope * ea
@@ -454,7 +471,7 @@ def compute_state_equations(
         - m * e0 * f32(PSYCHROMETRIC_CST)
         + m * e0star * f32(PSYCHROMETRIC_CST)
     )
-    ef_den = ef_den if abs(ef_den) > epsilon else epsilon
+    ef_den = ef_den if abs(ef_den) > epsilon else _sign(ef_den) * epsilon
     ef = -(f32(2) * alpha * slope * ea - f32(2) * alpha * slope * e0) / (ef_den)
     # Clip value for EF
     ef = min(max(ef, f32(0.0001)), f32(1.0))
@@ -781,7 +798,7 @@ def compute_wet_surface_temperature(ta: float, ea: float) -> float:
         esstar_w = _tetens(tw)
         f = esstar_w - PSYCHROMETRIC_CST * (ta - tw) - ea
         df = _tetens_derivative(tw) + PSYCHROMETRIC_CST
-        df = df if abs(df) > epsilon else sign(df) * epsilon
+        df = df if abs(df) > epsilon else _sign(df) * epsilon
         tw = tw - f / df
     return tw
 
