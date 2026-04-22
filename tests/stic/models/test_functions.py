@@ -367,9 +367,67 @@ def test_compute_alpha_coefficient(
     slope, g_aero, g_surf, ta, t0, e0star, ea, m, expected
 ) -> None:
     """
-    Test function for computing vapor pressure deficit at canopy/air height
+    Test function for computing alpha coefficient
     """
     res = functions.compute_alpha_coefficient(
         slope, g_aero, g_surf, ta, t0, e0star, ea, m
     )
     np.testing.assert_almost_equal(res, expected, decimal=3)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    (
+        "slope",
+        "ta",
+        "da",
+        "cp",
+        "rho",
+        "emis",
+        "rn",
+        "expected",
+    ),
+    [
+        pytest.param(
+            1.89602,
+            25.0,
+            9.75,
+            1.2,
+            1013,
+            0.9,
+            400,
+            1.07,
+        ),
+    ],
+)
+def test_initialize_alpha_coefficient(
+    slope, ta, da, cp, rho, emis, rn, expected
+) -> None:
+    """
+    Test function for computing vapor pressure deficit at canopy/air height
+    """
+    res = functions.initialize_alpha_coefficient(
+        slope, ta, da, cp, rho, emis, rn
+    )
+    np.testing.assert_almost_equal(res, expected, decimal=2)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    (
+        "t",
+        "expected",
+    ),
+    [
+        pytest.param(
+            29.0,
+            40.25,
+        ),
+    ],
+)
+def test_compute_saturated_vapor_pressure(t, expected) -> None:
+    """
+    Test function for computing saturated vapor pressure
+    """
+    res = functions.compute_saturated_vapor_pressure(t)
+    np.testing.assert_almost_equal(res, expected, decimal=2)

@@ -11,7 +11,9 @@ from math import exp
 from numba import float32 as f32  # to define f32
 from numba import njit
 from numba.types import Tuple
+from numpy import sign
 
+from sweat.common.flux import CST_SB
 from sweat.stic.constant import (
     CP_DRY,
     CP_WET,
@@ -680,3 +682,133 @@ def compute_alpha_coefficient(
         )
     )
     return min(max(alpha, f32(0.1)), f32(2.0))
+
+
+@njit(
+    (f32)(
+        f32,
+        f32,
+        f32,
+        f32,
+        f32,
+        f32,
+        f32,
+    ),
+    nogil=True,
+    cache=True,
+    inline="always",
+)
+def initialize_alpha_coefficient(
+    slope: float,
+    ta: float,
+    da: float,
+    cp: float,
+    rho: float,
+    emis: float,
+    rn: float,
+) -> float:
+    """
+    Initialize the alpha coefficient, i.e. Priestley-Taylor coefficient.
+
+    Notes
+    -----
+    The formula is defined by
+
+    Parameters
+    ----------
+    slope: float
+        Slope of saturation vapor pressure versus
+        air temperature at TA (hPa/degC)
+    ta: float
+        2m air temperature (Celsius)
+    da: float
+        Atmosphere vapor pressure deficit (hPa) at the reference height
+    rho: float
+        Air density (kg.m-3)
+    cp: float
+        Specific heat of air at constant pressure (J.kg-1.K-1)
+    emis: float
+        Emissivity
+    rn: float
+        Net radiation
+
+    Returns
+    -------
+    alpha: float
+        Priestley-Taylor coefficient
+    """
+    # Conduction radiometric
+    gr = 4 * emis * CST_SB * (ta + KELVIN_CST) ** 3 / (rho * cp)
+    alpha = ((rho * cp * gr * da) / (slope * rn)) + f32(1)
+    return min(max(alpha, f32(0.2)), f32(2.0))
+
+
+@njit(
+    (f32)(
+        f32,
+        f32,
+    ),
+    nogil=True,
+    cache=True,
+    inline="always",
+)
+def compute_wet_surface_temperature(ta: float, ea: float) -> float:
+    """
+    Compute wet surface temperature
+
+    Notes
+    -----
+    Solve wet surface temperature (°C)
+    from air temperature, RH, and pressure (no wind needed).
+
+    Parameters
+    ----------
+    ta: float
+        Air temperature (degC)
+    ea: float
+        Atmosphere vapor pressure (hPa)
+
+    Returns
+    -------
+    tw: float
+        Wet surface temperature (degC)
+    """
+    # Initialization
+    tw = ta
+    epsilon = f32(1.0e-7)
+    # Iterative loop
+    for _ in range(50):
+        esstar_w = _tetens(tw)
+        f = esstar_w - PSYCHROMETRIC_CST * (ta - tw) - ea
+        df = _tetens_derivative(tw) + PSYCHROMETRIC_CST
+        df = df if abs(df) > epsilon else sign(df) * epsilon
+        tw = tw - f / df
+    return tw
+
+
+@njit(
+    (f32)(
+        f32,
+    ),
+    nogil=True,
+    cache=True,
+    inline="always",
+)
+def compute_saturated_vapor_pressure(t: float) -> float:
+    """
+    Compute saturated vapor pressure from temperature
+
+    Notes
+    -----
+
+    Parameters
+    ----------
+    t: float
+        Temperature (degC)
+
+    Returns
+    -------
+    estar: float
+        Saturated vapor pressure
+    """
+    return _tetens(t)
