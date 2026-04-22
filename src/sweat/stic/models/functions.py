@@ -409,8 +409,7 @@ def compute_state_equations(
         g_aero_den
     )
     # Adjust the abnormal conductances
-    g_aero = min(max(g_aero, f32(0.0001)), f32(0.2))
-    # g_aero = min(max(g_aero, f32(0.0001)), f32(0.1))
+    g_aero = min(max(g_aero, f32(0.0001)), f32(0.1))
 
     # Surface conductance
     g_surf_den = (
@@ -437,8 +436,7 @@ def compute_state_equations(
         )
     ) / (g_surf_den)
     # Adjust the abnormal conductances
-    g_surf = min(max(g_surf, f32(0.0001)), f32(0.06))
-    # g_surf = min(max(g_surf, f32(0.0001)), f32(0.1))
+    g_surf = min(max(g_surf, f32(0.0001)), f32(0.1))
 
     # T0 - TA
     delta_t_den = f32(2) * alpha * slope * f32(PSYCHROMETRIC_CST)
