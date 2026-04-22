@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 from sweat.stic.models.v1_3.model import (
+    run_batch_init_stic_model,
     run_batch_stic_model,
     run_stic_model,
     run_stic_model_pixel,
@@ -189,3 +190,43 @@ def test_run_batch_stic_model(
     assert res.shape == (1, 8)
     np.testing.assert_almost_equal(res[0, 0], le_expected, decimal=2)
     np.testing.assert_almost_equal(res[0, 2], ef_expected, decimal=2)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    (
+        "data",
+        "le_expected",
+    ),
+    [
+        pytest.param(
+            np.array(
+                [
+                    [
+                        30.0,
+                        25,
+                        19,
+                        69.36,
+                        0.86,
+                        4,
+                        300,
+                        100,
+                        20000,
+                    ]
+                ],
+                dtype=np.float32,
+            ),
+            209.45,
+        ),
+    ],
+)
+def test_run_batch_init_stic_model(
+    data,
+    le_expected,
+) -> None:
+    """
+    Test function for STIC model calculation function
+    """
+    res = run_batch_init_stic_model(data)
+    assert res.shape == (1, 20)
+    np.testing.assert_almost_equal(res[0, 0], le_expected, decimal=2)

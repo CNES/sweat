@@ -15,6 +15,7 @@ from sweat.stic import models
 class ModelSpec:
     raster_func: Callable
     batch_func: Callable
+    init_func: Callable
     inputs: dict[str, str]
 
 
@@ -41,8 +42,12 @@ for module in pkgutil.iter_modules(models.__path__):
         mapping = imported_module.VARIABLES_MAPPING
         batch_func = imported_module.run_batch_stic_model
         raster_func = imported_module.run_stic_model
+        init_func = imported_module.run_batch_init_stic_model
         MODEL_REGISTRY[version] = ModelSpec(
-            batch_func=batch_func, raster_func=raster_func, inputs=mapping
+            batch_func=batch_func,
+            raster_func=raster_func,
+            init_func=init_func,
+            inputs=mapping,
         )
 
         if getattr(imported_module, "IS_DEFAULT", False):

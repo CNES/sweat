@@ -53,7 +53,7 @@ def run_model(
     version: str | None = None,
 ) -> tuple[npt.NDArray, npt.NDArray, npt.NDArray]:
     """
-    Run STIC model of a dataset
+    Run STIC model on a dataset
 
     Parameters
     ----------
@@ -100,10 +100,11 @@ def run_batch_model(
     threshold: float = 0.01,
     nb_steps: int = 15,
     version: str | None = None,
+    debug: bool = False,
     mapping: bool = True,
 ) -> npt.NDArray:
     """
-    Run STIC model of a dataset
+    Run STIC model on a dataframe
 
     Parameters
     ----------
@@ -115,6 +116,8 @@ def run_batch_model(
         Max number of iterations
     version: str
         Model version
+    debug: bool
+        Use debug mode
     mapping: bool
         Used mapping for variables
 
@@ -142,4 +145,53 @@ def run_batch_model(
     inputs = data[col_inputs].to_numpy()
 
     # Return un dataframe
-    return spec.batch_func(inputs, threshold=threshold, nb_steps=nb_steps)
+    return spec.batch_func(
+        inputs, threshold=threshold, nb_steps=nb_steps, debug=debug
+    )
+
+
+def run_batch_init_model(
+    data: pd.DataFrame,
+    version: str | None = None,
+    debug: bool = False,
+    mapping: bool = True,
+) -> npt.NDArray:
+    """
+    Run STIC model initialization on a dataframe
+
+    Parameters
+    ----------
+    data: pd.DataFrame
+        Data
+    version: str
+        Model version
+    debug: bool
+        Use debug mode
+    mapping: bool
+        Used mapping for variables
+
+    Returns
+    -------
+    results: tuple[np.array,np.array,np.array]
+        Results of the model
+    """
+    if version is None:
+        version = DEFAULT_VERSION
+    if version not in MODEL_REGISTRY:
+        msg = f"Unknown run_batch_stic_model version: {version}"
+        raise ValueError(msg)
+
+    spec = MODEL_REGISTRY[version]
+    col_inputs = list(spec.inputs.keys())
+    if mapping:
+        col_inputs = list(spec.inputs.values())
+
+    missing = [v for v in col_inputs if v not in data.columns]
+    if missing:
+        msg = f"Missing variables: {missing}"
+        raise ValueError(msg)
+
+    inputs = data[col_inputs].to_numpy()
+
+    # Return un dataframe
+    return spec.init_func(inputs, debug=debug)

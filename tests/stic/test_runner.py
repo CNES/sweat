@@ -8,6 +8,7 @@ import xarray as xr
 
 from sweat.common.constant import ETVar
 from sweat.stic.runner import (
+    run_batch_init_model,
     run_batch_model,
     run_model,
 )
@@ -141,7 +142,7 @@ def test_run_stic_model(
         ),
     ],
 )
-def test_run_batch_stic_model(
+def test_run_batch_model(
     variables,
     data,
     threshold,
@@ -158,9 +159,60 @@ def test_run_batch_stic_model(
         data=df,
         threshold=threshold,
         nb_steps=nb_steps,
+        debug=False,
         version=version,
         mapping=True,
     )
     assert res.shape == (1, 8)
     np.testing.assert_almost_equal(res[0, 0], le_expected, decimal=2)
     np.testing.assert_almost_equal(res[0, 2], ef_expected, decimal=2)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    (
+        "variables",
+        "data",
+        "version",
+        "le_expected",
+    ),
+    [
+        pytest.param(
+            [
+                "ts",
+                "ta",
+                "td",
+                "rh",
+                "fc",
+                "lai",
+                "rn",
+                "ln",
+                "local_time",
+            ],
+            np.array(
+                [[30.0, 25, 19, 69.36, 0.86, 4, 300, 100, 20000]],
+                dtype=np.float32,
+            ),
+            "1.3",
+            209.45,
+        ),
+    ],
+)
+def test_run_batch_init_model(
+    variables,
+    data,
+    version,
+    le_expected,
+) -> None:
+    """
+    Test runner for STIC model (batch mode)
+    """
+    df = pd.DataFrame(data, columns=variables)
+    res = run_batch_init_model(
+        data=df,
+        version=version,
+        debug=False,
+        mapping=True,
+    )
+    assert res.shape == (1, 20)
+    np.testing.assert_almost_equal(res[0, 0], le_expected, decimal=2)

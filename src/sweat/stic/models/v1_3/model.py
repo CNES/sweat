@@ -51,7 +51,7 @@ VARIABLES_MAPPING: dict[str, str] = {
 
 
 @njit(
-    Tuple((f32,) * 26)(
+    Tuple((f32,) * 27)(
         f32,
         f32,
         f32,
@@ -101,10 +101,6 @@ def init_stic_model_pixel(
         Longwave net radiation
     local_time: float
         Local time in seconds
-    threshold: float
-        Threshold value
-    nb_steps: int
-        Maximum of iteration number
     debug: bool
         Mode debug to print intermediate results
 
@@ -225,6 +221,7 @@ def init_stic_model_pixel(
         s4,
         rho,
         cp,
+        alpha,
     )
 
 
@@ -624,6 +621,7 @@ def run_batch_stic_model(
     data: npt.NDArray,
     threshold: float,
     nb_steps: int,
+    debug: bool = False,
 ) -> npt.NDArray:
     """
     Run
@@ -645,7 +643,7 @@ def run_batch_stic_model(
             local_time=data[i, 8],
             threshold=threshold,
             nb_steps=nb_steps,
-            debug=False,
+            debug=debug,
         )
         out[i, 0] = le
         out[i, 1] = h
@@ -655,5 +653,80 @@ def run_batch_stic_model(
         out[i, 5] = gs
         out[i, 6] = t0
         out[i, 7] = m
+
+    return out
+
+
+def run_batch_init_stic_model(
+    data: npt.NDArray, debug: bool = False
+) -> npt.NDArray:
+    """
+    Run
+
+    """
+    n = data.shape[0]
+    out = np.empty((n, 20))
+
+    for i in range(n):
+        (
+            le,
+            h,
+            g,
+            ga,
+            gs,
+            t0,
+            t0d,
+            m,
+            _,
+            _,
+            m_surf,
+            m_rz,
+            da,
+            ds,
+            es,
+            ea,
+            e0,
+            esstar,
+            e0star,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+            alpha,
+        ) = init_stic_model_pixel(
+            ts=data[i, 0],
+            ta=data[i, 1],
+            td=data[i, 2],
+            rh=data[i, 3],
+            fc=data[i, 4],
+            lai=data[i, 5],
+            rn=data[i, 6],
+            ln=data[i, 7],
+            local_time=data[i, 8],
+            debug=debug,
+        )
+        out[i, 0] = le
+        out[i, 1] = h
+        out[i, 2] = g
+        out[i, 3] = ga
+        out[i, 4] = gs
+        out[i, 5] = t0
+        out[i, 6] = t0d
+        out[i, 7] = m
+        out[i, 8] = m_surf
+        out[i, 9] = m_rz
+        out[i, 10] = da
+        out[i, 11] = ds
+        out[i, 12] = es
+        out[i, 13] = ea
+        out[i, 14] = e0
+        out[i, 15] = esstar
+        out[i, 16] = e0star
+        out[i, 17] = alpha
+        out[i, 18] = 0.0
+        out[i, 19] = 0.0
 
     return out
