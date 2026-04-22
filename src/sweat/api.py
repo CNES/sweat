@@ -22,6 +22,7 @@ from sweat.logging import LoggerManager
 from sweat.misc import trishna
 from sweat.stic import main as stic
 from sweat.stic.config import STICParamsConfig
+from sweat.stic.registry import MODEL_REGISTRY
 from sweat.timeseries import stack_handler as sth
 from sweat.timeseries import updater_handler as uh
 from sweat.timeseries.config import (
@@ -353,22 +354,17 @@ def run_stic(
     configure_debugging(**debug_config.model_dump())
     logger.debug("Check configuration: OK")
     # Prepare data
-    data = stic.prepare(data, **params_config.prepare.model_dump())
+    data = stic.prepare(
+        data,
+        **params_config.prepare.model_dump(),
+        version=params_config.stic.version,
+    )
     logger.debug("Prepare input data: OK")
     # Filter data
+    # Check variables
     valid_mask, flags_mask = filter.find_valid_pixels(
         data,
-        nan_config=[
-            ETVar.LST.value,
-            ETVar.ALBEDO.value,
-            ETVar.TEMPERATURE.value,
-            ETVar.DEWPOINT_TEMPERATURE.value,
-            ETVar.FCOVER.value,
-            ETVar.LAI.value,
-            ETVar.EMISSIVITY.value,
-            ETVar.NET_RADIATION.value,
-            ETVar.LONGWAVE_NET_RADIATION.value,
-        ],
+        nan_config=MODEL_REGISTRY[params_config.stic.version].inputs,
         valid_config=params_config.filtering.model_dump(),
     )
     data[ETVar.VALID.value] = valid_mask

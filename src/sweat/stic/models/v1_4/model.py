@@ -39,7 +39,7 @@ from sweat.stic.models.v1_4.smwetness import (
 VERSION = "1.4"
 IS_DEFAULT = False
 
-# List of variables required by the model
+# Mapping of variables required by the model
 VARIABLES_MAPPING: dict[str, str] = {
     ETVar.LST.value: "ts",
     ETVar.TEMPERATURE.value: "ta",
@@ -59,6 +59,24 @@ VARIABLES_MAPPING: dict[str, str] = {
     ETVar.EMISSIVITY.value: "emis",
     ETVar.LOCAL_TIME.value: "local_time",
 }
+
+# List of variables required (before data preparation)
+REQUIRED_INPUTS: list[str] = [
+    ETVar.LST.value,
+    ETVar.TEMPERATURE.value,
+    ETVar.DEWPOINT_TEMPERATURE.value,
+    ETVar.FCOVER.value,
+    ETVar.LAI.value,
+    ETVar.ALBEDO.value,
+    ETVar.RLD.value,
+    ETVar.RSD.value,
+    ETVar.EMISSIVITY.value,
+    ETVar.BLUE.value,
+    ETVar.RED.value,
+    ETVar.GREEN.value,
+    ETVar.NIR.value,
+    ETVar.SWIR.value,
+]
 
 
 @njit(

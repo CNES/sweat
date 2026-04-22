@@ -6,6 +6,7 @@ Module containing the API for STIC
 import numpy as np
 import xarray as xr
 
+from sweat.common import utils
 from sweat.common.constant import (
     FLAGS_TYPE,
     ETVar,
@@ -17,7 +18,7 @@ from sweat.stic.convert import (
     convert_to_local_time,
     convert_to_rh,
 )
-from sweat.stic.registry import DEFAULT_VERSION
+from sweat.stic.registry import DEFAULT_VERSION, MODEL_REGISTRY
 from sweat.stic.runner import run_model
 
 logger = LoggerManager.get_logger(__name__)
@@ -30,10 +31,13 @@ def prepare(
     data: xr.Dataset,
     use_topo: bool = False,
     selected_radiation: str | None = None,
+    version: str | None = None,
 ) -> xr.Dataset:
     """
     Prepare data for STIC
 
+    Notes
+    -----
     The following steps are performed:
 
     - Compute LST in celsius
@@ -41,6 +45,7 @@ def prepare(
     - Compute local time
     - Mask pixel if nan in input data
     - Create flags mask
+    - Compute vegetation indices required by the model if necessary
 
     Parameters
     ----------
@@ -50,43 +55,56 @@ def prepare(
         Activate topographic correction
     selected_radiation: str
         Select provider for radiation
+    version: str
+        Model version
 
     Returns
     -------
     res: tuple[float]
         Output arrays
     """
-    # Check
-    checked_vars = [
-        ETVar.LST,
-        ETVar.ALBEDO,
-        ETVar.TEMPERATURE,
-        ETVar.DEWPOINT_TEMPERATURE,
-        ETVar.FCOVER,
-        ETVar.LAI,
-        ETVar.EMISSIVITY,
-    ]
+    # Default version if needed
+    if version is None:
+        version = DEFAULT_VERSION
+    # Check version
+    if version not in MODEL_REGISTRY:
+        msg = f"Unknown run_stic_model version: {version}"
+        raise ValueError(msg)
+    spec = MODEL_REGISTRY[version]
+    # Check variables
+    checked_vars = spec.required_inputs
     for var in checked_vars:
-        if var.value not in data.data_vars:
-            msg = f"Variable {var.value} is missing in the dataset"
+        if var not in data.data_vars:
+            msg = f"Variable {var} is missing in the dataset"
             raise KeyError(msg)
     # Copy
     new_data = data.copy()
+    dims = new_data[ETVar.LST.value].dims
+    coords = new_data[ETVar.LST.value].coords
     # Converting temperature from Kelvin to Celsius degree
-    new_data[ETVar.LST.value] = xr.apply_ufunc(
-        convert_kelvin_to_celsius, data[ETVar.LST.value]
+    new_data[ETVar.LST.value] = xr.DataArray(
+        convert_kelvin_to_celsius(data[ETVar.LST.value]),
+        dims=dims,
+        coords=coords,
     )
-    new_data[ETVar.TEMPERATURE.value] = xr.apply_ufunc(
-        convert_kelvin_to_celsius, data[ETVar.TEMPERATURE.value]
+    new_data[ETVar.TEMPERATURE.value] = xr.DataArray(
+        convert_kelvin_to_celsius(data[ETVar.TEMPERATURE.value]),
+        dims=dims,
+        coords=coords,
     )
-    new_data[ETVar.DEWPOINT_TEMPERATURE.value] = xr.apply_ufunc(
-        convert_kelvin_to_celsius, data[ETVar.DEWPOINT_TEMPERATURE.value]
+    new_data[ETVar.DEWPOINT_TEMPERATURE.value] = xr.DataArray(
+        convert_kelvin_to_celsius(data[ETVar.DEWPOINT_TEMPERATURE.value]),
+        dims=dims,
+        coords=coords,
     )
     # Converting to relative humidity percentage
-    new_data[ETVar.RH.value] = xr.apply_ufunc(
-        convert_to_rh,
-        new_data[ETVar.TEMPERATURE.value],
-        new_data[ETVar.DEWPOINT_TEMPERATURE.value],
+    new_data[ETVar.RH.value] = xr.DataArray(
+        convert_to_rh(
+            t2m=new_data[ETVar.TEMPERATURE.value],
+            d2m=new_data[ETVar.DEWPOINT_TEMPERATURE.value],
+        ),
+        dims=dims,
+        coords=coords,
     )
     # Convert to local time
     new_data[ETVar.LOCAL_TIME.value] = xr.apply_ufunc(
@@ -106,7 +124,63 @@ def prepare(
         ln_xr = next(iter(ln_xr.data_vars.values()))
     new_data[ETVar.NET_RADIATION.value] = rn_xr
     new_data[ETVar.LONGWAVE_NET_RADIATION.value] = ln_xr
-
+    # Compute vegetation indices
+    if (
+        ETVar.NDVI.value in spec.inputs
+        and ETVar.NDVI.value not in data.data_vars
+    ):
+        new_data[ETVar.NDVI.value] = xr.DataArray(
+            utils.compute_ndvi(
+                nir=new_data[ETVar.NIR.value], red=new_data[ETVar.RED.value]
+            ),
+            dims=dims,
+            coords=coords,
+        )
+    if (
+        ETVar.GNDVI.value in spec.inputs
+        and ETVar.GNDVI.value not in data.data_vars
+    ):
+        new_data[ETVar.GNDVI.value] = xr.DataArray(
+            utils.compute_gndvi(
+                nir=new_data[ETVar.NIR.value], green=new_data[ETVar.GREEN.value]
+            ),
+            dims=dims,
+            coords=coords,
+        )
+    if ETVar.GLI.value in spec.inputs and ETVar.GLI.value not in data.data_vars:
+        new_data[ETVar.GLI.value] = xr.DataArray(
+            utils.compute_gli(
+                blue=new_data[ETVar.BLUE.value],
+                green=new_data[ETVar.GREEN.value],
+                red=new_data[ETVar.RED.value],
+            ),
+            dims=dims,
+            coords=coords,
+        )
+    if (
+        ETVar.VARI.value in spec.inputs
+        and ETVar.VARI.value not in data.data_vars
+    ):
+        new_data[ETVar.VARI.value] = xr.DataArray(
+            utils.compute_vari_green(
+                blue=new_data[ETVar.BLUE.value],
+                green=new_data[ETVar.GREEN.value],
+                red=new_data[ETVar.RED.value],
+            ),
+            dims=dims,
+            coords=coords,
+        )
+    if (
+        ETVar.MSAVI.value in spec.inputs
+        and ETVar.MSAVI.value not in data.data_vars
+    ):
+        new_data[ETVar.MSAVI.value] = xr.DataArray(
+            utils.compute_msavi(
+                nir=new_data[ETVar.NIR.value], red=new_data[ETVar.RED.value]
+            ),
+            dims=dims,
+            coords=coords,
+        )
     return new_data
 
 
@@ -135,6 +209,7 @@ def run(
     res: tuple[float]
         Output arrays
     """
+    # Default version if needed
     if version is None:
         version = DEFAULT_VERSION
     # Get valid and flags

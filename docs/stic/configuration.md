@@ -87,6 +87,7 @@ This configuration describes the parameters for STIC main processing step
 
 | Name | Description | Type | Mandatory | Default value | Possible value |
 |------|-------------|------|-----------|---------------|----------------|
+| version | Version of STIC model | str | no | "1.3" | "1.3","1.4" |
 | threshold | Iteration threshold value used for check convergence | float | no | 0.01 | - |
 | nb_steps | Number of iteration steps | int | no | 15 | - |
 
@@ -95,6 +96,7 @@ This configuration describes the parameters for STIC main processing step
 ```json
 {
     "stic": {
+        "version": "1.3",
         "threshold": 0.01,
         "nb_steps": 15
     }

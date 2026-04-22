@@ -17,6 +17,7 @@ class ModelSpec:
     batch_func: Callable
     init_func: Callable
     inputs: dict[str, str]
+    required_inputs: list[str]
 
 
 MODEL_REGISTRY = {}
@@ -40,6 +41,7 @@ for module in pkgutil.iter_modules(models.__path__):
 
         version = imported_module.VERSION
         mapping = imported_module.VARIABLES_MAPPING
+        required = imported_module.REQUIRED_INPUTS
         batch_func = imported_module.run_batch_stic_model
         raster_func = imported_module.run_stic_model
         init_func = imported_module.run_batch_init_stic_model
@@ -48,6 +50,7 @@ for module in pkgutil.iter_modules(models.__path__):
             raster_func=raster_func,
             init_func=init_func,
             inputs=mapping,
+            required_inputs=required,
         )
 
         if getattr(imported_module, "IS_DEFAULT", False):

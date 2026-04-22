@@ -9,6 +9,7 @@ import xarray as xr
 
 from sweat.common.constant import ETVar
 from sweat.stic import main
+from sweat.stic.registry import DEFAULT_VERSION, MODEL_REGISTRY
 
 
 def setup_data(
@@ -93,7 +94,11 @@ def setup_data(
 
 
 @pytest.mark.functional
-def test_prepare():
+@pytest.mark.parametrize(
+    "version",
+    [None, "1.3", "1.4"],
+)
+def test_prepare(version):
     """
     Test function for STIC prepare function
     """
@@ -108,6 +113,11 @@ def test_prepare():
             "emis": (["y", "x"], np.full((2, 2), 0.8)),
             "rsd": (["y", "x"], np.full((2, 2), 400)),
             "rld": (["y", "x"], np.full((2, 2), 200)),
+            "blue": (["y", "x"], np.full((2, 2), 0.1)),
+            "green": (["y", "x"], np.full((2, 2), 0.6)),
+            "red": (["y", "x"], np.full((2, 2), 0.2)),
+            "nir": (["y", "x"], np.full((2, 2), 0.5)),
+            "swir": (["y", "x"], np.full((2, 2), 0.4)),
         },
         coords={
             "y": ("y", np.array([40.0, 40.1])),
@@ -119,12 +129,21 @@ def test_prepare():
             "crs": 4326,
         },
     )
-    res = main.prepare(data)
+    res = main.prepare(data=data, version=version)
+    if version is None:
+        version = DEFAULT_VERSION
+    spec = MODEL_REGISTRY[version]
     assert res
+    for v in spec.inputs:
+        assert v in res.data_vars
 
 
-@pytest.mark.unit
-def test_prepare_exc():
+@pytest.mark.functional
+@pytest.mark.parametrize(
+    "version",
+    [None, "1.3", "1.4"],
+)
+def test_prepare_exc(version):
     """
     Test function for STIC prepare function (with exception)
     """
@@ -146,7 +165,7 @@ def test_prepare_exc():
     with pytest.raises(
         KeyError, match="Variable lst is missing in the dataset"
     ):
-        main.prepare(data)
+        main.prepare(data=data, version=version)
 
 
 @pytest.mark.unit

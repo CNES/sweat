@@ -65,16 +65,38 @@ For each band, a *band description* option/tag must be used when writing the Geo
 The code uses this information to find out which band it is.
 The table below lists the expected nomenclature for band names.
 
+For version 1.3:
 | Band | Tag name |
 |------|----------|
 | Land surface temperature | `lst` |
+| Land surface emissivity | `emis` |
 | DEM elevation | `height` |
 | DEM slope | `slope` |
 | DEM aspect | `aspect` |
 | Downward shortwave radiation | `rsdXXXX` |
 | Downward longwave radiation | `rldXXXX` |
 | LAI | `lai` |
-| NDVI | `ndvi` |
+| Fcover | `fcover` |
+| Albedo | `albedo` |
+| Temperature | `ta` |
+| Dewpoint temperature | `tdp` |
+
+For version 1.4:
+| Band | Tag name |
+|------|----------|
+| Blue reflectance | `blue` |
+| Green reflectance | `green` |
+| Red reflectance | `red` |
+| NIR reflectance | `nir` |
+| SWIR reflectance | `swir` |
+| Land surface temperature | `lst` |
+| Land surface emissivity | `emis` |
+| DEM elevation | `height` |
+| DEM slope | `slope` |
+| DEM aspect | `aspect` |
+| Downward shortwave radiation | `rsdXXXX` |
+| Downward longwave radiation | `rldXXXX` |
+| LAI | `lai` |
 | Fcover | `fcover` |
 | Albedo | `albedo` |
 | Temperature | `ta` |
@@ -142,7 +164,7 @@ output_dir/
     └── stic_inst_valid.tif
 ```
 
-* `config.json` corresponds to the exact configurtaion used to run STIC.
+* `config.json` corresponds to the exact configuration used to run STIC.
 * `stic_inst` contains instantaneous products
 * `stic_daily` contains daily products
 * `debug` (optional) contains intermediary results if verbose mode is active in debug section
