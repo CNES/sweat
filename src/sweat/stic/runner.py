@@ -143,6 +143,7 @@ def run_batch_model(
         raise ValueError(msg)
 
     inputs = data[col_inputs].to_numpy()
+    inputs = inputs.astype(np.float32)
 
     # Return un dataframe
     return spec.batch_func(
@@ -192,6 +193,6 @@ def run_batch_init_model(
         raise ValueError(msg)
 
     inputs = data[col_inputs].to_numpy()
-
+    inputs = inputs.astype(np.float32)
     # Return un dataframe
     return spec.init_func(inputs, debug=debug)
