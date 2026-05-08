@@ -21,7 +21,7 @@ def initialize_soil_moisture(
     ts: float,
     ta: float,
     td: float,
-    ln: float,
+    ln: float,  # noqa
     fc: float,
     ea: float,
     esstar: float,
@@ -179,13 +179,19 @@ def initialize_soil_moisture(
     # Compute dewpoint temperature index
     # tdew_index > 1 signifies super dry condition
     # Handle division by zero
-    tdew_index = (ts - tsd) / (ta - td) if abs(ta - td) > epsilon else f32(0)
+    # tdew_index = (ts - tsd) / (ta - td) if abs(ta - td) > epsilon else f32(0)
 
     # Surface wetness comes from the soil, vegetation contribution is negligible
-    if (fc <= f32(0.25)) & (tdew_index < f32(1)):
+    # if (fc <= f32(0.25)) & (tdew_index < f32(1)):
+    # m_surf = m_soil
+    # m_canopy = f32(0)
+    # if (fc <= f32(0.25)) & (ta > f32(10)) & (td < f32(0)) & (ln < f32(-125)):
+    # m_surf = m_soil
+    # m_canopy = f32(0)
+    if (fc <= f32(0.25)) & (ta > f32(10)) & (td < f32(0)):
         m_surf = m_soil
         m_canopy = f32(0)
-    if (fc <= f32(0.25)) & (ta > f32(10)) & (td < f32(0)) & (ln < f32(-125)):
+    if (swir > nir) & (vari_green < 0) & (gli < 0) & (ndvi > msavi) & (td < 0):
         m_surf = m_soil
         m_canopy = f32(0)
 
@@ -255,7 +261,7 @@ def iterate_soil_moisture(
     ta: float,
     td: float,
     t0d: float,
-    ln: float,
+    ln: float,  # noqa
     fc: float,
     ea: float,
     e0star: float,
@@ -396,15 +402,21 @@ def iterate_soil_moisture(
     m_soil = (f32(1) - fc) * m_surf
 
     # Handle division by zero
-    tdew_index = (
-        (ts - t0d) / (ta - td) if abs(ta - td) > f32(1.0e-7) else f32(0)
-    )
+    # tdew_index = (
+    # (ts - t0d) / (ta - td) if abs(ta - td) > f32(1.0e-7) else f32(0)
+    # )
 
     # Surface wetness comes from the soil, vegetation contribution is negligible
-    if (fc <= f32(0.25)) & (tdew_index < f32(1)):
+    # if (fc <= f32(0.25)) & (tdew_index < f32(1)):
+    # m_surf = m_soil
+    # m_canopy = f32(0)
+    # if (fc <= f32(0.25)) & (ta > f32(10)) & (td < f32(0)) & (ln < f32(-125)):
+    # m_surf = m_soil
+    # m_canopy = f32(0)
+    if (fc <= f32(0.25)) & (ta > f32(10)) & (td < f32(0)):
         m_surf = m_soil
         m_canopy = f32(0)
-    if (fc <= f32(0.25)) & (ta > f32(10)) & (td < f32(0)) & (ln < f32(-125)):
+    if (swir > nir) & (vari_green < 0) & (gli < 0) & (ndvi > msavi) & (td < 0):
         m_surf = m_soil
         m_canopy = f32(0)
 
