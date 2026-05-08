@@ -1,6 +1,5 @@
 # Custom Dictionary Words
 centre
-cesbio
 choudhury
 dewpoint
 esstar
@@ -21,13 +20,9 @@ vari
 glai
 savi
 msavi
-Psychrometric
+psychrometric
 psychrometrics
-Santanello
 spatiales
-stic
-Tetens
-trishna
 use_topo
 esstar
 estar
@@ -35,3 +30,17 @@ eastar
 vari
 swir
 emis
+ameriflux
+fluxnet
+landcover
+tdew
+
+# Acronyms
+stic
+trishna
+cesbio
+
+# Names
+Tetens
+Mallick
+Santanello
