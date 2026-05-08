@@ -37,9 +37,7 @@
   "[json]": {
     "editor.defaultFormatter": "vscode.json-language-features"
   },
-  "cSpell.ignoreWords": [
-    "tdew"
-  ],
+  "cSpell.ignoreWords": [],
   "cSpell.dictionaries": [
     "python"
   ],
