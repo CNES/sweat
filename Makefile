@@ -28,7 +28,7 @@ test-slow:
 	$(RUN) pytest --runslow -m slow $(TESTARGS)
 
 test-notebook:
-	$(RUN) pytest --runslow -m slow  tests/test_notebooks.py
+	$(RUN) pytest -v --runslow -m slow  tests/test_notebooks.py $(TESTARGS)
 
 check: ruff mypy test
 
