@@ -15,7 +15,7 @@ exclude = [
 ]
 
 # In addition to the standard set of exclusions, omit all tests, plus a specific file.
-extend-exclude = ["raqrs","notebooks/stic"]
+extend-exclude = ["raqrs","notebooks/stic/old"]
 
 line-length = 80
 
