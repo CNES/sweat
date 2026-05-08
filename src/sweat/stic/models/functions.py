@@ -753,8 +753,14 @@ def initialize_alpha_coefficient(
         Priestley-Taylor coefficient
     """
     # Conduction radiometric
+    epsilon = f32(1.0e-7)
     gr = 4 * emis * CST_SB * (ta + KELVIN_CST) ** 3 / (rho * cp)
-    alpha = ((rho * cp * gr * da) / (slope * rn)) + f32(1)
+    den = (
+        (slope * rn)
+        if abs(slope * rn) > epsilon
+        else _sign(slope * rn) * epsilon
+    )
+    alpha = ((rho * cp * gr * da) / den) + f32(1)
     return min(max(alpha, f32(0.2)), f32(2.0))
 
 
