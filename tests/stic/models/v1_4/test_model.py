@@ -281,7 +281,7 @@ def test_run_batch_stic_model(
     """
     Test function for STIC model calculation function
     """
-    res = run_batch_stic_model(data, threshold, nb_steps)
+    res = run_batch_stic_model(data, threshold, nb_steps, debug=False)
     assert res.shape == (1, 8)
     np.testing.assert_almost_equal(res[0, 0], le_expected, decimal=2)
     np.testing.assert_almost_equal(res[0, 2], ef_expected, decimal=2)
@@ -330,6 +330,6 @@ def test_run_batch_init_model(
     """
     Test function for STIC model calculation function
     """
-    res = run_batch_init_stic_model(data)
+    res = run_batch_init_stic_model(data, debug=False)
     assert res.shape == (1, 20)
     np.testing.assert_almost_equal(res[0, 0], le_expected, decimal=2)

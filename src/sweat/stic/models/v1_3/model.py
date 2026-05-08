@@ -176,7 +176,20 @@ def init_stic_model_pixel(
         s4,
     )
     if debug:
-        print("Init SM = ", m, m_soil, s1, s2, s3, s4, es, ds)  # noqa T201
+        print(  # noqa T201
+            "Init SM = ",
+            m,
+            m_canopy,
+            m_soil,
+            m_surf,
+            m_rz,
+            s1,
+            s2,
+            s3,
+            s4,
+            es,
+            ds,
+        )
 
     # Initialize saturation vapor pressure at t0
     e0star = esstar
@@ -359,7 +372,7 @@ def run_stic_model_pixel(
         s4,
     )
     if debug:
-        print("Init SM = ", m, m_soil, s1, s2, s3, s4, es, ds)  # noqa T201
+        print("Init SM = ", m, m_canopy, m_soil, m_surf, m_rz)  # noqa T201
 
     # Initialize saturation vapor pressure at t0
     e0star = esstar
@@ -630,20 +643,25 @@ def run_stic_model(
     return le_arr, ef_arr, converged_arr
 
 
+@njit(
+    nogil=True,
+    parallel=True,
+    cache=True,
+)
 def run_batch_stic_model(
     data: npt.NDArray,
     threshold: float,
     nb_steps: int,
-    debug: bool = False,
+    debug: bool,
 ) -> npt.NDArray:
     """
     Run
 
     """
     n = data.shape[0]
-    out = np.empty((n, 8))
+    out = np.empty((n, 8), dtype=data.dtype)
 
-    for i in range(n):
+    for i in prange(n):
         (le, h, ef, g, ga, gs, t0, m, _) = run_stic_model_pixel(
             ts=data[i, 0],
             ta=data[i, 1],
@@ -670,17 +688,20 @@ def run_batch_stic_model(
     return out
 
 
-def run_batch_init_stic_model(
-    data: npt.NDArray, debug: bool = False
-) -> npt.NDArray:
+@njit(
+    nogil=True,
+    parallel=True,
+    cache=True,
+)
+def run_batch_init_stic_model(data: npt.NDArray, debug: bool) -> npt.NDArray:
     """
     Run
 
     """
     n = data.shape[0]
-    out = np.empty((n, 20))
+    out = np.empty((n, 20), dtype=data.dtype)
 
-    for i in range(n):
+    for i in prange(n):
         (
             le,
             h,
@@ -690,8 +711,8 @@ def run_batch_init_stic_model(
             t0,
             t0d,
             m,
-            _,
-            _,
+            m_canopy,
+            m_soil,
             m_surf,
             m_rz,
             da,
@@ -729,17 +750,17 @@ def run_batch_init_stic_model(
         out[i, 5] = t0
         out[i, 6] = t0d
         out[i, 7] = m
-        out[i, 8] = m_surf
-        out[i, 9] = m_rz
-        out[i, 10] = da
-        out[i, 11] = ds
-        out[i, 12] = es
-        out[i, 13] = ea
-        out[i, 14] = e0
-        out[i, 15] = esstar
-        out[i, 16] = e0star
-        out[i, 17] = alpha
-        out[i, 18] = 0.0
-        out[i, 19] = 0.0
+        out[i, 8] = m_canopy
+        out[i, 9] = m_soil
+        out[i, 10] = m_surf
+        out[i, 11] = m_rz
+        out[i, 12] = da
+        out[i, 13] = ds
+        out[i, 14] = es
+        out[i, 15] = ea
+        out[i, 16] = e0
+        out[i, 17] = esstar
+        out[i, 18] = e0star
+        out[i, 19] = alpha
 
     return out
