@@ -4,7 +4,8 @@ Module for STIC flux computation
 """
 
 import numpy as np
-from numba import float32 as f32  # to define f32
+from numba import float32 as f32
+from numba import float64 as f64
 from numba import njit
 from numba.types import Tuple
 
@@ -19,12 +20,7 @@ TG_MAX = 100000  # for dry surface
 
 
 @njit(
-    (f32)(
-        f32,
-        f32,
-        f32,
-        f32,
-    ),
+    [f32(*(f32,) * 4), f64(*(f64,) * 4)],
     nogil=True,
     cache=True,
 )
@@ -63,22 +59,22 @@ def compute_g_flux(
     """
     rn_soil = rn * np.exp(-KRN * lai)
 
-    sol_noon = f32(12) * f32(60) * f32(60)
+    sol_noon = 12.0 * 60.0 * 60.0
     tg0 = sol_noon - local_time
 
     # Estimating GHF according to Santanello and Friedl (2003)
-    cg = (f32(1) - m) * f32(CG_MAX) + m * f32(CG_MIN)
-    tg = (f32(1) - m) * f32(TG_MAX) + m * f32(TG_MIN)
+    cg = (1 - m) * CG_MAX + m * CG_MIN
+    tg = (1 - m) * TG_MAX + m * TG_MIN
 
-    g_flux = rn_soil * cg * np.cos(f32(2) * np.pi * (tg0 + f32(10800)) / tg)
-    if rn_soil < f32(0):
+    g_flux = rn_soil * cg * np.cos(2.0 * np.pi * (tg0 + 10800.0) / tg)
+    if rn_soil < 0.0:
         g_flux = -g_flux
 
     return g_flux
 
 
 @njit(
-    Tuple((f32,) * 2)(*(f32,) * 7),
+    [Tuple((f32,) * 2)(*(f32,) * 7), Tuple((f64,) * 2)(*(f64,) * 7)],
     nogil=True,
     cache=True,
 )
@@ -129,29 +125,27 @@ def initiate_le_h_fluxes(
     """
     # Calculate ET and H based on initial results from state eqs.
     # with McNaughton and Jarvis (1986)
-    omega = ((slope / f32(PSYCHROMETRIC_CST)) + f32(1)) / (
-        (slope / f32(PSYCHROMETRIC_CST)) + f32(1) + g_aero / g_surf
+    omega = ((slope / PSYCHROMETRIC_CST) + 1) / (
+        (slope / PSYCHROMETRIC_CST) + 1.0 + g_aero / g_surf
     )
-    le_flux_eq = (phi * (slope / f32(PSYCHROMETRIC_CST))) / (
-        (slope / f32(PSYCHROMETRIC_CST)) + f32(1)
+    le_flux_eq = (phi * (slope / PSYCHROMETRIC_CST)) / (
+        (slope / PSYCHROMETRIC_CST) + 1.0
     )
-    le_flux_imp = (
-        (cp * f32(0.0289644) / f32(PSYCHROMETRIC_CST)) * g_surf * f32(40) * da
-    )
-    le_flux = omega * le_flux_eq + (f32(1) - omega) * le_flux_imp
+    le_flux_imp = (cp * 0.0289644 / PSYCHROMETRIC_CST) * g_surf * 40.0 * da
+    le_flux = omega * le_flux_eq + (1.0 - omega) * le_flux_imp
 
     h_flux = (
-        f32(PSYCHROMETRIC_CST) * phi * (f32(1) + g_aero / g_surf)
+        PSYCHROMETRIC_CST * phi * (1.0 + g_aero / g_surf)
         - rho * cp * g_aero * da
     ) / (
-        slope + f32(PSYCHROMETRIC_CST) * (f32(1) + g_aero / g_surf)
+        slope + PSYCHROMETRIC_CST * (1.0 + g_aero / g_surf)
     )  # Deduced from the PM equation
 
     return le_flux, h_flux
 
 
 @njit(
-    Tuple((f32,) * 2)(*(f32,) * 11),
+    [Tuple((f32,) * 2)(*(f32,) * 11), Tuple((f64,) * 2)(*(f64,) * 11)],
     nogil=True,
     cache=True,
 )
@@ -220,19 +214,19 @@ def compute_le_h_fluxes(
         Sensible heat flux
     """
     le_flux = (
-        (rho * cp / f32(PSYCHROMETRIC_CST))
+        (rho * cp / PSYCHROMETRIC_CST)
         * ((g_aero * g_surf) / (g_aero + g_surf))
         * (slope * (t0 - ta) + da)
     )
 
-    if (le_flux < f32(0.0)) & (le_flux < phi):
-        le_flux = rho * cp * g_aero * (e0 - ea) / f32(PSYCHROMETRIC_CST)
+    if (le_flux < 0.0) & (le_flux < phi):
+        le_flux = rho * cp * g_aero * (e0 - ea) / PSYCHROMETRIC_CST
 
     h_flux = (
-        f32(PSYCHROMETRIC_CST) * phi * (f32(1) + g_aero / g_surf)
+        PSYCHROMETRIC_CST * phi * (1.0 + g_aero / g_surf)
         - rho * cp * g_aero * da
     ) / (
-        slope + f32(PSYCHROMETRIC_CST) * (f32(1) + g_aero / g_surf)
+        slope + PSYCHROMETRIC_CST * (1.0 + g_aero / g_surf)
     )  # Deduced from the PM equation
 
     return le_flux, h_flux

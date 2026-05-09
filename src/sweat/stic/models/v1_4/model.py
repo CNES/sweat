@@ -10,8 +10,9 @@ from numba import (
     njit,
     prange,
 )
-from numba import float32 as f32  # to define f32
-from numba import int64 as i64  # to define i64
+from numba import float32 as f32
+from numba import float64 as f64
+from numba import int64 as i64
 from numba.types import Array, Tuple
 
 from sweat.common.constant import ETVar
@@ -80,26 +81,10 @@ REQUIRED_INPUTS: list[str] = [
 
 
 @njit(
-    Tuple((f32,) * 29)(
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        boolean,
-    ),
+    [
+        Tuple((f32,) * 29)(*(f32,) * 17, boolean),
+        Tuple((f64,) * 29)(*(f64,) * 17, boolean),
+    ],
     nogil=True,
     cache=True,
 )
@@ -121,7 +106,7 @@ def init_stic_model_pixel(
     msavi: float,
     emis: float,
     local_time: float,
-    debug: boolean,
+    debug: bool,
 ) -> tuple[float, ...]:
     """
     STIC model initialization function for a single pixel
@@ -314,28 +299,10 @@ def init_stic_model_pixel(
 
 
 @njit(
-    Tuple((f32, f32, f32, f32, f32, f32, f32, f32, boolean))(
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        i64,
-        boolean,
-    ),
+    [
+        Tuple((f32,) * 8 + (boolean,))(*(f32,) * 18, i64, boolean),
+        Tuple((f64,) * 8 + (boolean,))(*(f64,) * 18, i64, boolean),
+    ],
     nogil=True,
     cache=True,
 )
@@ -359,7 +326,7 @@ def run_stic_model_pixel(
     local_time: float,
     threshold: float,
     nb_steps: int,
-    debug: boolean,
+    debug: bool,
 ) -> tuple[float, float, float, float, float, float, float, float, bool]:
     """
     STIC model calculation function for a single pixel
@@ -514,9 +481,10 @@ def run_stic_model_pixel(
 
     # Initialize iteration loop
     le_flux_old = le_flux
-    le_error = f32(0.05)
+    le_error = 5.0 * threshold
     steps = 0
     converged = False
+    t0d_old = t0d
 
     # Iteration step
     while le_error > threshold and steps < nb_steps:
@@ -524,7 +492,7 @@ def run_stic_model_pixel(
             print("step = ", steps)  # noqa T201
         # Re-estimate saturated vapor pressure at canopy/air height
         e0star = compute_canopy_air_saturation_vapor_pressure(
-            le_flux, ea, esstar, g_aero, g_surf, rho, cp, f32(PSYCHROMETRIC_CST)
+            le_flux, ea, esstar, g_aero, g_surf, rho, cp, PSYCHROMETRIC_CST
         )
         if debug:
             print("e0star = ", e0star)  # noqa T201
@@ -538,7 +506,7 @@ def run_stic_model_pixel(
 
         # Re-estimate vapor pressure at canopy/air height (hPa)
         e0 = e0star - d0
-        if e0 < f32(0.0):
+        if e0 < 0.0:
             e0 = es
         if e0 < ea:
             e0 = es
@@ -548,7 +516,7 @@ def run_stic_model_pixel(
             print("e0 = ", e0)  # noqa T201
 
         # Re-estimate dewpoint temperature at source/sink height
-        t0d = td + (f32(PSYCHROMETRIC_CST) * le_flux) / (rho * cp * g_aero * s1)
+        t0d = td + (PSYCHROMETRIC_CST * le_flux) / (rho * cp * g_aero * s1)
         if t0d < td:
             t0d = td
         if t0d > ts:
@@ -632,34 +600,20 @@ def run_stic_model_pixel(
     # Final output from the STIC model
     # Compute EF
     ef = le_flux / (le_flux + h_flux)
-    ef = min(max(ef, f32(0.0)), f32(1.0))
+    ef = min(max(ef, 0.0), 1.0)
 
     return le_flux, h_flux, ef, g_flux, g_aero, g_surf, t0, m, converged
 
 
 @njit(
-    Tuple((Array(f32, 2, "C"), Array(f32, 2, "C"), Array(f32, 2, "C")))(
-        Array(f32, 2, "C"),
-        Array(f32, 2, "C"),
-        Array(f32, 2, "C"),
-        Array(f32, 2, "C"),
-        Array(f32, 2, "C"),
-        Array(f32, 2, "C"),
-        Array(f32, 2, "C"),
-        Array(f32, 2, "C"),
-        Array(f32, 2, "C"),
-        Array(f32, 2, "C"),
-        Array(f32, 2, "C"),
-        Array(f32, 2, "C"),
-        Array(f32, 2, "C"),
-        Array(f32, 2, "C"),
-        Array(f32, 2, "C"),
-        Array(f32, 2, "C"),
-        Array(f32, 2, "C"),
-        Array(i64, 2, "C"),
-        f32,
-        i64,
-    ),
+    [
+        Tuple((Array(f32, 2, "C"),) * 3)(
+            *(Array(f32, 2, "C"),) * 17, Array(i64, 2, "C"), f32, i64
+        ),
+        Tuple((Array(f64, 2, "C"),) * 3)(
+            *(Array(f64, 2, "C"),) * 17, Array(i64, 2, "C"), f64, i64
+        ),
+    ],
     nogil=True,
     parallel=True,
     cache=True,
@@ -783,8 +737,8 @@ def run_stic_model(
                 )
             else:
                 le_arr[i, j], ef_arr[i, j], converged_arr[i, j] = (
-                    f32(np.nan),
-                    f32(np.nan),
+                    np.nan,
+                    np.nan,
                     0,
                 )
 
@@ -792,6 +746,10 @@ def run_stic_model(
 
 
 @njit(
+    [
+        Array(f32, 2, "C")(Array(f32, 2, "C"), f32, i64, boolean),
+        Array(f64, 2, "C")(Array(f64, 2, "C"), f64, i64, boolean),
+    ],
     nogil=True,
     parallel=True,
     cache=True,
@@ -845,6 +803,10 @@ def run_batch_stic_model(
 
 
 @njit(
+    [
+        Array(f32, 2, "C")(Array(f32, 2, "C"), boolean),
+        Array(f64, 2, "C")(Array(f64, 2, "C"), boolean),
+    ],
     nogil=True,
     parallel=True,
     cache=True,

@@ -4,7 +4,8 @@ Module containing functions to compute soil moisture
 for STIC model v1.4
 """
 
-from numba import float32 as f32  # to define f32
+from numba import float32 as f32
+from numba import float64 as f64
 from numba import njit
 from numba.types import Tuple
 
@@ -12,7 +13,7 @@ from sweat.stic.constant import PSYCHROMETRIC_CST
 
 
 @njit(
-    Tuple((f32,) * 8)(*(f32,) * 19),
+    [Tuple((f32,) * 8)(*(f32,) * 19), Tuple((f64,) * 8)(*(f64,) * 19)],
     nogil=True,
     cache=True,
 )
@@ -148,7 +149,7 @@ def initialize_soil_moisture(
     ds: float
         Vapor pressure deficit of the air at the surface (hPa)
     """
-    epsilon = f32(1.0e-7)
+    epsilon = 1.0e-7
     # Compute the surface dewpoint temperature (degC)
     # Handle division by zero
     tsd = (
@@ -161,11 +162,9 @@ def initialize_soil_moisture(
     # for surface wetness (0-1)
     # Handle division by zero
     m_surf = (
-        (s1 / s2) * ((tsd - td) / (ts - td))
-        if abs(ts - td) > epsilon
-        else f32(1)
+        (s1 / s2) * ((tsd - td) / (ts - td)) if abs(ts - td) > epsilon else 1.0
     )
-    m_surf = min(max(m_surf, f32(0.0001)), f32(0.9999))
+    m_surf = min(max(m_surf, 0.0001), 0.9999)
 
     # Compute surface vapor pressure and deficit
     es = ea + m_surf * (esstar - ea)
@@ -174,34 +173,40 @@ def initialize_soil_moisture(
     # Separate the soil and canopy wetness to form a
     # composite surface moisture
     m_canopy = fc * m_surf
-    m_soil = (f32(1) - fc) * m_surf
+    m_soil = (1.0 - fc) * m_surf
 
     # Compute dewpoint temperature index
     # tdew_index > 1 signifies super dry condition
     # Handle division by zero
-    # tdew_index = (ts - tsd) / (ta - td) if abs(ta - td) > epsilon else f32(0)
+    # tdew_index = (ts - tsd) / (ta - td) if abs(ta - td) > epsilon else 0
 
     # Surface wetness comes from the soil, vegetation contribution is negligible
-    # if (fc <= f32(0.25)) & (tdew_index < f32(1)):
+    # if (fc <= 0.25) & (tdew_index < 1):
     # m_surf = m_soil
-    # m_canopy = f32(0)
-    # if (fc <= f32(0.25)) & (ta > f32(10)) & (td < f32(0)) & (ln < f32(-125)):
+    # m_canopy = 0
+    # if (fc <= 0.25) & (ta > 10) & (td < 0) & (ln < -125):
     # m_surf = m_soil
-    # m_canopy = f32(0)
-    if (fc <= f32(0.25)) & (ta > f32(10)) & (td < f32(0)):
+    # m_canopy = 0
+    if (fc <= 0.25) & (ta > 10.0) & (td < 0.0):
         m_surf = m_soil
-        m_canopy = f32(0)
-    if (swir > nir) & (vari_green < 0) & (gli < 0) & (ndvi > msavi) & (td < 0):
+        m_canopy = 0.0
+    if (
+        (swir > nir)
+        & (vari_green < 0.0)
+        & (gli < 0.0)
+        & (ndvi > msavi)
+        & (td < 0.0)
+    ):
         m_surf = m_soil
-        m_canopy = f32(0)
+        m_canopy = 0.0
 
     # Compute root zone moisture (Mrz)
-    m_rz = (f32(PSYCHROMETRIC_CST) * s1 * (tsd - td)) / (
+    m_rz = (PSYCHROMETRIC_CST * s1 * (tsd - td)) / (
         slope * s3 * (ts - td)
-        + f32(PSYCHROMETRIC_CST) * s4 * (ta - td)
+        + PSYCHROMETRIC_CST * s4 * (ta - td)
         - slope * s1 * (tsd - td)
     )
-    m_rz = min(max(m_rz, f32(0.0001)), f32(0.9999))
+    m_rz = min(max(m_rz, 0.0001), 0.9999)
 
     # Combine soil moisture to account for hysteresis
     # and initial estimation of surface vapor pressure
@@ -209,12 +214,12 @@ def initialize_soil_moisture(
 
     # Conditions to switch to root zone soil moisture
     # Severely stressed vegetation
-    if (swir > nir) and (vari_green < f32(0)) and (gli > f32(0)):
+    if (swir > nir) and (vari_green < 0.0) and (gli > 0.0):
         m = m_rz
     # Severely stressed vegetation
     if (
         (swir > nir)
-        and (vari_green < f32(0))
+        and (vari_green < 0.0)
         and (ndvi > gndvi)
         and (ndvi > msavi)
     ):
@@ -222,19 +227,14 @@ def initialize_soil_moisture(
     # Stressed sparse vegetation
     if (
         (swir > nir)
-        and (vari_green > f32(0))
-        and (gli > f32(0))
+        and (vari_green > 0.0)
+        and (gli > 0.0)
         and (ndvi > gndvi)
         and (ndvi > msavi)
     ):
         m = m_rz
     # Special conditions for stressed bare case
-    if (
-        (swir > nir)
-        and (vari_green < f32(0))
-        and (gli < f32(0))
-        and (ndvi > msavi)
-    ):
+    if (swir > nir) and (vari_green < 0.0) and (gli < 0.0) and (ndvi > msavi):
         m = m_rz
 
     # Update vapor pressure at surface
@@ -247,7 +247,7 @@ def initialize_soil_moisture(
 
 
 @njit(
-    Tuple((f32,) * 5)(*(f32,) * 21),
+    [Tuple((f32,) * 5)(*(f32,) * 21), Tuple((f64,) * 5)(*(f64,) * 21)],
     nogil=True,
     cache=True,
 )
@@ -391,42 +391,49 @@ def iterate_soil_moisture(
         Surface moisture availability for root zone wetness (0-1)
     """
     # Surface available moisture
-    m_surf = f32(1)
-    if abs(ts - td) > f32(1.0e-7):
+    m_surf = 1.0
+    epsilon = 1.0e-7
+    if abs(ts - td) > epsilon:
         k = (e0star - ea) / (esstar - ea)
         m_surf = (s1 / (k * s2)) * ((t0d - td) / (ts - td))  # surface wetness
-    m_surf = min(max(m_surf, f32(0.0001)), f32(0.9999))
+    m_surf = min(max(m_surf, 0.0001), 0.9999)
 
     # Separating soil and canopy wetness to form a composite surface moisture
     m_canopy = fc * m_surf
-    m_soil = (f32(1) - fc) * m_surf
+    m_soil = (1.0 - fc) * m_surf
 
     # Handle division by zero
     # tdew_index = (
-    # (ts - t0d) / (ta - td) if abs(ta - td) > f32(1.0e-7) else f32(0)
+    # (ts - t0d) / (ta - td) if abs(ta - td) > 1.0e-7 else 0
     # )
 
     # Surface wetness comes from the soil, vegetation contribution is negligible
-    # if (fc <= f32(0.25)) & (tdew_index < f32(1)):
+    # if (fc <= 0.25) & (tdew_index < 1):
     # m_surf = m_soil
-    # m_canopy = f32(0)
-    # if (fc <= f32(0.25)) & (ta > f32(10)) & (td < f32(0)) & (ln < f32(-125)):
+    # m_canopy = 0
+    # if (fc <= 0.25) & (ta > 10) & (td < 0) & (ln < -125):
     # m_surf = m_soil
-    # m_canopy = f32(0)
-    if (fc <= f32(0.25)) & (ta > f32(10)) & (td < f32(0)):
+    # m_canopy = 0
+    if (fc <= 0.25) & (ta > 10.0) & (td < 0.0):
         m_surf = m_soil
-        m_canopy = f32(0)
-    if (swir > nir) & (vari_green < 0) & (gli < 0) & (ndvi > msavi) & (td < 0):
+        m_canopy = 0.0
+    if (
+        (swir > nir)
+        & (vari_green < 0.0)
+        & (gli < 0.0)
+        & (ndvi > msavi)
+        & (td < 0.0)
+    ):
         m_surf = m_soil
-        m_canopy = f32(0)
+        m_canopy = 0.0
 
     # Root zone moisture (Mrz)
-    m_rz = (f32(PSYCHROMETRIC_CST) * s1 * (t0d - td)) / (
+    m_rz = (PSYCHROMETRIC_CST * s1 * (t0d - td)) / (
         slope * s3 * (ts - td)
-        + f32(PSYCHROMETRIC_CST) * s4 * (ta - td)
+        + PSYCHROMETRIC_CST * s4 * (ta - td)
         - slope * s1 * (t0d - td)
     )
-    m_rz = min(max(m_rz, f32(0.0001)), f32(0.9999))
+    m_rz = min(max(m_rz, 0.0001), 0.9999)
 
     # Combine M to account for Hysteresis and
     # initial estimation of surface vapor pressure
@@ -434,12 +441,12 @@ def iterate_soil_moisture(
 
     # Conditions to switch to root zone soil moisture
     # Severely stressed vegetation
-    if (swir > nir) and (vari_green < f32(0)) and (gli > f32(0)):
+    if (swir > nir) and (vari_green < 0.0) and (gli > 0.0):
         m = m_rz
     # Severely stressed vegetation
     if (
         (swir > nir)
-        and (vari_green < f32(0))
+        and (vari_green < 0.0)
         and (ndvi > gndvi)
         and (ndvi > msavi)
     ):
@@ -447,19 +454,14 @@ def iterate_soil_moisture(
     # Stressed sparse vegetation
     if (
         (swir > nir)
-        and (vari_green > f32(0))
-        and (gli > f32(0))
+        and (vari_green > 0.0)
+        and (gli > 0.0)
         and (ndvi > gndvi)
         and (ndvi > msavi)
     ):
         m = m_rz
     # Special conditions for stressed bare case
-    if (
-        (swir > nir)
-        and (vari_green < f32(0))
-        and (gli < f32(0))
-        and (ndvi > msavi)
-    ):
+    if (swir > nir) and (vari_green < 0.0) and (gli < 0.0) and (ndvi > msavi):
         m = m_rz
 
     return (m, m_surf, m_canopy, m_soil, m_rz)

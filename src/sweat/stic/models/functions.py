@@ -8,7 +8,8 @@ from __future__ import annotations
 
 from math import copysign, exp
 
-from numba import float32 as f32  # to define f32
+from numba import float32 as f32
+from numba import float64 as f64
 from numba import int8 as i8
 from numba import njit
 from numba.types import Tuple
@@ -31,16 +32,16 @@ C_TETENS = 237.3
 
 
 @njit(
-    (i8)(f32),
+    [i8(f32), i8(f64)],
     nogil=True,
     cache=True,
 )
 def _sign(x):
-    return i8(copysign(f32(1), x))
+    return i8(copysign(1, x))
 
 
 @njit(
-    (f32)(f32),
+    [f32(f32), f64(f64)],
     nogil=True,
     cache=True,
 )
@@ -70,11 +71,11 @@ def _tetens(t: float) -> float:
         Saturation vapor pressure (hPa)
     """
     # Saturation vapor pressure at surface temperature TS (unit hPa)
-    return f32(A_TETENS) * exp((f32(B_TETENS) * t) / (t + f32(C_TETENS)))
+    return A_TETENS * exp((B_TETENS * t) / (t + C_TETENS))
 
 
 @njit(
-    (f32)(f32),
+    [f32(f32), f64(f64)],
     nogil=True,
     cache=True,
 )
@@ -100,19 +101,17 @@ def _tetens_derivative(t: float) -> float:
     slope: float
         Slope of saturation vapor pressure (hPa/degC)
     """
-    return f32(B_TETENS) * f32(C_TETENS) * _tetens(t) / (t + f32(C_TETENS)) ** 2
+    return B_TETENS * C_TETENS * _tetens(t) / (t + C_TETENS) ** 2
 
 
 @njit(
-    Tuple((f32,) * 11)(*(f32,) * 4),
+    [Tuple((f32,) * 11)(*(f32,) * 4), Tuple((f64,) * 11)(*(f64,) * 4)],
     nogil=True,
     cache=True,
 )
 def compute_psychrometrics(
     ts: float, ta: float, td: float, rh: float
-) -> tuple[
-    float, float, float, float, float, float, float, float, float, float, float
-]:
+) -> tuple[float, ...]:
     """
     Compute psychrometrics
 
@@ -261,7 +260,7 @@ def compute_psychrometrics(
     eastar = _tetens(ta)
     # Compute actual vapor pressure of air (unit hPa)
     # using the definition of relative humidity
-    ea = (rh / f32(100)) * (eastar)
+    ea = (rh / 100) * (eastar)
     # Vapor pressure deficit of air (hPa)
     da = eastar - ea
     # Compute the slope of saturation vapor pressure versus temperature
@@ -276,22 +275,15 @@ def compute_psychrometrics(
     s3 = (45.03 + 3.014 * ts + 0.05345 * ts**2 + 0.00224 * ts**3) * 1e-2
     s4 = (eastar - ea) / (ta - td) if abs(ta - td) > f32(1.0e-7) else s1
     # Specific humidity
-    qref = (f32(MWRATIO) * ea) / (
-        f32(STANDARD_PRESSURE) - (f32(1) - f32(MWRATIO)) * ea
-    )
+    qref = (MWRATIO * ea) / (STANDARD_PRESSURE - (1 - MWRATIO) * ea)
     # Water vapor mixing ratio
-    r = qref / (f32(1) - qref)
+    r = qref / (1 - qref)
     # Density of dry air
-    rho_dry = (
-        f32(100)
-        * f32(STANDARD_PRESSURE)
-        / (f32(R_DRY) * (ta + f32(KELVIN_CST)))
-    )
+    rho_dry = 100 * STANDARD_PRESSURE / (R_DRY * (ta + KELVIN_CST))
     # Density of air computed with the equation of state for moist air
-    rho = rho_dry * ((f32(1) + r) / (f32(1) + r / f32(MWRATIO)))
+    rho = rho_dry * ((1 + r) / (1 + r / MWRATIO))
     # Specific heat of air
-
-    cp = qref * f32(CP_WET) + (f32(1) - qref) * f32(CP_DRY)
+    cp = qref * CP_WET + (1 - qref) * CP_DRY
 
     return (
         esstar,
@@ -309,7 +301,7 @@ def compute_psychrometrics(
 
 
 @njit(
-    Tuple((f32,) * 4)(*(f32,) * 9),
+    [Tuple((f32,) * 4)(*(f32,) * 9), Tuple((f64,) * 4)(*(f64,) * 9)],
     nogil=True,
     cache=True,
 )
@@ -394,100 +386,89 @@ def compute_state_equations(
 
     # Aerodynamic conductance
     g_aero_den = (
-        f32(2) * cp * slope * e0 * rho
-        - f32(2) * cp * slope * ea * rho
-        - f32(2) * cp * ea * f32(PSYCHROMETRIC_CST) * rho
-        + cp * e0 * f32(PSYCHROMETRIC_CST) * rho
-        + cp * e0star * f32(PSYCHROMETRIC_CST) * rho
-        - cp * m * e0 * f32(PSYCHROMETRIC_CST) * rho
-        + cp * m * e0star * f32(PSYCHROMETRIC_CST) * rho
+        2 * cp * slope * e0 * rho
+        - 2 * cp * slope * ea * rho
+        - 2 * cp * ea * PSYCHROMETRIC_CST * rho
+        + cp * e0 * PSYCHROMETRIC_CST * rho
+        + cp * e0star * PSYCHROMETRIC_CST * rho
+        - cp * m * e0 * PSYCHROMETRIC_CST * rho
+        + cp * m * e0star * PSYCHROMETRIC_CST * rho
     )
     g_aero_den = (
         g_aero_den if abs(g_aero_den) > epsilon else _sign(g_aero_den) * epsilon
     )
-    g_aero = (f32(2) * phi * alpha * slope * f32(PSYCHROMETRIC_CST)) / (
-        g_aero_den
-    )
+    g_aero = (2 * phi * alpha * slope * PSYCHROMETRIC_CST) / (g_aero_den)
     # Adjust the abnormal conductances
-    g_aero = min(max(g_aero, f32(0.0001)), f32(0.1))
+    g_aero = min(max(g_aero, 0.0001), 0.1)
 
     # Surface conductance
     g_surf_den = (
-        cp * e0star**2 * f32(PSYCHROMETRIC_CST) * rho
-        - cp * e0**2 * f32(PSYCHROMETRIC_CST) * rho
-        - f32(2) * cp * slope * e0**2 * rho
-        + f32(2) * cp * slope * ea * e0 * rho
-        - f32(2) * cp * slope * ea * e0star * rho
-        + f32(2) * cp * slope * e0 * e0star * rho
-        + f32(2) * cp * ea * e0 * f32(PSYCHROMETRIC_CST) * rho
-        - f32(2) * cp * ea * e0star * f32(PSYCHROMETRIC_CST) * rho
-        + cp * m * e0**2 * f32(PSYCHROMETRIC_CST) * rho
-        + cp * m * e0star**2 * f32(PSYCHROMETRIC_CST) * rho
-        - f32(2) * cp * m * e0 * e0star * f32(PSYCHROMETRIC_CST) * rho
+        cp * e0star**2 * PSYCHROMETRIC_CST * rho
+        - cp * e0**2 * PSYCHROMETRIC_CST * rho
+        - 2 * cp * slope * e0**2 * rho
+        + 2 * cp * slope * ea * e0 * rho
+        - 2 * cp * slope * ea * e0star * rho
+        + 2 * cp * slope * e0 * e0star * rho
+        + 2 * cp * ea * e0 * PSYCHROMETRIC_CST * rho
+        - 2 * cp * ea * e0star * PSYCHROMETRIC_CST * rho
+        + cp * m * e0**2 * PSYCHROMETRIC_CST * rho
+        + cp * m * e0star**2 * PSYCHROMETRIC_CST * rho
+        - 2 * cp * m * e0 * e0star * PSYCHROMETRIC_CST * rho
     )
     g_surf_den = (
         g_surf_den if abs(g_surf_den) > epsilon else _sign(g_surf_den) * epsilon
     )
     g_surf = -(
-        f32(2)
+        2
         * (
-            phi * alpha * slope * ea * f32(PSYCHROMETRIC_CST)
-            - phi * alpha * slope * e0 * f32(PSYCHROMETRIC_CST)
+            phi * alpha * slope * ea * PSYCHROMETRIC_CST
+            - phi * alpha * slope * e0 * PSYCHROMETRIC_CST
         )
     ) / (g_surf_den)
     # Adjust the abnormal conductances
-    g_surf = min(max(g_surf, f32(0.0001)), f32(0.1))
+    g_surf = min(max(g_surf, 0.0001), 0.1)
 
     # T0 - TA
-    delta_t_den = f32(2) * alpha * slope * f32(PSYCHROMETRIC_CST)
+    delta_t_den = 2 * alpha * slope * PSYCHROMETRIC_CST
     delta_t_den = (
         delta_t_den
         if abs(delta_t_den) > epsilon
         else _sign(delta_t_den) * epsilon
     )
     delta_t = (
-        f32(2) * slope * e0
-        - f32(2) * slope * ea
-        - f32(2) * ea * f32(PSYCHROMETRIC_CST)
-        + e0 * f32(PSYCHROMETRIC_CST)
-        + e0star * f32(PSYCHROMETRIC_CST)
-        - m * e0 * f32(PSYCHROMETRIC_CST)
-        + m * e0star * f32(PSYCHROMETRIC_CST)
-        + f32(2) * alpha * slope * ea
-        - f32(2) * alpha * slope * e0
+        2 * slope * e0
+        - 2 * slope * ea
+        - 2 * ea * PSYCHROMETRIC_CST
+        + e0 * PSYCHROMETRIC_CST
+        + e0star * PSYCHROMETRIC_CST
+        - m * e0 * PSYCHROMETRIC_CST
+        + m * e0star * PSYCHROMETRIC_CST
+        + 2 * alpha * slope * ea
+        - 2 * alpha * slope * e0
     ) / (delta_t_den)
     # Maximum surface-air temperature difference rarely overpasses 20 degC
-    delta_t = min(max(delta_t, f32(-10)), f32(20))
+    delta_t = min(max(delta_t, -10), 20)
 
     # Evaporative fraction
     ef_den = (
-        f32(2) * slope * e0
-        - f32(2) * slope * ea
-        - f32(2) * ea * f32(PSYCHROMETRIC_CST)
-        + e0 * f32(PSYCHROMETRIC_CST)
-        + e0star * f32(PSYCHROMETRIC_CST)
-        - m * e0 * f32(PSYCHROMETRIC_CST)
-        + m * e0star * f32(PSYCHROMETRIC_CST)
+        2 * slope * e0
+        - 2 * slope * ea
+        - 2 * ea * PSYCHROMETRIC_CST
+        + e0 * PSYCHROMETRIC_CST
+        + e0star * PSYCHROMETRIC_CST
+        - m * e0 * PSYCHROMETRIC_CST
+        + m * e0star * PSYCHROMETRIC_CST
     )
     ef_den = ef_den if abs(ef_den) > epsilon else _sign(ef_den) * epsilon
-    ef = -(f32(2) * alpha * slope * ea - f32(2) * alpha * slope * e0) / (ef_den)
+    ef = -(2 * alpha * slope * ea - 2 * alpha * slope * e0) / (ef_den)
     # Clip value for EF
-    ef = min(max(ef, f32(0.0001)), f32(1.0))
+    ef = min(max(ef, 0.0001), 1.0)
 
     return (g_aero, g_surf, delta_t, ef)
 
 
 @njit(
-    (f32)(
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-    ),
+    [f32(*(f32,) * 8), f64(*(f64,) * 8)],
     nogil=True,
     cache=True,
     inline="always",
@@ -538,21 +519,12 @@ def compute_canopy_air_saturation_vapor_pressure(
         Canopy/air saturated vapor pressure
     """
     e0star = ea + (gamma * le_flux * (g_a + g_s)) / (rho * cp * g_a * g_s)
-    e0star = e0star if e0star >= f32(0.0) else esstar
-    return e0star if e0star < f32(250.0) else esstar
+    e0star = e0star if e0star >= 0.0 else esstar
+    return e0star if e0star < 250.0 else esstar
 
 
 @njit(
-    (f32)(
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-    ),
+    [f32(*(f32,) * 8), f64(*(f64,) * 8)],
     nogil=True,
     cache=True,
     inline="always",
@@ -606,27 +578,15 @@ def compute_canopy_air_vapor_pressure_deficit(
         Canopy/air vapor pressure deficit
     """
     d0 = (
-        (g_aero / g_surf)
-        * (
-            f32(PSYCHROMETRIC_CST)
-            / (slope + f32(PSYCHROMETRIC_CST) * (f32(1) + g_aero / g_surf))
-        )
-        * (da + ((slope * phi) / (rho * cp * g_aero)))
-    )
-    return d0 if d0 >= f32(0.0) else ds
+        PSYCHROMETRIC_CST
+        * (g_aero / g_surf)
+        / (slope + PSYCHROMETRIC_CST * (1 + g_aero / g_surf))
+    ) * (da + ((slope * phi) / (rho * cp * g_aero)))
+    return d0 if d0 >= 0.0 else ds
 
 
 @njit(
-    (f32)(
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-    ),
+    [f32(*(f32,) * 8), f64(*(f64,) * 8)],
     nogil=True,
     cache=True,
     inline="always",
@@ -684,31 +644,23 @@ def compute_alpha_coefficient(
         g_surf
         * (e0star - ea)
         * (
-            f32(2) * slope
-            + f32(2) * f32(PSYCHROMETRIC_CST)
-            + f32(PSYCHROMETRIC_CST) * (g_aero / g_surf) * (f32(1) + m)
+            2 * slope
+            + 2 * PSYCHROMETRIC_CST
+            + PSYCHROMETRIC_CST * (g_aero / g_surf) * (1 + m)
         )
     ) / (
-        f32(2)
+        2
         * slope
         * (
-            f32(PSYCHROMETRIC_CST) * (t0 - ta) * (g_aero + g_surf)
+            PSYCHROMETRIC_CST * (t0 - ta) * (g_aero + g_surf)
             + g_surf * (e0star - ea)
         )
     )
-    return min(max(alpha, f32(0.1)), f32(2.0))
+    return min(max(alpha, 0.1), 2.0)
 
 
 @njit(
-    (f32)(
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-    ),
+    [f32(*(f32,) * 7), f64(*(f64,) * 7)],
     nogil=True,
     cache=True,
     inline="always",
@@ -753,7 +705,7 @@ def initialize_alpha_coefficient(
         Priestley-Taylor coefficient
     """
     # Conduction radiometric
-    epsilon = f32(1.0e-7)
+    epsilon = 1.0e-7
     gr = 4 * emis * CST_SB * (ta + KELVIN_CST) ** 3 / (rho * cp)
     den = (
         (slope * rn)
@@ -761,14 +713,11 @@ def initialize_alpha_coefficient(
         else _sign(slope * rn) * epsilon
     )
     alpha = ((rho * cp * gr * da) / den) + f32(1)
-    return min(max(alpha, f32(0.2)), f32(2.0))
+    return min(max(alpha, 0.2), 2.0)
 
 
 @njit(
-    (f32)(
-        f32,
-        f32,
-    ),
+    [f32(f32, f32), f64(f64, f64)],
     nogil=True,
     cache=True,
     inline="always",
@@ -796,7 +745,7 @@ def compute_wet_surface_temperature(ta: float, ea: float) -> float:
     """
     # Initialization
     tw = ta
-    epsilon = f32(1.0e-7)
+    epsilon = 1.0e-7
     # Iterative loop
     for _ in range(50):
         esstar_w = _tetens(tw)
@@ -808,9 +757,7 @@ def compute_wet_surface_temperature(ta: float, ea: float) -> float:
 
 
 @njit(
-    (f32)(
-        f32,
-    ),
+    [f32(f32), f64(f64)],
     nogil=True,
     cache=True,
     inline="always",

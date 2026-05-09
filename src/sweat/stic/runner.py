@@ -3,6 +3,8 @@
 Module containing methods for running STIC models
 """
 
+from typing import Literal
+
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
@@ -12,6 +14,8 @@ from sweat.stic.registry import (
     DEFAULT_VERSION,
     MODEL_REGISTRY,
 )
+
+TYPES = Literal["float32", "float64"]
 
 
 def check_model(data: xr.Dataset, version: str | None) -> bool:
@@ -51,6 +55,7 @@ def run_model(
     threshold: float = 0.01,
     nb_steps: int = 15,
     version: str | None = None,
+    precision: TYPES = "float32",
 ) -> tuple[npt.NDArray, npt.NDArray, npt.NDArray]:
     """
     Run STIC model on a dataset
@@ -65,6 +70,8 @@ def run_model(
         Max number of iterations
     version: str
         Model version
+    precision: str
+        Precision used for computation (float32 or float64)
 
     Returns
     -------
@@ -76,6 +83,7 @@ def run_model(
     if version not in MODEL_REGISTRY:
         msg = f"Unknown run_stic_model version: {version}"
         raise ValueError(msg)
+    dtype = np.dtype(precision)
 
     spec = MODEL_REGISTRY[version]
 
@@ -84,7 +92,7 @@ def run_model(
         msg = f"Missing variables: {missing}"
         raise ValueError(msg)
 
-    inputs = [data[v].data.astype(np.float32) for v in spec.inputs]
+    inputs = [data[v].data.astype(dtype) for v in spec.inputs]
     if valid is None:
         valid = np.ones_like(inputs[0], dtype=np.int64)
     return spec.raster_func(
@@ -102,6 +110,7 @@ def run_batch_model(
     version: str | None = None,
     debug: bool = False,
     mapping: bool = True,
+    precision: TYPES = "float32",
 ) -> npt.NDArray:
     """
     Run STIC model on a dataframe
@@ -120,6 +129,8 @@ def run_batch_model(
         Use debug mode
     mapping: bool
         Used mapping for variables
+    precision: str
+        Precision used for computation (float32 or float64)
 
     Returns
     -------
@@ -131,6 +142,7 @@ def run_batch_model(
     if version not in MODEL_REGISTRY:
         msg = f"Unknown run_batch_stic_model version: {version}"
         raise ValueError(msg)
+    dtype = np.dtype(precision)
 
     spec = MODEL_REGISTRY[version]
     col_inputs = list(spec.inputs.keys())
@@ -142,8 +154,9 @@ def run_batch_model(
         msg = f"Missing variables: {missing}"
         raise ValueError(msg)
 
-    inputs = data[col_inputs].to_numpy()
-    inputs = inputs.astype(np.float32)
+    # Convert to numpy array
+    inputs = np.asarray(data[col_inputs].to_numpy(), order="C", dtype=dtype)
+    inputs.setflags(write=True)
 
     # Return un dataframe
     return spec.batch_func(
@@ -156,6 +169,7 @@ def run_batch_init_model(
     version: str | None = None,
     debug: bool = False,
     mapping: bool = True,
+    precision: TYPES = "float32",
 ) -> npt.NDArray:
     """
     Run STIC model initialization on a dataframe
@@ -170,6 +184,8 @@ def run_batch_init_model(
         Use debug mode
     mapping: bool
         Used mapping for variables
+    precision: str
+        Precision used for computation (float32 or float64)
 
     Returns
     -------
@@ -181,6 +197,7 @@ def run_batch_init_model(
     if version not in MODEL_REGISTRY:
         msg = f"Unknown run_batch_stic_model version: {version}"
         raise ValueError(msg)
+    dtype = np.dtype(precision)
 
     spec = MODEL_REGISTRY[version]
     col_inputs = list(spec.inputs.keys())
@@ -192,7 +209,9 @@ def run_batch_init_model(
         msg = f"Missing variables: {missing}"
         raise ValueError(msg)
 
-    inputs = data[col_inputs].to_numpy()
-    inputs = inputs.astype(np.float32)
+    # Convert to numpy array
+    inputs = np.asarray(data[col_inputs].to_numpy(), order="C", dtype=dtype)
+    inputs.setflags(write=True)
+
     # Return un dataframe
     return spec.init_func(inputs, debug=debug)
