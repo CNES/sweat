@@ -3,9 +3,11 @@
 
 ## Filtering step
 
-The configuration describes how to find valid pixels. It is a dictionary.
+The configuration describes how to find valid pixels, i.e.
+where ET is computed.
+The configuration is stored in the form of a dictionary.
 The key corresponds to the variable to look at.
-The value is either a single condition or a combined conditionThe key correspond to the data variables.
+The value is either a single condition or a combined condition.
 
 ### Simple condition
 
@@ -57,10 +59,42 @@ This configuration describes the parameters for EF processing step.
 
 | Name | Description | Type | Mandatory | Default value | Possible value |
 |------|-------------|------|-----------|---------------|----------------|
-| models | EF model description. See [EF models](ef_model.md#ef-models-configuration) | str or list[dict] | yes | - | - |
-| options.selection | Activate model selection (Not implemented yet) | bool | no | false | true or false |
-| options.merging | Method used to merge EF data | str | no | "mean" | "median","mean" |
-| check.threshold | Threshold used to check land surface temperature variability | float | no | 0.02 | - |
+| `models` | EF model description. See [EF models](ef_model.md#ef-models-configuration) | str or list[dict] | yes | - | - |
+| `options.filtering` | Use to define points to be considered for computing the regression points for dry/wet edges | dict | no | - | - |
+| `options.selection` | Activate model selection (Not implemented yet) | bool | no | false | true or false |
+| `options.merging` | Methods used to merge EF data and compute uncertainty | str | no | "mean" | "median","mean" |
+| `check.threshold` | Threshold used to check land surface temperature variability | float | no | 0.02 | - |
+
+### Options: filtering
+
+This section of the configuration corresponds to a second level of filtering.
+It is used to describe which pixels must be kept for selecting the regression points based for the dry/wet edges computation.
+This configuration is similar to the one used for define valid pixels, see [Filtering](#filtering-step).
+
+### Options: Merging
+
+This section of the configuration describes the methods used to :
+
+- to merge EF data
+- to compute uncertainty
+
+| Name | Description | Type | Mandatory | Default value | Possible value |
+|------|-------------|------|-----------|---------------|----------------|
+| `merging_method` | Methods used to merge EF data and compute uncertainty | str | no | "mean"  | "mean", "median" |
+| `uncertainty_method` | Methods used to merge EF data and compute uncertainty | str | no | "interquartile" | "std", "nmad", "interquartile" |
+
+```json
+"merging": {
+    "merging_method": "median",
+    "uncertainty_method": "interquartile"
+}
+```
+
+If `merging_method` is provided but not `uncertainty_method`, then `uncertainty_method` is set to
+- **std** if `merging_method` is equal to **mean**
+- **nmad** if `merging_method` is equal to **median**
+
+### Example
 
 ```json
 {
@@ -107,8 +141,25 @@ This configuration describes the parameters for EF processing step.
 
         ],
         "options": {
+            "filtering": {
+                    "albedo": {
+                        "and": [
+                            {
+                                "op": ">=",
+                                "value": 0.1
+                            },
+                            {
+                                "op": "<=",
+                                "value": 0.3
+                            }
+                        ]
+                    }
+                },
             "selection": false,
-            "merging": "mean"
+            "merging": {
+                "merging_method": "median",
+                "uncertainty_method": "interquartile"
+            }
         },
         "check": {
             "threshold": 0.02
@@ -123,7 +174,9 @@ This configuration describes the parameters for EF processing step.
         "models": "default_evaspa",
         "options": {
             "selection": false,
-            "merging": "mean"
+            "merging": {
+                "merging_method": "median"
+            }
         },
         "check": {
             "threshold": 0.02
@@ -139,9 +192,34 @@ This configuration describes the parameters for SEB processing step.
 
 | Name | Description | Type | Mandatory | Default value | Possible value |
 |------|-------------|------|-----------|---------------|----------------|
-| models | Models used to compute $G/R_n$ | list[str] | no | ["kustas"] | "kustas","su","choudhury" |
-| use_topo | Use topographic corrections for net radiation computation | bool | no | false | true or false |
-| merging | Method used to merge LE data | str | no | "mean" | "median","mean" |
+| `models` | Models used to compute $G/R_n$ | list[str] | no | ["kustas"] | "kustas","su","choudhury" |
+| `use_topo` | Use topographic corrections for net radiation computation | bool | no | false | true or false |
+| `merging` | Methods used to merge LE data and to compute uncertainty | dict | no | - | - |
+
+### Merging
+
+This section of the configuration describes the methods used to :
+
+- to merge LE data
+- to compute uncertainty
+
+| Name | Description | Type | Mandatory | Default value | Possible value |
+|------|-------------|------|-----------|---------------|----------------|
+| `merging_method` | Methods used to merge LE data and compute uncertainty | str | no | "mean"  | "mean", "median" |
+| `uncertainty_method` | Methods used to merge LE data and compute uncertainty | str | no | "interquartile" | "std", "nmad", "interquartile" |
+
+```json
+"merging": {
+    "merging_method": "median",
+    "uncertainty_method": "interquartile"
+}
+```
+
+The *merging* configuration should be the same that the one used for [EF step](#options-merging).
+If not, a warning is raised and the configuration is changed to correspond to the EF step.
+
+
+### Example
 
 ```json
 {
@@ -150,7 +228,10 @@ This configuration describes the parameters for SEB processing step.
         "models": [
             "kustas"
         ],
-        "merging": "mean"
+        "merging": {
+            "merging_method": "median",
+            "uncertainty_method": "interquartile"
+        }
     }
 }
 ```
@@ -161,8 +242,8 @@ This configuration describes the parameters for daily extrapolation processing s
 
 | Name | Description | Type | Mandatory | Default value | Possible value |
 |------|-------------|------|-----------|---------------|----------------|
-| method | Method used daily extrapolation | str | no | "toa" | "toa" |
-| use_topo | Use topographic corrections for daily extrapolation | bool | no | false | true or false |
+| `method` | Method used daily extrapolation | str | no | "toa" | "toa" |
+| `use_topo` | Use topographic corrections for daily extrapolation | bool | no | false | true or false |
 
 ```json
 {
