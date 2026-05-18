@@ -43,4 +43,4 @@ pixi.lock
 # Generated docs
 site/
 docs/private.md
-!docs/images/*.png
+!docs/**/images/*.png
