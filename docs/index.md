@@ -1,8 +1,8 @@
-# Welcome to Evapotranspiration for TRISHNA Documentation
+# Welcome to SWEAT Documentation
 
-This site contains the project documentation for the algorithms
-used in TRISHNA mission to compute evapotranspiration.
-
+Spatial Water stress and Evapotranspiration Assessment for TRISHNA
+(SWEAT) is a toolbox containing the evapotranspiration algorithms used in TRISHNA
+mission.
 
 To get started with the toolbox, go [here](getting_started.md).
 

@@ -56,11 +56,11 @@ The **input** section is composed of:
 
 | Name | Description | Type | Mandatory | Default value |
 |------|-------------|------|-----------|--------------|
-| et_time_series | List of file paths of previous ET time series | list[str] | yes | - |
-| dates | List of dates to compute the new ET time series. If not provided, the dates correspond to ET time series | list[str] | non | - |
-| radiation | List of file paths of daily radiation. If not provided, theoretical radiation is computed. | list[str] | no | - |
-| et_single_date | List of file paths of new ET products used to update the tET time series. | list[str] | no | - |
-| dem | Path to the DEM | str | no | - |
+| `et_time_series` | List of file paths of previous ET time series | list[str] | yes | - |
+| `dates` | List of dates to compute the new ET time series. If not provided, the dates correspond to ET time series | list[str] | non | - |
+| `radiation` | List of file paths of daily radiation. If not provided, theoretical radiation is computed. | list[str] | no | - |
+| `et_single_date` | List of file paths of new ET products used to update the tET time series. | list[str] | no | - |
+| `dem` | Path to the DEM | str | no | - |
 
 The path of input data must be a GeoTIF file.
 The code assumes that each band of the GeoTIF file
@@ -116,9 +116,10 @@ The **output** section is composed of:
 
 | Name | Description | Type | Mandatory | Default value |
 |------|-------------|------|-----------|---------------|
-| path | Path to write results | str | yes | - |
+| `path` | Path to write results | str | yes | - |
 
-Example:
+Example
+:
 ```json
 "output":{
     "path":"out"
@@ -134,11 +135,12 @@ The **debug** section is composed of:
 
 | Name | Description | Type | Mandatory | Default value |
 |------|-------------|------|-----------|---------------|
-| profile | Activate profiling | bool | no | false |
-| verbose | Activate intermediate result writing | bool | no | false |
-| path | Path to write intermediate results | str | no | debug |
+| `profile` | Activate profiling | bool | no | false |
+| `verbose` | Activate intermediate result writing | bool | no | false |
+| `path` | Path to write intermediate results | str | no | debug |
 
 Example:
+
 ```json
 "debug": {
     "profile": true,
@@ -184,6 +186,7 @@ The input file is composed of 4 sections:
   * **debug** (optional): provide information for debug mode
 
 An example of input file:
+
 ```json
 {
     "input": {
@@ -205,15 +208,16 @@ The **input** section is composed of:
 
 | Name | Description | Type | Mandatory | Default value |
 |------|-------------|------|-----------|--------------|
-| period_start | Date for period start (YYYY-MM-DD) | str | yes | - |
-| period_end | Date for period end (YYYY-MM-DD) | str | yes | - |
-| et_single_date | Directory with ET products. | str | yes | - |
-| radiation_dir | Directory with daily radiation. If not provided, theoretical radiation is computed. | str | no | - |
-| window | Size of the window to compute the time series at each step | int | no | 7 |
-| shift | Shift used for the window at each step | int | no | 1 |
-| dem | Path to the DEM | str | no | - |
+| `period_start` | Date for period start (YYYY-MM-DD) | str | yes | - |
+| `period_end` | Date for period end (YYYY-MM-DD) | str | yes | - |
+| `et_single_date` | Directory with ET products. | str | yes | - |
+| `radiation_dir` | Directory with daily radiation. If not provided, theoretical radiation is computed. | str | no | - |
+| `window` | Size of the window to compute the time series at each step | int | no | 7 |
+| `shift` | Shift used for the window at each step | int | no | 1 |
+| `dem` | Path to the DEM | str | no | - |
 
 Example:
+
 ```json
 "input": {
     "period_end": "2025-08-29",
@@ -232,9 +236,10 @@ The **output** section is composed of:
 
 | Name | Description | Type | Mandatory | Default value |
 |------|-------------|------|-----------|---------------|
-| path | Path to write results | str | yes | - |
+| `path` | Path to write results | str | yes | - |
 
 Example:
+
 ```json
 "output":{
     "path":"out"
@@ -250,13 +255,14 @@ The **debug** section is composed of:
 
 | Name | Description | Type | Mandatory | Default value |
 |------|-------------|------|-----------|---------------|
-| profile | Activate profiling | bool | no | false |
-| verbose | Activate intermediate result writing | bool | no | false |
-| path | Path to write intermediate results | str | no | debug |
-| config_verbose | Activate time series configuration writing at each step | bool | no | false |
-| config_dir | Path to write time series configuration files | str | no | config_dir |
+| `profile` | Activate profiling | bool | no | false |
+| `verbose` | Activate intermediate result writing | bool | no | false |
+| `path` | Path to write intermediate results | str | no | debug |
+| `config_verbose` | Activate time series configuration writing at each step | bool | no | false |
+| `config_dir` | Path to write time series configuration files | str | no | config_dir |
 
 Example:
+
 ```json
 "debug": {
     "config_dir": "out/timeseries/config_dir",

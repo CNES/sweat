@@ -1,6 +1,6 @@
-# Evapotranspiration for TRISHNA
+# Spatial Water stress and Evapotranspiration Assessment for TRISHNA
 
-This contains contains several algorithms
+SWEAT contains contains several algorithms
 used in TRISHNA mission to compute evapotranspiration:
 
 * [EVASPA][1]
@@ -33,7 +33,7 @@ pixi shell
 pip install .[notebook]
 ```
 
-If you encounter any problems during installation, see [troubleshooting page](docs/troubleshooting.md).
+If you encounter any problems during installation, see [troubleshooting page](troubleshooting.md).
 
 ## Usage
 

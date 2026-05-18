@@ -6,10 +6,11 @@ This configuration describes how to prepare data for the STIC model.
 
 | Name | Description | Type | Mandatory | Default value | Possible value |
 |------|-------------|------|-----------|---------------|----------------|
-| use_topo | Use DEM to correct solar direct radiation with slope and aspect. | bool | no | false | true orfalse |
-| selected_radiation | Select which radiation data is selected | str | no | null | - |
+| `use_topo` | Use DEM to correct solar direct radiation with slope and aspect. | bool | no | false | true or false |
+| `selected_radiation` | Select which radiation data is selected | str | no | null | - |
 
-Example
+Example:
+
 ```json
 {
     "prepare": {
@@ -21,9 +22,11 @@ Example
 
 ## Filtering step
 
-The configuration describes how to find valid pixels. It is a dictionary.
+The configuration describes how to find valid pixels, i.e.
+where ET is computed.
+The configuration is stored in the form of a dictionary.
 The key corresponds to the variable to look at.
-The value is either a single condition or a combined conditionThe key correspond to the data variables.
+The value is either a single condition or a combined condition.
 
 ### Simple condition
 
@@ -87,9 +90,9 @@ This configuration describes the parameters for STIC main processing step
 
 | Name | Description | Type | Mandatory | Default value | Possible value |
 |------|-------------|------|-----------|---------------|----------------|
-| version | Version of STIC model | str | no | "1.3" | "1.3","1.4" |
-| threshold | Iteration threshold value used for check convergence | float | no | 0.01 | - |
-| nb_steps | Number of iteration steps | int | no | 15 | - |
+| `version` | Version of STIC model | str | no | "1.3" | "1.3","1.4" |
+| `threshold` | Iteration threshold value used for check convergence | float | no | 0.01 | - |
+| `nb_steps` | Number of iteration steps | int | no | 15 | - |
 
 
 
@@ -105,12 +108,12 @@ This configuration describes the parameters for STIC main processing step
 
 ## Daily extrapolation step
 
-This ocnfiguration describes the parameters for daily extrapolation processing step
+This configuration describes the parameters for daily extrapolation processing step
 
 | Name | Description | Type | Mandatory | Default value | Possible value |
 |------|-------------|------|-----------|---------------|----------------|
-| method | Method used daily extrapolation | str | no | "toa" | "toa" |
-| use_topo | Use topographic corrections for daily extrapolation | bool | no | false | true or false |
+| `method` | Method used daily extrapolation | str | no | "toa" | "toa" |
+| `use_topo` | Use topographic corrections for daily extrapolation | bool | no | false | true or false |
 
 ```json
 {

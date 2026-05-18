@@ -7,9 +7,11 @@ a stack stack to create the stack for processing the time series.
 
 ### Filtering step
 
-The configuration describes how to find valid pixels. It is a dictionary.
+The configuration describes how to find valid pixels, i.e.
+where ET is computed.
+The configuration is stored in the form of a dictionary.
 The key corresponds to the variable to look at.
-The value is either a single condition or a combined conditionThe key correspond to the data variables.
+The value is either a single condition or a combined condition.
 
 #### Simple condition
 
@@ -73,16 +75,16 @@ This configuration describes the parameters for update processing step
 
 | Name | Description | Type | Mandatory | Default value | Possible value |
 |------|-------------|------|-----------|---------------|----------------|
-| method | Type of update method used | str | no | "linear" | "linear" |
-| params | Parameters used to configure the update method | dict | no | - | - |
+| `method` | Type of update method used | str | no | "linear" | "linear" |
+| `params` | Parameters used to configure the update method | dict | no | - | - |
 
 
 ### Linear updater
 
 | Name | Description | Type | Mandatory | Default value | Possible value |
 |------|-------------|------|-----------|---------------|----------------|
-| strict_mode | Only use acquisition to interpolate/extrapolate | bool | no | true | true or false |
-| radiation_mode | Radiation mode to use | str | no | "EXTERNAL" | "THEORETICAL", "EXTERNAL" |
+| `strict_mode` | Only use acquisition to interpolate/extrapolate | bool | no | true | true or false |
+| `radiation_mode` | Radiation mode to use | str | no | "EXTERNAL" | "THEORETICAL", "EXTERNAL" |
 
 
 ```json

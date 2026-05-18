@@ -34,6 +34,8 @@ ameriflux
 fluxnet
 landcover
 tdew
+nmad
+interquartile
 
 # Acronyms
 stic

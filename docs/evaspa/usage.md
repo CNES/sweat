@@ -17,6 +17,7 @@ The input file is composed of 4 sections:
   * **debug** (optional): provide information for debug mode
 
 An example of input file:
+
 ```json
 {
     "input":{
@@ -47,14 +48,15 @@ The **input** section is composed of:
 
 | Name | Description | Type | Mandatory | Default value |
 |------|-------------|------|-----------|--------------|
-| path | Path of input data (file or directory) | str | yes | - |
-| date | Date of the acquisition | str | non | - |
+| `path` | Path of input data (file or directory) | str | yes | - |
+| `date` | Date of the acquisition | str | non | - |
 
 The path of input data can be either a GeoTIF file or a directory
 containing GeoTIF files. The code assumes that each band of the GeoTIF file
 has a band description in order to retrieve the name of the band to use.
 
 Example:
+
 ```json
 "input":{
     "path":"tests/data/modis_test_geo.tif",
@@ -96,9 +98,10 @@ The **output** section is composed of:
 
 | Name | Description | Type | Mandatory | Default value |
 |------|-------------|------|-----------|---------------|
-| path | Path to write results | str | yes | - |
+| `path` | Path to write results | str | yes | - |
 
 Example:
+
 ```json
 "output":{
     "path":"out"
@@ -114,11 +117,12 @@ The **debug** section is composed of:
 
 | Name | Description | Type | Mandatory | Default value |
 |------|-------------|------|-----------|---------------|
-| profile | Activate profiling | bool | no | false |
-| verbose | Activate intermediate result writing | bool | no | false |
-| path | Path to write intermediate results | str | no | debug |
+| `profile` | Activate profiling | bool | no | false |
+| `verbose` | Activate intermediate result writing | bool | no | false |
+| `path` | Path to write intermediate results | str | no | debug |
 
 Example:
+
 ```json
 "debug": {
     "profile": true,
