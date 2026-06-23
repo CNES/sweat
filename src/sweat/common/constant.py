@@ -59,6 +59,6 @@ MSK_INPUT_NODATA = 1 << 0
 MSK_INPUT_FILTERED = 1 << 1
 # if bit 2 activated : The pixel is invalid : input data filtered
 # during some processing step
-MSK_INPUT_FILTERED_FOR_PROCESSING = 1 << 2
-# if bit 2 activated : The pixel is invalid : Processing failed
+MSK_INPUT_FILTERED_DURING_PROCESSING = 1 << 2
+# if bit 3 activated : The pixel is invalid : Processing failed
 MSK_PROCESSING_FAILED = 1 << 3

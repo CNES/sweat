@@ -26,7 +26,7 @@ from pydantic import (
 
 from sweat.common.constant import (
     MSK_INPUT_FILTERED,
-    MSK_INPUT_FILTERED_FOR_PROCESSING,
+    MSK_INPUT_FILTERED_DURING_PROCESSING,
     ETVar,
 )
 from sweat.common.filter import FilteringConfig, find_valid_pixels
@@ -73,7 +73,7 @@ class EFOptionsConfig(BaseModel):
 
 class EFCheckConfig(BaseModel):
     """
-    Check variablity for EF processing
+    Check variability for EF processing
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -174,12 +174,12 @@ class EFModel:
     def fit(self, data: xr.Dataset, mask: xr.DataArray | None = None) -> None:
         """
         Method to estimate dry and wet edges.
-        data is a xarray.Dataset which must conatin "lst"
-        and "var" as data varaibles.
+        data is a xarray.Dataset which must contain "lst"
+        and "var" as data variables.
 
         Parameters
         ----------
-        data : xr.Datset
+        data : xr.Dataset
             Dataset containing the data
         mask : xr.DataArray
             Data used for masking
@@ -236,7 +236,7 @@ class EFModel:
 
         Parameters
         ----------
-        data : xr.Datset
+        data : xr.Dataset
             Dataset containing the data
         mask : xr.DataArray
             Data used for masking
@@ -403,7 +403,7 @@ def check_variability(
     mask : np.array_like
         Mask (valid not 0)
     threshold : float
-        Threshold value to check variablity
+        Threshold value to check variability
 
     Returns
     -------
@@ -599,9 +599,13 @@ def run(
             nan_config=[ETVar.LST.value],
             valid_config=None,
         )
-    flags = flags.where(
-        (model_flags & MSK_INPUT_FILTERED) == 0,
-        flags | MSK_INPUT_FILTERED_FOR_PROCESSING,
+    # Identify pixel filtered just for edge computation
+    flags = xr.where(
+        ((model_flags & MSK_INPUT_FILTERED) != 0)
+        & ((flags & (1 << 0)) == 0)
+        & ((flags & (1 << 1)) == 0),
+        flags | MSK_INPUT_FILTERED_DURING_PROCESSING,
+        flags,
     )
     ef[ETVar.VALID.value] = valid
     ef[ETVar.FLAGS.value] = flags

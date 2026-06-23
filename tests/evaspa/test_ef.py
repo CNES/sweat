@@ -12,6 +12,7 @@ import pytest
 import xarray as xr
 
 import sweat.evaspa.ef
+from sweat.common.constant import FLAGS_TYPE
 from sweat.evaspa import edge
 from sweat.evaspa.ef import (
     EFCheckConfig,
@@ -1036,6 +1037,99 @@ def test_select() -> None:
     )
     selected = select(ef)
     xr.testing.assert_identical(ef, selected)
+
+
+@pytest.mark.unit
+def test_double_filtering() -> None:
+    """
+    Test double filtering
+    """
+    # Generate models
+    models = setup_models()
+    # Generate data
+    data = setup_data(
+        albedo=(0.0, 0.6),
+        fcover=(0, 1.0),
+        valid=(0.2, 0.8),
+        dry=(330.0, -10.0),
+        wet=(300.0, 15.0),
+    )
+    data["flags"] = xr.zeros_like(data["lst"], dtype=FLAGS_TYPE)
+    # Specify 4 pixels for validation purpose
+    # Pixel nodata
+    data["valid"].values[0, 0] = 0
+    data["flags"].values[0, 0] = 1
+    data["lst"].values[0, 0] = 310
+    data["fcover"].values[0, 0] = 0.5
+    data["albedo"].values[0, 0] = 0.05
+    # Pixel filtered
+    data["valid"].values[1, 0] = 0
+    data["flags"].values[1, 0] = 2
+    data["lst"].values[1, 0] = 310
+    data["fcover"].values[1, 0] = 0.5
+    data["albedo"].values[1, 0] = 0.05
+    # Pixel filtered during processing
+    data["valid"].values[2, 0] = 1
+    data["flags"].values[2, 0] = 0
+    data["lst"].values[2, 0] = 310
+    data["fcover"].values[2, 0] = 0.5
+    data["albedo"].values[2, 0] = 0.05
+    # Pixel valid
+    data["valid"].values[3, 0] = 1
+    data["flags"].values[3, 0] = 0
+    data["lst"].values[3, 0] = 310
+    data["fcover"].values[3, 0] = 0.5
+    data["albedo"].values[3, 0] = 0.25
+    # Run
+    options = {
+        "filtering": {
+            "albedo": {
+                "and": [
+                    {"op": ">=", "value": 0.1},
+                    {"op": "<=", "value": 0.5},
+                ]
+            }
+        },
+        "selection": False,
+        "merging": {
+            "merging_method": MergingMethod.MEDIAN,
+            "uncertainty_method": UncertaintyMethod.NMAD,
+        },
+    }
+    ef_xr, ef_inst = run(models, data, **options)
+    assert "valid" in ef_xr.data_vars
+    assert "flags" in ef_xr.data_vars
+    assert "valid" in ef_inst.data_vars
+    assert "flags" in ef_inst.data_vars
+    xr.testing.assert_equal(ef_xr["valid"], ef_inst["valid"])
+    xr.testing.assert_equal(ef_xr["flags"], ef_inst["flags"])
+    # Pixel nodata
+    assert ef_xr["valid"].values[0, 0] == 0
+    assert ef_xr["flags"].values[0, 0] == 1
+    assert np.isnan(ef_xr["model1"].values[0, 0])
+    assert np.isnan(ef_xr["model2"].values[0, 0])
+    assert np.isnan(ef_inst["ef"].values[0, 0])
+    # Pixel filtered
+    assert ef_xr["valid"].values[1, 0] == 0
+    assert ef_xr["flags"].values[1, 0] == 2
+    assert np.isnan(ef_xr["model1"].values[1, 0])
+    assert np.isnan(ef_xr["model2"].values[1, 0])
+    assert np.isnan(ef_inst["ef"].values[1, 0])
+    # Pixel filtered during processing
+    assert ef_xr["valid"].values[2, 0] == 1
+    assert ef_xr["flags"].values[2, 0] == 4
+    assert not np.isnan(ef_xr["model1"].values[2, 0])
+    assert not np.isnan(ef_xr["model2"].values[2, 0])
+    assert not np.isnan(ef_inst["ef"].values[2, 0])
+    # Pixel valid
+    assert ef_xr["valid"].values[3, 0] == 1
+    assert ef_xr["flags"].values[3, 0] == 0
+    assert not np.isnan(ef_xr["model1"].values[3, 0])
+    assert not np.isnan(ef_xr["model2"].values[3, 0])
+    assert not np.isnan(ef_inst["ef"].values[3, 0])
+
+
+# Add test double filtering
 
 
 @pytest.mark.functional
