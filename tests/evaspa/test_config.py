@@ -224,11 +224,9 @@ def test_check() -> None:
                 "water": {"op": "!=", "value": 1},
                 "ndvi": {
                     "and": [{"op": ">=", "value": 0}, {"op": "<=", "value": 1}],
-                    "or": None,
                 },
                 "qa": {
                     "or": [{"op": "==", "value": 2}, {"op": "==", "value": 10}],
-                    "and": None,
                 },
             },
             "ef": {
@@ -288,7 +286,10 @@ def test_check() -> None:
                     "uncertainty_method": "interquartile",
                 },
             },
-            "daily": {"use_topo": True, "method": "toa"},
+            "daily": {
+                "use_topo": True,
+                "method": "toa",
+            },
         },
         "debug": {"profile": False, "verbose": False, "path": "out/debug"},
     }

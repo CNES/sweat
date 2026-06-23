@@ -100,6 +100,51 @@ def test_filteringconfig_error(config) -> None:
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
+    ("config", "mode", "expected_type"),
+    [
+        pytest.param(
+            {"test": {"op": ">=", "value": "percentile(50)"}},
+            "python",
+            filter.PercentileValue,
+            id="python_mode_percentile",
+        ),
+        pytest.param(
+            {"test": {"op": ">=", "value": "percentile(50)"}},
+            "json",
+            str,
+            id="json_mode_percentile",
+        ),
+        pytest.param(
+            {"test": {"op": ">=", "value": 50.0}},
+            "python",
+            float,
+            id="python_mode_float",
+        ),
+        pytest.param(
+            {"test": {"op": ">=", "value": 50.0}},
+            "json",
+            float,
+            id="json_mode_float",
+        ),
+    ],
+)
+def test_filteringconfig_model_dump(
+    config: dict,
+    mode: str,
+    expected_type: type,
+) -> None:
+    """Test that values have correct types based on serialization mode"""
+    model = filter.FilteringConfig.model_validate(config)
+    result = (
+        model.model_dump(mode=mode) if mode == "json" else model.model_dump()
+    )
+
+    actual_value = result["test"]["value"]
+    assert isinstance(actual_value, expected_type)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
     ("entry", "cond", "expected"),
     [
         pytest.param(

@@ -8,10 +8,20 @@ from __future__ import annotations
 import operator
 import re
 from functools import reduce
-from typing import Literal
+from typing import Any, Literal
 
+import numpy as np
 import xarray as xr
-from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    RootModel,
+    SerializationInfo,
+    SerializerFunctionWrapHandler,
+    field_serializer,
+    field_validator,
+)
 
 from sweat.common.constant import (
     FLAGS_TYPE,
@@ -19,6 +29,7 @@ from sweat.common.constant import (
     MSK_INPUT_NODATA,
     ETVar,
 )
+from sweat.common.types import PercentileValue
 from sweat.debugging import register_debugging
 from sweat.logging import LoggerManager
 
@@ -35,21 +46,6 @@ OPS = {
 }
 
 
-class PercentileValue:
-    """
-    Class to manange percentile
-    """
-
-    def __init__(self, percentile: float):
-        if not (0 <= percentile <= 100):  # noqa: PLR2004
-            msg = "Percentile must be between 0 and 100"
-            raise ValueError(msg)
-        self.percentile = percentile
-
-    def __repr__(self):
-        return f"percentile({self.percentile})"
-
-
 # Simple condition
 class SimpleCondition(BaseModel):
     """
@@ -63,7 +59,7 @@ class SimpleCondition(BaseModel):
 
     @field_validator("value", mode="before")
     @classmethod
-    def parse_value(cls, v):
+    def parse_value(cls, v: Any) -> float | PercentileValue:
         """
         Check value and convert if necessary to percentile
         """
@@ -108,6 +104,43 @@ class FilteringConfig(RootModel):
     """
 
     root: dict[str, ConditionType]
+
+    @field_serializer("root", mode="wrap")
+    def serialize_root(
+        self,
+        v: dict[str, ConditionType],
+        handler: SerializerFunctionWrapHandler,
+        info: SerializationInfo,
+    ) -> Any:
+        if info.mode == "json":
+            return self._serialize_conditions(v)
+        return handler(v)
+
+    def _serialize_conditions(self, obj: Any) -> Any:
+        """
+        Recursively serialize conditions, converting PercentileValue to string
+        """
+        if isinstance(obj, dict):
+            return {k: self._serialize_conditions(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [self._serialize_conditions(item) for item in obj]
+        if isinstance(obj, PercentileValue):
+            return repr(obj)
+        if isinstance(obj, SimpleCondition):
+            return {
+                "op": obj.op,
+                "value": self._serialize_conditions(obj.value),
+            }
+        if isinstance(obj, CompositeCondition):
+            result = {}
+            if obj.and_:
+                result["and"] = [
+                    self._serialize_conditions(c) for c in obj.and_
+                ]
+            if obj.or_:
+                result["or"] = [self._serialize_conditions(c) for c in obj.or_]
+            return result
+        return obj
 
 
 def eval_condition(da: xr.DataArray, cond: dict) -> xr.DataArray:
@@ -179,7 +212,7 @@ def apply_condition(da: xr.DataArray, cond: dict) -> xr.DataArray:
 def detect_valid_pixels(data: xr.Dataset, config: dict) -> xr.DataArray:
     """
     Detect valid pixels on a dataset based on
-    codnitions in data variables. The conditions are
+    conditions in data variables. The conditions are
     described in a configuration dictionary.
 
     Parameters

@@ -10,6 +10,8 @@ import json
 from enum import Enum
 from pathlib import Path
 
+from sweat.common.types import PercentileValue
+
 
 def read_config(path: str) -> dict:
     """
@@ -41,6 +43,8 @@ def json_serial(obj):
         return obj.isoformat()
     elif isinstance(obj, Enum):  # noqa I001
         return obj.value
+    elif isinstance(obj, PercentileValue):
+        return str(obj)
     msg = f"Type {type(obj)} not serializable"
     raise TypeError(msg)
 
@@ -61,7 +65,7 @@ def write_config(config: dict, path: str, fmt: str = "json") -> None:
     output_dir = Path(path)
     if fmt.lower() == "json":
         with open(output_dir / "config.json", "w") as f:
-            json.dump(config, f, indent=4, default=json_serial)
+            json.dump(config, f, indent=4, allow_nan=True, default=json_serial)
     else:
         msg = f"Unsupported format for configuration file ({fmt})"
         raise ValueError(msg)

@@ -1,10 +1,13 @@
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
+import datetime as dt
 from pathlib import Path
 
 import pytest
 
 import sweat.common.config as cfg
+from sweat.common.constant import ETVar
+from sweat.common.types import PercentileValue
 
 
 @pytest.mark.unit
@@ -52,7 +55,12 @@ def test_write_config_exc(tmp_path) -> None:
     Test read configuration (with exception)
     """
     p = Path(tmp_path)
-    config = {"input": "foo", "output": "foo", "params": "foo"}
+    config = {
+        "input": dt.datetime.now(tz=dt.UTC),
+        "output": "foo",
+        "params": PercentileValue(10),
+        "variable": ETVar.LST,
+    }
     with pytest.raises(
         ValueError, match="Unsupported format for configuration file"
     ):
