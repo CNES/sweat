@@ -133,7 +133,7 @@ def test_filter_data_for_evaspa():
         },
     )
     ref_flags = xr.DataArray(
-        data=np.array([0, 2, 1, 3]),
+        data=np.array([0, 2, 1, 1]),
         dims=["x"],
         coords={
             "x": ("x", [0, 1, 2, 3]),

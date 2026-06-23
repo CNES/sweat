@@ -497,7 +497,7 @@ def test_detect_nan_pixels_exc(data, variables, expected) -> None:
                 }
             },
             np.array([[1, 1, 0], [0, 1, 0], [1, 0, 1]], dtype=FLAGS_TYPE),
-            np.array([[0, 0, 1], [3, 0, 1], [0, 2, 0]], dtype=FLAGS_TYPE),
+            np.array([[0, 0, 1], [1, 0, 1], [0, 2, 0]], dtype=FLAGS_TYPE),
         ),
         pytest.param(
             {

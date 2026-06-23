@@ -341,19 +341,23 @@ def find_valid_pixels(
         flags = xr.full_like(
             next(iter(data.data_vars.values())), 0, dtype=FLAGS_TYPE
         )
+    nan_mask = None
     if nan_config is not None:
         nan_mask = detect_nan_pixels(data, nan_config)
         valid = valid & ~nan_mask
         flags = xr.where(
             nan_mask == 1,
-            flags | MSK_INPUT_NODATA,
+            (flags | FLAGS_TYPE(MSK_INPUT_NODATA))
+            & FLAGS_TYPE(np.bitwise_not(MSK_INPUT_FILTERED)),
             flags,
         )
     if valid_config is not None:
+        if nan_mask is None:
+            nan_mask = xr.zeros_like(valid)
         valid_mask = detect_valid_pixels(data, valid_config)
         valid = valid & valid_mask
         flags = xr.where(
-            valid_mask == 0,
+            (valid_mask == 0) & (nan_mask != 1),
             flags | MSK_INPUT_FILTERED,
             flags,
         )
