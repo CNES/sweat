@@ -62,7 +62,7 @@ def create_net_radiation(
     The net radiation is computed from land surface temperature,
     land surface emissivity, albedo and downward longwave and
     shortwave radiations.
-    If several downward shortwave and longwace radiations are
+    If several downward shortwave and longwave radiations are
     available, the dataset will contain several net radiation
     estimation.
 
@@ -190,8 +190,8 @@ def _ratio_from_su(
     Notes
     -----
     Su Z., 2002. The surface energy balance system
-    (SEBS) for estimation of turbulent fluxes.
-    Hydrol. Earth Syst. Sci., 6, 85-99.
+    for estimation of turbulent fluxes.
+    Hydrology and Earth System Sciences, 6, 85-99.
 
     Parameters
     ----------
@@ -429,13 +429,18 @@ def run(
         msg = "EF dataset empty"
         raise ValueError(msg)
     # Get valid and flags
+    # First from EF, then from data, otherwise default value
     if ETVar.VALID.value in ef.data_vars:
+        valid = ef[ETVar.VALID.value]
+    elif ETVar.VALID.value in data.data_vars:
         valid = data[ETVar.VALID.value]
     else:
         valid = xr.ones_like(
             next(iter(ef.data_vars.values())), dtype=FLAGS_TYPE
         )
-    if ETVar.FLAGS.value in data.data_vars:
+    if ETVar.FLAGS.value in ef.data_vars:
+        flags = ef[ETVar.FLAGS.value]
+    elif ETVar.FLAGS.value in data.data_vars:
         flags = data[ETVar.FLAGS.value]
     else:
         flags = xr.zeros_like(
