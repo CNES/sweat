@@ -79,7 +79,7 @@ class PercentileValue:
     """
 
     def __init__(self, percentile: float):
-        if not (0 <= percentile <= 100):  # noqa: PLR2004
+        if not (0 <= percentile <= 100):
             msg = "Percentile must be between 0 and 100"
             raise ValueError(msg)
         self.percentile = percentile
@@ -1302,7 +1302,7 @@ class ThresholdLinearEdge(RegressionEdge):
                 logger.warning(msg)
                 breaks = [var_values[0], var_values[-2], var_values[-1]]
             # Specific case, if only 2 points
-            if len(var_values) == 2:  # noqa: PLR2004
+            if len(var_values) == 2:
                 breaks = [var_values[0], var_values[-1]]
             pwlf_solver.fit_with_breaks(breaks)
             self.threshold = breaks[-2]
@@ -1419,7 +1419,7 @@ class DoubleLinearEdge(RegressionEdge):
                 logger.warning(msg)
                 degraded_mode = True
             # Specific case, if only 2 points
-            if len(var_values) == 2:  # noqa: PLR2004
+            if len(var_values) == 2:
                 msg = "DoubleLinearEdge: not enough number of points"
                 logger.warning(msg)
                 degraded_mode = True
@@ -1554,7 +1554,7 @@ class FlatLinearEdge(RegressionEdge):
                 logger.warning(msg)
                 breaks = [var_values[0], var_values[-2], var_values[-1]]
             # Specific case, if only 2 points
-            if len(var_values) == 2:  # noqa: PLR2004
+            if len(var_values) == 2:
                 breaks = [var_values[0], var_values[-1]]
             pwlf_solver.fit_with_breaks(breaks)
             self.fit_breakpoint = breaks[-2]
