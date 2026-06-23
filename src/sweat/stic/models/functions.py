@@ -704,8 +704,8 @@ def initialize_alpha_coefficient(
     alpha: float
         Priestley-Taylor coefficient
     """
-    # Conduction radiometric
     epsilon = 1.0e-7
+    # Radiative conductance
     gr = 4 * emis * CST_SB * (ta + KELVIN_CST) ** 3 / (rho * cp)
     den = (
         (slope * rn)
