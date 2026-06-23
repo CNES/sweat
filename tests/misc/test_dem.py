@@ -13,7 +13,7 @@ def get_test_data_path() -> str:
     Get test data path for DEM tiles
     """
     return os.path.join(
-        os.environ["SWEAT_TEST_DATA_PATH"], "DEM_Copercinus_30m"
+        os.environ["SWEAT_TEST_DATA_PATH"], "DEM_Copernicus_30m"
     )
 
 

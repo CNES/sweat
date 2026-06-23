@@ -32,7 +32,7 @@ def get_dem_from_tile(
     ----------
     tile_id: str
         Tile ID
-    resolution: str, deflaut=60
+    resolution: str, default=60
         DEM spatial resolution
     base_dir: str
         Path to the DEM directory
@@ -43,7 +43,7 @@ def get_dem_from_tile(
     xarr: xarray.Dataset
     """
     if base_dir is None:
-        base_dir = os.path.join(os.environ["MNT_PATH"], "DEM_Copercinus_30m/")
+        base_dir = os.path.join(os.environ["MNT_PATH"], "DEM_Copernicus_30m/")
     file_name = os.path.join(base_dir, f"COP-DEM_GLO-30-DGED_{tile_id}.tif")
     if not os.path.isfile(file_name):
         msg = f"DEM file not found: {file_name}"
@@ -97,7 +97,7 @@ def get_dem_from_tiles(
     ----------
     tile_ids: List[str]
         List of tile IDs
-    resolution: str, deflaut=60
+    resolution: str, default=60
         DEM spatial resolution
     base_dir: str
         Path to the DEM directory
@@ -108,7 +108,7 @@ def get_dem_from_tiles(
     xarr: xarray.Dataset
     """
     if base_dir is None:
-        base_dir = os.path.join(os.environ["MNT_PATH"], "DEM_Copercinus_30m/")
+        base_dir = os.path.join(os.environ["MNT_PATH"], "DEM_Copernicus_30m/")
     if len(tile_ids) == 0:
         msg = "No DEM tiles requested"
         raise ValueError(msg)
