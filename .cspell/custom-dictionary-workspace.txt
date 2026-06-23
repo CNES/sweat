@@ -1,18 +1,34 @@
 # Custom Dictionary Words
+
+# Acronyms
 centre
-choudhury
-dewpoint
-esstar
 etudes
 evaspa
-fcover
+national
+stic
+trishna
+cesbio
+
+# Nouns
+Choudhury
 Friedl
-kustas
+Kustas
+Tetens
+Mallick
+Santanello
+Daughtry
+Oevelen
+Idso
+Reginato
+
+# Variables
+dewpoint
+esstar
+fcover
 longwave
 lulc
 merra
 modis
-national
 ndvi
 gndvi
 arvi
@@ -34,15 +50,11 @@ ameriflux
 fluxnet
 landcover
 tdew
+tdry
+twet
 nmad
 interquartile
-
-# Acronyms
-stic
-trishna
-cesbio
-
-# Names
-Tetens
-Mallick
-Santanello
+dataarray
+efconfig
+seb
+xarr
