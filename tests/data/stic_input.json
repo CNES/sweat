@@ -14,6 +14,18 @@
             "tdp": {
                 "op": ">=",
                 "value": -30.0
+            },
+            "lst": {
+                "and": [
+                    {
+                        "op": ">=",
+                        "value": "percentile(1)"
+                    },
+                    {
+                        "op": "<=",
+                        "value": "percentile(99)"
+                    }
+                ]
             }
         },
         "stic": {
