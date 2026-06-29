@@ -155,6 +155,8 @@ def test_prepare_exc(version):
             "fcover": (["y", "x"], np.full((2, 2), 0.6)),
             "lai": (["y", "x"], np.full((2, 2), 2)),
             "emis": (["y", "x"], np.full((2, 2), 0.8)),
+            "rsd": (["y", "x"], np.full((2, 2), 400)),
+            "rld": (["y", "x"], np.full((2, 2), -150)),
         },
         coords={
             "y": ("y", np.array([0, 1])),
@@ -166,6 +168,54 @@ def test_prepare_exc(version):
         KeyError, match="Variable lst is missing in the dataset"
     ):
         main.prepare(data=data, version=version)
+
+
+@pytest.mark.functional
+@pytest.mark.parametrize(
+    ("selected_radiation", "rsd_expected", "rld_expected"),
+    [
+        ("msg", "rsd_msg", "rld_msg"),
+        (None, "rsd", "rld"),
+    ],
+)
+def test_prepare_with_radiation_selection(
+    selected_radiation, rsd_expected, rld_expected
+):
+    """
+    Test function for STIC prepare function with radiation selection
+    """
+    data = xr.Dataset(
+        data_vars={
+            "lst": (["y", "x"], np.array([[293, np.nan], [293, 293]])),
+            "albedo": (["y", "x"], np.array([[0.5, 0.5], [np.nan, 0.5]])),
+            "ta": (["y", "x"], np.full((2, 2), 290)),
+            "tdp": (["y", "x"], np.full((2, 2), 285)),
+            "fcover": (["y", "x"], np.full((2, 2), 0.6)),
+            "lai": (["y", "x"], np.full((2, 2), 2)),
+            "emis": (["y", "x"], np.full((2, 2), 0.8)),
+            "rsd": (["y", "x"], np.full((2, 2), 400)),
+            "rsd_msg": (["y", "x"], np.full((2, 2), 500)),
+            "rld": (["y", "x"], np.full((2, 2), -100)),
+            "rld_msg": (["y", "x"], np.full((2, 2), -200)),
+            "blue": (["y", "x"], np.full((2, 2), 0.1)),
+            "green": (["y", "x"], np.full((2, 2), 0.6)),
+            "red": (["y", "x"], np.full((2, 2), 0.2)),
+            "nir": (["y", "x"], np.full((2, 2), 0.5)),
+            "swir": (["y", "x"], np.full((2, 2), 0.4)),
+        },
+        coords={
+            "y": ("y", np.array([40.0, 40.1])),
+            "x": ("x", np.array([0, 0.1])),
+        },
+        attrs={
+            "description": "Test data",
+            "date": dt.datetime.now(tz=dt.UTC),
+            "crs": 4326,
+        },
+    )
+    res = main.prepare(data=data, selected_radiation=selected_radiation)
+    assert rsd_expected in res.data_vars
+    assert rld_expected in res.data_vars
 
 
 @pytest.mark.unit

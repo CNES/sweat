@@ -11,7 +11,11 @@ from sweat.common.constant import (
     FLAGS_TYPE,
     ETVar,
 )
-from sweat.common.flux import compute_et_from_le, create_net_radiation
+from sweat.common.flux import (
+    compute_et_from_le,
+    create_net_radiation,
+    get_radiation_variables,
+)
 from sweat.logging import LoggerManager
 from sweat.stic.convert import (
     convert_kelvin_to_celsius,
@@ -71,14 +75,34 @@ def prepare(
         msg = f"Unknown run_stic_model version: {version}"
         raise ValueError(msg)
     spec = MODEL_REGISTRY[version]
+    # Select radiation
+    rsd_data, rld_data = get_radiation_variables(data)
+    if selected_radiation is not None:
+        if f"{ETVar.RSD.value}_{selected_radiation}" not in rsd_data:
+            msg = f"Radiation data {selected_radiation} is missing"
+            raise ValueError(msg)
+        rsd_name = f"{ETVar.RSD.value}_{selected_radiation}"
+    elif ETVar.RSD.value in data.data_vars:
+        rsd_name = ETVar.RSD.value
+    else:
+        rsd_name = rsd_data[0]
+    rld_name = str.replace(rsd_name, ETVar.RSD.value, ETVar.RLD.value, 1)
     # Check variables
     checked_vars = spec.required_inputs
+    # Replace radiation
+    checked_vars = [
+        rsd_name if v == ETVar.RSD.value else v for v in checked_vars
+    ]
+    checked_vars = [
+        rld_name if v == ETVar.RLD.value else v for v in checked_vars
+    ]
     for var in checked_vars:
         if var not in data.data_vars:
             msg = f"Variable {var} is missing in the dataset"
             raise KeyError(msg)
     # Copy
-    new_data = data.copy()
+    new_data = data[checked_vars].copy()
+    # Extract dimensions, shape, coordinates
     dims = new_data[ETVar.LST.value].dims
     coords = new_data[ETVar.LST.value].coords
     # Converting temperature from Kelvin to Celsius degree
@@ -107,21 +131,24 @@ def prepare(
         coords=coords,
     )
     # Convert to local time
-    new_data[ETVar.LOCAL_TIME.value] = xr.apply_ufunc(
-        convert_to_local_time,
+    row_names = ["y", "lat", "latitude"]
+    col_names = ["x", "lon", "longitude"]
+    row = next((name for name in row_names if name in coords), None)
+    col = next((name for name in col_names if name in coords), None)
+    if row is None or col is None:
+        msg = "Coordinate unkown for local time conversion"
+        raise ValueError(msg)
+    local_time = convert_to_local_time(
         new_data.attrs["date"],
-        new_data.coords["x"],
-        new_data.coords["y"],
+        new_data.coords[col],
+        new_data.coords[row],
         new_data.attrs["crs"],
     )
+    new_data[ETVar.LOCAL_TIME.value] = ((row, col), local_time)
     # Compute net radiation
     rn_xr, ln_xr = create_net_radiation(data, use_topo=use_topo)
-    if selected_radiation is not None:
-        rn_xr = rn_xr[selected_radiation]
-        ln_xr = ln_xr[selected_radiation]
-    else:
-        rn_xr = next(iter(rn_xr.data_vars.values()))
-        ln_xr = next(iter(ln_xr.data_vars.values()))
+    rn_xr = next(iter(rn_xr.data_vars.values()))
+    ln_xr = next(iter(ln_xr.data_vars.values()))
     new_data[ETVar.NET_RADIATION.value] = rn_xr
     new_data[ETVar.LONGWAVE_NET_RADIATION.value] = ln_xr
     # Compute vegetation indices
@@ -181,6 +208,15 @@ def prepare(
             dims=dims,
             coords=coords,
         )
+    # Add DEM data, if available
+    dem_vars = [
+        d
+        for d in data.data_vars
+        if d in [ETVar.HEIGHT.value, ETVar.SLOPE.value, ETVar.ASPECT.value]
+    ]
+    if len(dem_vars) > 0:
+        new_data[dem_vars] = data[dem_vars].copy()
+
     return new_data
 
 

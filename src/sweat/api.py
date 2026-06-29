@@ -14,6 +14,7 @@ import xarray as xr
 
 from sweat.common import daily, filter, io
 from sweat.common.constant import ETVar
+from sweat.common.flux import get_radiation_variables
 from sweat.common.io import InputConfig
 from sweat.debugging import DebuggingConfig, configure_debugging
 from sweat.evaspa import ef, seb, tiling
@@ -265,6 +266,18 @@ def run_evaspa(
     logger.debug("Check configuration: OK")
     # Initialize EF models
     models, options = ef.initialize(params_config.ef.model_dump(by_alias=True))
+    # Check if the variables required by the models are present in the data
+    required_variables = [
+        *ef.get_variables_from_models(models),
+        ETVar.ALBEDO.value,
+        ETVar.EMISSIVITY.value,
+    ]
+    for v in required_variables:
+        if v not in data.data_vars:
+            msg = f"Variable {v} is missing to compute EF from EF models"
+            raise KeyError(msg)
+    # Check variables for radiation
+    _ = get_radiation_variables(data)
     # Filter data
     data = filter_data_for_evaspa(
         data=data,

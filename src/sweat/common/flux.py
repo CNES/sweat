@@ -13,6 +13,7 @@ import xarray as xr
 from pyproj import CRS
 from scipy.constants import c, h, k, pi
 
+from sweat.common.constant import ETVar
 from sweat.common.solar import compute_diffuse_fraction, compute_sun_angles
 from sweat.debugging import register_debugging
 from sweat.logging import LoggerManager
@@ -198,6 +199,48 @@ def compute_rn(
     return (1 - np.array(albedo)) * np.array(rsd) + ln, ln
 
 
+def get_radiation_variables(data: xr.Dataset) -> tuple[list[str], list[str]]:
+    """
+    Get the lists of RSD variables and RLD variables
+
+    Parameters
+    ----------
+    data : xr.Dataset
+        Data containing (LST, emissivity, albedo and downward
+        shortwave and longwave radiation)
+
+    Returns
+    -------
+    rsd_data: list[str]
+        List of RSD data
+    rld_data: list[str]
+        List of RLD data
+    """
+    # Check if several rsd/rld are available
+    rsd_data: list[str] = [
+        str(v) for v in data.data_vars if ETVar.RSD.value in str(v)
+    ]
+    if len(rsd_data) == 0:
+        msg = "No RSD data available"
+        raise ValueError(msg)
+
+    msg = f"RSD data available: {rsd_data}"
+    logger.debug(msg)
+    rld_data: list[str] = [
+        str.replace(v, ETVar.RSD.value, "rld", 1) for v in rsd_data
+    ]
+    for v in rld_data:
+        if v not in data.data_vars:
+            msg = (
+                f"No RLD data ({v}) associated to RSD"
+                f" data ({str.replace(v, 'rld', 'rsd')})"
+            )
+            raise ValueError(msg)
+    msg = f"RLD data available: {rld_data}"
+    logger.debug(msg)
+    return rsd_data, rld_data
+
+
 @register_debugging
 def create_net_radiation(
     data: xr.Dataset, use_topo: bool = False
@@ -211,7 +254,7 @@ def create_net_radiation(
     The net radiation is computed from land surface temperature,
     land surface emissivity, albedo and downward longwave and
     shortwave radiations.
-    If several downward shortwave and longwace radiations are
+    If several downward shortwave and longwave radiations are
     available, the dataset will contain several net radiation
     estimation.
 
@@ -240,23 +283,7 @@ def create_net_radiation(
         use_topo = False
 
     # Check if several rsd/rld are available
-    rsd_data: list[str] = [str(v) for v in data.data_vars if "rsd" in str(v)]
-    if len(rsd_data) == 0:
-        msg = "No RSD data available"
-        raise ValueError(msg)
-
-    msg = f"RSD data available: {rsd_data}"
-    logger.debug(msg)
-    rld_data: list[str] = [str.replace(v, "rsd", "rld", 1) for v in rsd_data]
-    for v in rld_data:
-        if v not in data.data_vars:
-            msg = (
-                f"No RLD data ({v}) associated to RSD"
-                f" data ({str.replace(v, 'rld', 'rsd')})"
-            )
-            raise ValueError(msg)
-    msg = f"RLD data available: {rld_data}"
-    logger.debug(msg)
+    rsd_data, rld_data = get_radiation_variables(data)
     # Compute rn and ln for all rsd/rld available
     rn = {}
     ln = {}
@@ -314,7 +341,7 @@ def compute_et_from_le(
 ) -> npt.NDArray:
     """
     Compute ET in mm from LE in W (J.m-2).
-    ET = LE / L with L is the latent heat vaoprization of water.
+    ET = LE / L with L is the latent heat vaporization of water.
 
     Parameters
     ----------

@@ -348,6 +348,30 @@ def test_correct_shortwave_radiation_with_warnings(
     assert msg in caplog.text
 
 
+@pytest.mark.functional
+@pytest.mark.parametrize(
+    ("params", "expected"),
+    [
+        pytest.param({"nb": 1}, 1),
+        pytest.param({"nb": 3}, 3),
+    ],
+)
+def test_get_radiation_variables(params, expected) -> None:
+    """
+    Test the functions to get radiation variables
+    """
+    data = setup_data(**params)
+    rsd_data, rld_data = flux.get_radiation_variables(data)
+    rsd_data_expected = [f"rsd_{i}" for i in np.arange(1, params["nb"])]
+    rsd_data_expected.append("rsd")
+    rld_data_expected = [f"rld_{i}" for i in np.arange(1, params["nb"])]
+    rld_data_expected.append("rld")
+    assert len(rsd_data) == expected
+    assert len(rld_data) == expected
+    assert sorted(rsd_data) == sorted(rsd_data_expected)
+    assert sorted(rld_data) == sorted(rld_data_expected)
+
+
 @pytest.mark.unit
 @pytest.mark.parametrize(
     (
