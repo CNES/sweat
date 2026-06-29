@@ -12,7 +12,7 @@ import numpy.typing as npt
 import xarray as xr
 
 from sweat.timeseries import status_handler as sh
-from sweat.timeseries.constant import TimeSeriesVar as TSVar
+from sweat.timeseries.types import TimeSeriesVar as TSVar
 
 
 class Updater(ABC):
@@ -183,7 +183,7 @@ class Updater(ABC):
         """
         Backward extrapolate from next index.
 
-        Parameterscou
+        Parameters
         ----------
         index: int
             Index position to considered
@@ -236,7 +236,7 @@ class Updater(ABC):
         acquisition_dates = feed.coords[TSVar.TIME.value].where(
             feed[TSVar.VALID.value], drop=True
         )
-        # Select data corresponding to valid acquition dates
+        # Select data corresponding to valid acquisition dates
         selected_ts = ts.sel({TSVar.TIME.value: acquisition_dates})
         # Select where to update
         selected_condition = xr.apply_ufunc(
@@ -290,7 +290,7 @@ class Updater(ABC):
         Returns
         -------
         value: float
-            Upadted value
+            Updated value
         status: STATUS_TYPE
             Updated status
         """
@@ -358,7 +358,7 @@ class Updater(ABC):
         Returns
         -------
         value: float
-            Upadted value
+            Updated value
         status: STATUS_TYPE
             Updated status
         """
@@ -390,7 +390,7 @@ class Updater(ABC):
         self, index: int, status: sh.STATUS_TYPE, data: xr.Dataset
     ) -> tuple[float, sh.STATUS_TYPE]:
         """
-        Update extraplated data
+        Update extrapolated data
 
         Parameters
         ----------
@@ -404,7 +404,7 @@ class Updater(ABC):
         Returns
         -------
         value: float
-            Upadted value
+            Updated value
         status: STATUS_TYPE
             Updated status
         """

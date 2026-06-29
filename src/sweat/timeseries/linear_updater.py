@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from sweat.timeseries import status_handler as sh
 from sweat.timeseries.abstract_updater import Updater
-from sweat.timeseries.constant import TimeSeriesVar as TSVar
+from sweat.timeseries.types import TimeSeriesVar as TSVar
 
 
 class LinearUpdaterParams(BaseModel):
@@ -34,7 +34,7 @@ class LinearUpdaterParams(BaseModel):
 
 class LinearUpdater(Updater):
     """
-    Linear upindexr
+    Linear updater
 
     Parameters
     ----------
@@ -170,7 +170,7 @@ class LinearUpdater(Updater):
         """
         Backward extrapolate from next index.
 
-        Parameterscou
+        Parameters
         ----------
         index: int
             Index position to considered

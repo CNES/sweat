@@ -6,8 +6,7 @@ from pathlib import Path
 import pytest
 
 import sweat.common.config as cfg
-from sweat.common.constant import ETVar
-from sweat.common.types import PercentileValue
+from sweat.common.types import ETVar, PercentileValue
 
 
 @pytest.mark.unit

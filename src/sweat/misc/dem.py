@@ -14,6 +14,8 @@ from rasterio.merge import merge as rio_merge
 from sensorsio import mgrs
 from sensorsio.regulargrid import read_as_numpy
 
+from sweat.common.types import ETVar
+
 ASPECT_MIN = 0
 ASPECT_MAX = 90
 
@@ -70,9 +72,9 @@ def get_dem_from_tile(
     top = np.max(ycoords) + resolution / 2
     transform = rio.Affine(resolution, 0.0, left, 0.0, -resolution, top)
     data_vars: dict[str, tuple[list[str], np.ndarray]] = {}
-    data_vars["height"] = (["y", "x"], elevation)
-    data_vars["slope"] = (["y", "x"], slope)
-    data_vars["aspect"] = (["y", "x"], aspect)
+    data_vars[ETVar.HEIGHT.value] = (["y", "x"], elevation)
+    data_vars[ETVar.SLOPE.value] = (["y", "x"], slope)
+    data_vars[ETVar.ASPECT.value] = (["y", "x"], aspect)
     return xr.Dataset(
         data_vars,
         coords={"x": xcoords, "y": ycoords},
@@ -154,9 +156,9 @@ def get_dem_from_tiles(
     top = np.max(ycoords) + resolution / 2
     transform = rio.Affine(resolution, 0.0, left, 0.0, -resolution, top)
     data_vars: dict[str, tuple[list[str], np.ndarray]] = {}
-    data_vars["height"] = (["y", "x"], elevation)
-    data_vars["slope"] = (["y", "x"], slope)
-    data_vars["aspect"] = (["y", "x"], aspect)
+    data_vars[ETVar.HEIGHT.value] = (["y", "x"], elevation)
+    data_vars[ETVar.SLOPE.value] = (["y", "x"], slope)
+    data_vars[ETVar.ASPECT.value] = (["y", "x"], aspect)
     return xr.Dataset(
         data_vars,
         coords={"x": xcoords, "y": ycoords},

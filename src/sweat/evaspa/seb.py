@@ -13,12 +13,13 @@ import numpy.typing as npt
 import xarray as xr
 from pydantic import BaseModel, ConfigDict, Field
 
-from sweat.common.constant import FLAGS_TYPE, ETVar
+from sweat.common.constant import FLAGS_TYPE
 from sweat.common.flux import (
     compute_et_from_le,
     compute_rn,
     correct_shortwave_radiation,
 )
+from sweat.common.types import ETVar
 from sweat.debugging import register_debugging
 from sweat.evaspa.merging import MergingConfig, merge_to_dataset
 from sweat.logging import LoggerManager

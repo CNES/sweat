@@ -13,8 +13,8 @@ import xarray as xr
 from pyproj import CRS
 from scipy.constants import c, h, k, pi
 
-from sweat.common.constant import ETVar
 from sweat.common.solar import compute_diffuse_fraction, compute_sun_angles
+from sweat.common.types import ETVar
 from sweat.debugging import register_debugging
 from sweat.logging import LoggerManager
 

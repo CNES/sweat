@@ -7,7 +7,7 @@ A pixel is characterized by
 backward extrapolated, invalid
 - Bit 4 "UPDATED": a flag to indicate is the pixel has been updated
 - Bit 5 "RADIATION": a mode for radiation product: external or theoretical
-- Bit 6 "AUX_DATA": a status for auxilliary data: complete, missing
+- Bit 6 "AUX_DATA": a status for auxiliary data: complete, missing
 - Bit 7 to 10 "DISTANCE": the difference between the two dates used for
 interpolation or the difference with the date used for extrapolation
 """
@@ -91,7 +91,7 @@ def _extract_bit(bit_array: STATUS_TYPE, position: int) -> STATUS_TYPE:
     value: int
         The value of the third bit (0 or 1).
     """
-    # Right shift by poistion and AND with 1
+    # Right shift by position and AND with 1
     return STATUS_TYPE((bit_array >> position) & 0b1)
 
 

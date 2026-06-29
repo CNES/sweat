@@ -13,9 +13,9 @@ import pandas as pd
 import xarray as xr
 
 from sweat.common import daily, filter, io
-from sweat.common.constant import ETVar
 from sweat.common.flux import get_radiation_variables
 from sweat.common.io import InputConfig
+from sweat.common.types import ETVar
 from sweat.debugging import DebuggingConfig, configure_debugging
 from sweat.evaspa import ef, seb, tiling
 from sweat.evaspa.config import EVASPAParamsConfig

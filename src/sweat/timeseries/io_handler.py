@@ -24,7 +24,7 @@ from pydantic import (
 
 import sweat.timeseries.status_handler as sh
 from sweat.common.io import read_data_from_file, write_dataset
-from sweat.timeseries.constant import TimeSeriesVar as TSVar
+from sweat.timeseries.types import TimeSeriesVar as TSVar
 
 
 class TimeSeriesInputConfig(BaseModel):

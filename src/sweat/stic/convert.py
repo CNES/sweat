@@ -14,8 +14,6 @@ from pyproj import CRS, Transformer
 
 from sweat.stic.constant import KELVIN_CST
 
-# ruff: noqa: PLR2004
-
 
 def convert_kelvin_to_celsius(lst: npt.ArrayLike) -> npt.NDArray:
     """

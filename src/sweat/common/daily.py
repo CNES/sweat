@@ -12,7 +12,8 @@ import xarray as xr
 from pydantic import BaseModel, ConfigDict, Field
 
 from sweat.common import solar
-from sweat.common.constant import FLAGS_TYPE, MSK_PROCESSING_FAILED, ETVar
+from sweat.common.constant import FLAGS_TYPE, MSK_PROCESSING_FAILED
+from sweat.common.types import ETVar
 from sweat.logging import LoggerManager
 
 logger = LoggerManager.get_logger(__name__)

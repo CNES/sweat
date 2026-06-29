@@ -19,7 +19,7 @@ from sweat.common.io import read_data_from_file, write_dataset
 from sweat.timeseries import io_handler as ioh
 from sweat.timeseries import stack_handler as sth
 from sweat.timeseries import status_handler as sh
-from sweat.timeseries.constant import TimeSeriesVar as TSVar
+from sweat.timeseries.types import TimeSeriesVar as TSVar
 
 # TODO: run a setup for create data, check if it is possible
 
@@ -27,7 +27,7 @@ from sweat.timeseries.constant import TimeSeriesVar as TSVar
 @pytest.fixture(scope="module")
 def test_data_dir(tmp_path_factory):
     """
-    Create temperory directory for all the tests in the module
+    Create temporary directory for all the tests in the module
     """
     dir_path = tmp_path_factory.mktemp("test_data")
     yield dir_path

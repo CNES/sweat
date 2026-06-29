@@ -27,9 +27,8 @@ from sweat.common.constant import (
     FLAGS_TYPE,
     MSK_INPUT_FILTERED,
     MSK_INPUT_NODATA,
-    ETVar,
 )
-from sweat.common.types import PercentileValue
+from sweat.common.types import ETVar, PercentileValue
 from sweat.debugging import register_debugging
 from sweat.logging import LoggerManager
 

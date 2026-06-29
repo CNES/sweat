@@ -1082,9 +1082,9 @@ def _to_fdiff(rsd: float, r0: float, sza: float) -> float:
         Fraction of diffuse radiation
     """
     ratio = rsd / r0
-    if ratio <= 0.22:  # noqa:PLR2004
+    if ratio <= 0.22:
         return 1.0
-    elif ratio <= 0.35:  # noqa:PLR2004, RET505
+    elif ratio <= 0.35:  # noqa: RET505
         return 1.0 - 6.4 * (ratio - 0.22) * (ratio - 0.22)
     l_value = 0.847 - 1.61 * np.sin(sza) + 1.04 * np.sin(sza) ** 2
     k_value = (1.47 - l_value) / 1.66

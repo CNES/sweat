@@ -10,8 +10,8 @@ import xarray as xr
 from pydantic import ValidationError
 
 from sweat.timeseries import updater_handler
-from sweat.timeseries.constant import TimeSeriesVar as TSVar
 from sweat.timeseries.status_handler import STATUS_TYPE
+from sweat.timeseries.types import TimeSeriesVar as TSVar
 
 
 @pytest.mark.unit

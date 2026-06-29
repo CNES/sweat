@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from sweat.common.constant import ETVar
+from sweat.common.types import ETVar
 from sweat.stic.runner import (
     run_batch_init_model,
     run_batch_model,

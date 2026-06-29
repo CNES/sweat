@@ -27,7 +27,7 @@ class UpdateMethod(str, Enum):
     """
 
     linear = "linear"
-    api = "api"  # Antecedent prepricipitation index
+    api = "api"  # Antecedent precipitation index
 
 
 class UpdaterConfig(BaseModel):
@@ -51,7 +51,7 @@ class UpdaterConfig(BaseModel):
             raise ValueError(msg)
         return value
 
-    # Replace `params` with typed submodel during validation
+    # Replace `params` with typed derived model during validation
     @model_validator(mode="after")
     def validate_params(self) -> UpdaterConfig:
         if self.method == UpdateMethod.linear:

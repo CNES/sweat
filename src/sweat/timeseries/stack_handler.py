@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sweat.common import filter
 from sweat.common.solar import compute_daily_toa_solar_radiation
 from sweat.debugging import register_debugging
-from sweat.timeseries.constant import TimeSeriesVar as TSVar
+from sweat.timeseries.types import TimeSeriesVar as TSVar
 
 
 class TimeSeriesStackConfig(BaseModel):
@@ -75,7 +75,7 @@ def stack_time_series(
 ) -> xr.Dataset:
     """
     Create a stack containing ET and radiation time series
-    if radiation do not exist compute theoritical value.
+    if radiation do not exist compute theoretical value.
 
     Parameters
     ----------

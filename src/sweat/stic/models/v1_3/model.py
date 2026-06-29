@@ -15,7 +15,7 @@ from numba import float64 as f64
 from numba import int64 as i64
 from numba.types import Array, Tuple
 
-from sweat.common.constant import ETVar
+from sweat.common.types import ETVar
 from sweat.stic.constant import PSYCHROMETRIC_CST, PT_CST
 from sweat.stic.models.flux import (
     compute_g_flux,

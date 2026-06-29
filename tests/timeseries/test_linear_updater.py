@@ -10,13 +10,13 @@ import pytest
 import xarray as xr
 from pydantic import ValidationError
 
-from sweat.timeseries.constant import TimeSeriesVar as TSVar
 from sweat.timeseries.linear_updater import LinearUpdater, LinearUpdaterParams
 from sweat.timeseries.status_handler import (
     STATUS_TYPE,
     ProcessingMode,
     RadiationMode,
 )
+from sweat.timeseries.types import TimeSeriesVar as TSVar
 
 
 def setup_data(
@@ -275,7 +275,7 @@ def test_backward_extrapolate(
 @pytest.mark.unit
 def test_update_new_acquisition() -> None:
     """
-    Test function for upadting new acquisitions
+    Test function for updating new acquisitions
     """
     # Window size
     window_size = 7
@@ -323,7 +323,7 @@ def test_update_new_acquisition() -> None:
 @pytest.mark.unit
 def test_update_with_new_acquisitions() -> None:
     """
-    Test function for upadting new acquisitions
+    Test function for updating new acquisitions
     """
     # Window size
     window_size = 7

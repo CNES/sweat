@@ -10,13 +10,13 @@ from sweat.common import utils
 from sweat.common.constant import (
     FLAGS_TYPE,
     MSK_PROCESSING_FAILED,
-    ETVar,
 )
 from sweat.common.flux import (
     compute_et_from_le,
     create_net_radiation,
     get_radiation_variables,
 )
+from sweat.common.types import ETVar
 from sweat.logging import LoggerManager
 from sweat.stic.convert import (
     convert_kelvin_to_celsius,

@@ -27,9 +27,9 @@ from pydantic import (
 from sweat.common.constant import (
     MSK_INPUT_FILTERED,
     MSK_INPUT_FILTERED_DURING_PROCESSING,
-    ETVar,
 )
 from sweat.common.filter import FilteringConfig, find_valid_pixels
+from sweat.common.types import ETVar
 from sweat.debugging import register_debugging
 from sweat.evaspa.edge import Edge, EdgeConfig, EdgeError
 from sweat.evaspa.merging import (

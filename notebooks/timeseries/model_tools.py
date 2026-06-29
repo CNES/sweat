@@ -8,8 +8,8 @@ import os
 
 import xarray as xr
 
-from sweat.common.constant import ETVar
 from sweat.common.io import read_data_from_file
+from sweat.common.types import ETVar
 
 
 def get_et_time_series(path_dir: str, date: dt.datetime) -> xr.DataArray:

@@ -17,10 +17,10 @@ from pydantic import (
 )
 
 from sweat.__about__ import __version__
-from sweat.common.constant import ETVar
 from sweat.common.daily import DailyConfig
 from sweat.common.filter import FilteringConfig
 from sweat.common.io import InputConfig, OutputConfig
+from sweat.common.types import ETVar
 from sweat.debugging import DebuggingConfig
 from sweat.logging import LoggerManager
 from sweat.stic.registry import DEFAULT_VERSION, MODEL_REGISTRY

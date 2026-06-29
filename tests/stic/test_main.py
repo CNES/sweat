@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from sweat.common.constant import ETVar
+from sweat.common.types import ETVar
 from sweat.stic import main
 from sweat.stic.registry import DEFAULT_VERSION, MODEL_REGISTRY
 

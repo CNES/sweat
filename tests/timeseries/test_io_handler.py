@@ -17,7 +17,7 @@ from pyproj import CRS
 from sweat.common.io import write_dataset
 from sweat.timeseries import io_handler as ioh
 from sweat.timeseries import status_handler as sh
-from sweat.timeseries.constant import TimeSeriesVar as TSVar
+from sweat.timeseries.types import TimeSeriesVar as TSVar
 
 # TODO: run a setup for create data, check if it is possible
 
@@ -123,7 +123,7 @@ def setup_test_data(test_data_dir):
     # Add CRS and transform metadata (compatible with rioxarray)
     radiation_ts = radiation_ts.rio.write_crs(CRS(4236))
     radiation_ts = radiation_ts.rio.write_transform(transform)
-    # Create a dataset for ET signe dates
+    # Create a dataset for ET single dates
     acquisition_dates = [1, 3, 5, 6]
     feed_dates = dates[acquisition_dates]
     feed = xr.Dataset(
@@ -266,7 +266,7 @@ def test_timeseries_input_config(keys, test_data_dir) -> None:
         "et_single_date": et_files,
         "dem": dem_file,
     }
-    # Create the subdictionary
+    # Create the sub-dictionary
     config = {k: full_config[k] for k in keys if k in full_config}
     assert ioh.TimeSeriesInputConfig.model_validate(config)
 
@@ -493,7 +493,7 @@ def test_read_radiation_time_series(test_data_dir) -> None:
 @pytest.mark.unit
 def test_read_et_single_date(test_data_dir) -> None:
     """
-    Test function for reading et sibgle date files
+    Test function for reading et single date files
     """
     _, _, files, _ = get_list_files(str(test_data_dir))
     ts = ioh.read_et_single_date(files)
@@ -540,7 +540,7 @@ def test_read_input(keys, test_data_dir) -> None:
         "et_single_date": et_files,
         "dem": dem_file,
     }
-    # Create the subdictionary
+    # Create the sub-dictionary
     config = {k: full_config[k] for k in keys if k in full_config}
     et_ts, radiation_ts, et_sd, dem = ioh.read_input(config)
     assert et_ts
