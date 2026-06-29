@@ -11,6 +11,8 @@ cesbio
 
 # Journals
 Hydrometeorology
+Appl
+Climatol
 
 # Nouns
 Choudhury
@@ -23,6 +25,9 @@ Daughtry
 Oevelen
 Idso
 Reginato
+Alduchov
+Eskridge
+Magnus
 
 # Variables
 dewpoint
