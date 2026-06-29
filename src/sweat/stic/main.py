@@ -9,6 +9,7 @@ import xarray as xr
 from sweat.common import utils
 from sweat.common.constant import (
     FLAGS_TYPE,
+    MSK_PROCESSING_FAILED,
     ETVar,
 )
 from sweat.common.flux import (
@@ -26,9 +27,6 @@ from sweat.stic.registry import DEFAULT_VERSION, MODEL_REGISTRY
 from sweat.stic.runner import run_model
 
 logger = LoggerManager.get_logger(__name__)
-
-# if bit 1 activated : The pixel is invalid : STIC not converged
-MSK_STIC_NOT_CONVERGED = 1 << 3
 
 
 def prepare(
@@ -274,7 +272,7 @@ def run(
     ef_arr[converged_arr == 0] = np.nan
     flags_arr = np.where(
         converged_arr == 0,
-        flags_arr | MSK_STIC_NOT_CONVERGED,
+        flags_arr | MSK_PROCESSING_FAILED,
         flags_arr,
     )
     valid_arr = valid_arr & converged_arr
