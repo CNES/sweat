@@ -76,7 +76,7 @@ class STICModelConfig(BaseModel):
     @field_validator("threshold")
     @classmethod
     def check_threshold(cls, v):
-        if v < 1.0e-6 or v > 1.0e-1:  # noqa PLR2004
+        if v < 1.0e-6 or v > 1.0e-1:
             msg = "Threshold must be between 1.e-6 and 1.e-1"
             raise ValueError(msg)
         return v
@@ -84,7 +84,7 @@ class STICModelConfig(BaseModel):
     @field_validator("nb_steps")
     @classmethod
     def check_nb_steps(cls, v):
-        if v < 0 or v > 20:  # noqa PLR2004
+        if v < 0 or v > 20:
             msg = "Nb steps must be between 0 and 20"
             raise ValueError(msg)
         return v
@@ -154,4 +154,4 @@ def check_config_stic(config: dict) -> dict:
         Checked dictionary containing the configuration parameters
     """
     cfg = STICInputFile.model_validate(config)
-    return cfg.model_dump(mode="json")
+    return cfg.model_dump(mode="json", by_alias=True)

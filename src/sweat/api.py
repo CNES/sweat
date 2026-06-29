@@ -365,7 +365,7 @@ def run_stic(
     valid_mask, flags_mask = filter.find_valid_pixels(
         data,
         nan_config=MODEL_REGISTRY[params_config.stic.version].inputs,
-        valid_config=params_config.filtering.model_dump(),
+        valid_config=params_config.filtering.model_dump(by_alias=True),
     )
     data[ETVar.VALID.value] = valid_mask
     data[ETVar.FLAGS.value] = flags_mask
