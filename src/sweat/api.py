@@ -376,7 +376,9 @@ def run_stic(
     # Extract DEM data
     dem = None
     dem_data = [
-        d for d in data.data_vars if d in ["elevation", "slope", "aspect"]
+        d
+        for d in data.data_vars
+        if d in [ETVar.HEIGHT.value, ETVar.SLOPE.value, ETVar.ASPECT.value]
     ]
     if len(dem_data) > 0:
         dem = data[dem_data]
