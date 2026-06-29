@@ -9,6 +9,9 @@ stic
 trishna
 cesbio
 
+# Journals
+Hydrometeorology
+
 # Nouns
 Choudhury
 Friedl
@@ -58,3 +61,21 @@ dataarray
 efconfig
 seb
 xarr
+adjs
+adjacents
+fdiff
+
+# Python packages
+numpy
+xarray
+sensorsio
+pwlf
+rioxarray
+contextily
+mkdocstrings
+gdal
+
+# Python ini_options
+autorefs
+addopts
+testpaths
