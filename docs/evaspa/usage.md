@@ -131,31 +131,43 @@ Example:
 }
 ```
 
-## Output directory description
+## Output description
+
+### Output directory description
 
 EVASPA produces the following files in the output directory:
 
 ```bash
 output_dir/
-out/
 ├── config.json
-├── debug
 ├── evaspa_daily
 │   ├── evaspa_daily_et.tif
 │   ├── evaspa_daily_flags.tif
 │   ├── evaspa_daily_le.tif
+│   ├── evaspa_daily_uncertainty_et.tif
+│   ├── evaspa_daily_uncertainty_le.tif
 │   └── evaspa_daily_valid.tif
-├── evaspa_inst
-│   ├── evaspa_inst_ef.tif
-│   ├── evaspa_inst_et.tif
-│   ├── evaspa_inst_flags.tif
-│   ├── evaspa_inst_le.tif
-│   ├── evaspa_inst_uncertainty_ef.tif
-│   ├── evaspa_inst_uncertainty_le.tif
-│   └── evaspa_inst_valid.tif
+└── evaspa_inst
+    ├── evaspa_inst_ef.tif
+    ├── evaspa_inst_et.tif
+    ├── evaspa_inst_flags.tif
+    ├── evaspa_inst_le.tif
+    ├── evaspa_inst_uncertainty_ef.tif
+    ├── evaspa_inst_uncertainty_et.tif
+    ├── evaspa_inst_uncertainty_le.tif
+    └── evaspa_inst_valid.tif
 ```
 
 * `config.json` corresponds to the exact configuration used to run EVASPA.
 * `evaspa_inst` contains instantaneous products
 * `evaspa_daily` contains daily products
 * `debug` (optional) contains intermediary results if verbose mode is active in debug section
+
+### Flag description
+
+| Bit | Description |
+|-----|-------------|
+| 0   | Invalid input pixel |
+| 1   | Filtered input pixel |
+| 2   | Filtered pixel during processing step: Not used for regression point selection |
+| 3   | Processing failed |
