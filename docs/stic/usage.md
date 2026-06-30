@@ -41,7 +41,7 @@ STIC produces the following results:
 
 The **input** section is composed of:
 
-| Name | Description | Type | Mandatory | Defult value |
+| Name | Description | Type | Mandatory | Default value |
 |------|-------------|------|-----------|--------------|
 | `path` | Path of input data (file or directory) | str | yes | - |
 | `date` | Date of the acquisition | str | non | - |
@@ -149,7 +149,9 @@ Example:
 }
 ```
 
-## Output directory description
+## Output description
+
+### Output directory description
 
 STIC produces the following files in the output directory:
 
@@ -161,12 +163,17 @@ output_dir/
 │   ├── stic_daily_et.tif
 │   ├── stic_daily_flags.tif
 │   ├── stic_daily_le.tif
+│   ├── stic_daily_uncertainty_et.tif
+│   ├── stic_daily_uncertainty_le.tif
 │   └── stic_daily_valid.tif
 └── stic_inst
     ├── stic_inst_ef.tif
     ├── stic_inst_et.tif
     ├── stic_inst_flags.tif
     ├── stic_inst_le.tif
+    ├── stic_inst_uncertainty_ef.tif
+    ├── stic_inst_uncertainty_et.tif
+    ├── stic_inst_uncertainty_le.tif
     └── stic_inst_valid.tif
 ```
 
@@ -174,3 +181,12 @@ output_dir/
 * `stic_inst` contains instantaneous products
 * `stic_daily` contains daily products
 * `debug` (optional) contains intermediary results if verbose mode is active in debug section
+
+### Flag description
+
+| Bit | Description |
+|-----|-------------|
+| 0   | Invalid input pixel |
+| 1   | Filtered input pixel |
+| 2   | Not used |
+| 3   | Processing failed: No convergence of STIC algorithm |
