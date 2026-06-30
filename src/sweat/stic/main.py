@@ -277,11 +277,15 @@ def run(
     )
     valid_arr = valid_arr & converged_arr
     dims = data[ETVar.LST.value].dims
+    # Create dataset and add uncertainty (set to 0 for now)
     return xr.Dataset(
         data_vars={
             ETVar.LE.value: (dims, le_arr),
             ETVar.ET.value: (dims, et_arr),
             ETVar.EF.value: (dims, ef_arr),
+            ETVar.UNCERTAINTY_LE.value: (dims, np.zeros_like(le_arr)),
+            ETVar.UNCERTAINTY_ET.value: (dims, np.zeros_like(et_arr)),
+            ETVar.UNCERTAINTY_EF.value: (dims, np.zeros_like(ef_arr)),
             ETVar.VALID.value: (dims, valid_arr.astype(FLAGS_TYPE)),
             ETVar.FLAGS.value: (dims, flags_arr.astype(FLAGS_TYPE)),
         },

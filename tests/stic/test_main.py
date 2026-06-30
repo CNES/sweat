@@ -323,3 +323,15 @@ def test_run(version):
 
     res = main.run(data, threshold=0.01, nb_steps=15, version=version)
     assert res
+    assert sorted(res.data_vars) == sorted(
+        [
+            ETVar.LE.value,
+            ETVar.ET.value,
+            ETVar.EF.value,
+            ETVar.UNCERTAINTY_LE.value,
+            ETVar.UNCERTAINTY_ET.value,
+            ETVar.UNCERTAINTY_EF.value,
+            ETVar.VALID.value,
+            ETVar.FLAGS.value,
+        ]
+    )
