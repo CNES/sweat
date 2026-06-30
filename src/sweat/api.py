@@ -398,7 +398,12 @@ def run_stic(
     # Extrapolate at daily scale
     daily_xr = daily.extrapolate_at_daily_scale(
         inst_xr,
-        variables=["le", "et"],
+        variables=[
+            ETVar.LE.value,
+            ETVar.ET.value,
+            ETVar.UNCERTAINTY_LE.value,
+            ETVar.UNCERTAINTY_ET.value,
+        ],
         dem=dem,
         **params_config.daily.model_dump(),
     )
