@@ -315,7 +315,7 @@ def _sun_zenith_angle(
 ) -> npt.NDArray:
     """
     Compute the sun zenith angle with an analytical
-    expression based on spherical troginometry.
+    expression based on spherical trigonometry.
 
     Notes
     -----
@@ -351,7 +351,7 @@ def _sun_azimuth_angle(
 ) -> npt.NDArray:
     """
     Compute the sun azimuth angle with an analytical
-    expression based on spherical troginometry.
+    expression based on spherical trigonometry.
 
     Notes
     -----
@@ -392,7 +392,7 @@ def _declination_angle(date: dt.datetime) -> float:
     """
     # Day angle
     gamma = _day_angle(date)
-    # Solar declinaison given by Spencer, J. W. (1971).
+    # Solar declination given by Spencer, J. W. (1971).
     # Fourier series representation of the position
     # of the sun. Search, 2(5), 172-172.
     return (
@@ -476,7 +476,7 @@ def compute_sun_angles(
 ) -> tuple[npt.NDArray, npt.NDArray]:
     """
     Compute the sun zenith angle with an analytical
-    expression based on spherical troginometry.
+    expression based on spherical trigonometry.
 
     Notes
     -----
@@ -636,7 +636,7 @@ def compute_toa_solar_radiation_from_hour_angle(
     y: np.array_like
         Y coordinates
     crs: pyproj.CRS
-        Corrdinate Reference System
+        Coordinate Reference System
     slope: np.array_like
         Slope
     aspect: np.array_like
@@ -657,7 +657,7 @@ def compute_toa_solar_radiation_from_hour_angle(
     lon, lat = _to_lonlat(crs, x_grid, y_grid)  # type: ignore
     lon_rad = np.deg2rad(lon)
     lat_rad = np.deg2rad(lat)
-    # Hour ange
+    # Hour angle
     hour_angle = _hour_angle(date, lon_rad, lat_rad)
     # Declination angle
     decl_angle = _declination_angle(date)
@@ -730,7 +730,7 @@ def compute_toa_solar_radiation(
     y: np.array_like
         Y coordinates
     crs: pyproj.CRS
-        Corrdinate Reference System
+        Coordinate Reference System
     slope: np.array_like
         Slope
     aspect: np.array_like
@@ -792,7 +792,7 @@ def _toa_daily_irradiance(
     _, lat = _to_lonlat(crs, x_grid, y_grid)  # type: ignore
     # convert angle in radians
     lat = np.deg2rad(lat)
-    # Solar declinaison
+    # Solar declination
     delta = _declination_angle(date)
     # Sunrise hour angle
     cosh0 = -np.tan(lat) * np.tan(delta)
@@ -859,7 +859,7 @@ def compute_daily_toa_solar_radiation_from_hour_angle(
     oriented due north. Parameter w is the hour angle,
     where w = 0 at solar noon, w is negative in morning
     and w is positive in afternoon.
-    The formula is intergarted between sunrise and sunset angles.
+    The formula is integrated between sunrise and sunset angles.
     See Richard G. Allen, Ricardo Trezza, Masahiro Tasumi,
     Analytical integrated functions for daily solar radiation on slopes,
     Agricultural and Forest Meteorology,
@@ -899,7 +899,7 @@ def compute_daily_toa_solar_radiation_from_hour_angle(
     slope_rad = np.zeros_like(lat) if slope is None else np.deg2rad(slope)
     aspect_rad = np.zeros_like(lat) if aspect is None else np.deg2rad(aspect)
     aspect_rad -= np.pi  # convention for aspect
-    # Solar declinaison
+    # Solar declination
     delta = _declination_angle(date)
     # Sunrise and sunset angles (in radians)
     sunrise_angle = _sunrise_angle(date, lat_rad)
@@ -982,7 +982,7 @@ def compute_daily_toa_solar_radiation(
     oriented due north. Parameter w is the hour angle,
     where w = 0 at solar noon, w is negative in morning
     and w is positive in afternoon.
-    The formula is intergarted between sunrise and sunset angles.
+    The formula is integrated between sunrise and sunset angles.
     See Richard G. Allen, Ricardo Trezza, Masahiro Tasumi,
     Analytical integrated functions for daily solar radiation on slopes,
     Agricultural and Forest Meteorology,
@@ -1020,7 +1020,7 @@ def compute_daily_toa_solar_radiation(
     # Slope and aspect
     slope_rad = np.zeros_like(lat) if slope is None else np.deg2rad(slope)
     aspect_rad = np.zeros_like(lat) if aspect is None else np.deg2rad(aspect)
-    # Solar declinaison
+    # Solar declination
     delta = _declination_angle(date)
     # Sunrise angle (in radians)
     sunrise_angle = np.min(_sunrise_angle(date, lat_rad))
@@ -1072,7 +1072,7 @@ def _to_fdiff(rsd: float, r0: float, sza: float) -> float:
     rsd: float
         Global radiation
     r0: float
-        Theoritical radiation
+        Theoretical radiation
     sza: float
         Sun Zenith Angle (in degrees)
 
@@ -1107,7 +1107,7 @@ def compute_diffuse_fraction(
     Notes
     -----
     We use the relationship between
-    the fraction of diffuse radiation (Rdiff) compared to
+    the fraction of diffuse radiation (fdiff) compared to
     global radiation data (Rsd) and the fraction of global
     radiation data (Rsd) compared to  theoretical radiation (R0),
     as recommended by de Jon (1980) for hourly radiation.
@@ -1146,7 +1146,7 @@ def compute_diffuse_fraction(
     else:
         sza_arr = sza.data
         saa_arr = saa.data
-    # Theoritical radiation
+    # Theoretical radiation
     r0 = compute_toa_solar_radiation_from_sun_angles(
         date=date, sza=sza_arr, saa=saa_arr
     )

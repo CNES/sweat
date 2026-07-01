@@ -23,7 +23,7 @@ EF = \frac{LE}{LE+H} = \frac{LE}{R_n-G}
 $$
 
 To compute $EF$, EVASPA is based on the model called Simplified Surface Energy Balance Index (S-SEBI) that has been developed to solve
-the surface energy balance with remote sensing techniques on a pixel-by-pixel basis (Roering 2000).
+the surface energy balance with remote sensing techniques on a pixel-by-pixel basis (Roerink 2000).
 It has been observed that the surface temperature and reflectance of areas subject to constant atmospheric forcing are correlated,
 and that the relationships can be applied to determine the effective properties of the land surface (Menenti 1989; Bastiaanssen 1995).
 Up to a certain temperature, surface temperature can be described as “evaporation-controlled”, because the change in temperature is

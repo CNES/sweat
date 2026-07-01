@@ -153,7 +153,7 @@ def merge(
                 message="Degrees of freedom <= 0 for slice.",
                 category=RuntimeWarning,
             )
-            # Standard deviation compute with ddof = 1
+            # Standard deviation compute with delta degree of freedom = 1
             uncertainty_xarr = xarr.std(dim="new", skipna=False, ddof=1)
     elif uncertainty_method.value == UncertaintyMethod.NMAD.value:
         uncertainty_xarr = xr.apply_ufunc(

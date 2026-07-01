@@ -43,7 +43,7 @@ def toa_daily_estimate(
     -----
     The instantaneous value is transformed
     into a daily value by considering a scaling factor.
-    This facor is equal to the ratio between daily downwelling
+    This factor is equal to the ratio between daily downwelling
     shortwave radiation and between instant downwelling shortwave
     radiation.
     In this method the shortwave radiation is estimate at
@@ -117,7 +117,7 @@ def extrapolate_at_daily_scale(
     use_topo: bool = False,
 ) -> xr.Dataset:
     """
-    Extraplate data variables at daily scale.
+    Extrapolate data variables at daily scale.
 
     Notes
     -----

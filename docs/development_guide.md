@@ -1,6 +1,6 @@
 # Development guide
 
-## Useful developper commands
+## Useful developer commands
 
 Installation for development
 ```console
@@ -41,7 +41,7 @@ Build the documentation
 mkdocs build
 ```
 
-Clean the documenttaion
+Clean the documentation
 ```console
 mkdocs build --clean
 ```

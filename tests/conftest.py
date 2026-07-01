@@ -27,7 +27,7 @@ def pytest_collection_modifyitems(
     ----------
     config: pytest.Config
         pytest configuration
-    items: list[pyest.Item]
+    items: list[pytest.Item]
         list of pytest.Item objects (i.e., collected tests)
     """
     selected_items = []

@@ -141,7 +141,7 @@ def get_adjacent_tiles(
     land_overlap: float
         Minimum land overlap percentage between two tiles
         (default value is 2)
-    orbir_overlap: float
+    orbit_overlap: float
         Minimum overlap percentage between a tile and an orbit trace
         (default value is 25)
 
@@ -304,7 +304,7 @@ def generate_adjacents(
     land_overlap: float
         Minimum land overlap percentage between two tiles
         (default value is 2)
-    orbir_overlap: float
+    orbit_overlap: float
         Minimum overlap percentage between a tile and an orbit trace
         (default value is 25)
 
@@ -394,7 +394,7 @@ def initialize_regroup(
     ----------
     tiles: DataFrame
         List of tiles to process
-    land: Optinal(GeoDataFrame)
+    land: Optional(GeoDataFrame)
         Land polygons
     by: str, default="id"
         Name of the column containing the tile ID
@@ -439,7 +439,7 @@ def _get_adjacents(
     adjacents: DataFrame
         DataFrame containing adjacent tiles
     by: str
-        Name of column containg adjacent tiles
+        Name of column containing adjacent tiles
 
     Returns
     -------
@@ -538,7 +538,7 @@ def regroup(
         valid pixels and the valid zones
     threshold: int
         Threshold on minimum number of valid pixels
-    land: Optinal(GeoDataFrame)
+    land: Optional(GeoDataFrame)
         Land polygons
 
     Returns

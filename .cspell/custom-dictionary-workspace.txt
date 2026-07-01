@@ -8,11 +8,18 @@ national
 stic
 trishna
 cesbio
+pvcdrom
+noaa
+sebi
+svat
+ecostress
 
 # Journals
 Hydrometeorology
 Appl
 Climatol
+Geocarto
+
 
 # Nouns
 Choudhury
@@ -28,8 +35,32 @@ Reginato
 Alduchov
 Eskridge
 Magnus
+Anatoly
+Gitelson
+Yoram
+Rundquist
+Louhaichi
+Mounir
+Borman
+Trezza
+Masahiro
+Tasumi
+Toussaint
+Goudriaan
+Roerink
+Bastiaanssen
+Menenti
+Kpemlie
+Shuttleworth
+Trebs
+
 
 # Variables
+polygonize
+markexpr
+xrds
+nbands
+downwelling
 dewpoint
 esstar
 fcover
@@ -70,8 +101,14 @@ adjs
 adjacents
 fdiff
 waterstress
+covariation
+libomp
+ldflags
+cppflags
 
 # Python packages
+parameterization
+parameterizations
 numpy
 xarray
 sensorsio

@@ -27,7 +27,7 @@ def setup_dataset(
     seed: int = 0,
 ) -> xr.Dataset:
     """
-    Create a rondom dataset
+    Create a random dataset
     """
     assert len(variables) > 0
     np.random.seed(seed)
@@ -69,7 +69,7 @@ def setup_dataset(
 @pytest.mark.unit
 def test_to_latlon():
     """
-    Test to_latlon function
+    Test to_lat/lon function
     """
     x = np.linspace(739122, 740122, num=10)
     y = np.linspace(5064871, 5074871, num=20)
@@ -424,7 +424,7 @@ def test_compute_toa_solar_radiation_from_hour_angle(
 )
 def test_toa_daily_irradiance(date, x, y, crs, expected):
     """
-    Test function for compiting toa daily irradiance
+    Test function for computing toa daily irradiance
     """
     toa_daily = solar._toa_daily_irradiance(date, x, y, crs)  # noqa: SLF001
     np.testing.assert_approx_equal(toa_daily, expected, significant=2)

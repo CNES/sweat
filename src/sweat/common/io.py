@@ -201,7 +201,7 @@ def write_dataset(
         File name
     directory: str
         Path to the directory
-    seperate: bool
+    separate: bool
         Write bands to separate files
     """
     if len(xrds.data_vars) == 0:

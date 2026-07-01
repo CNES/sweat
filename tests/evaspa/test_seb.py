@@ -82,7 +82,7 @@ def setup_dataset(
     seed: int = 0,
 ) -> xr.Dataset:
     """
-    Create a rondom dataset
+    Create a random dataset
     """
     assert len(variables) > 0
     np.random.seed(seed)

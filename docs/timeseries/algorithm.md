@@ -57,4 +57,4 @@ The following two sections detail the two possible cases:
 Here is the list of algorithms available to interpolate/extrapolate ET value between acquisitions:
 
 * Linear interpolation/extrapolation
-* Interpolation taking into account re-humectation trough rainfall (not implemented yet)
+* Interpolation taking into account re-moistening trough rainfall (not implemented yet)
