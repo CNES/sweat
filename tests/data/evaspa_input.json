@@ -100,6 +100,9 @@
         "daily": {
             "use_topo": true,
             "method": "toa"
+        },
+        "waterstress": {
+            "method": "ef"
         }
     },
     "debug": {

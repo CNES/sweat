@@ -49,6 +49,7 @@ class ETVar(Enum):
     UNCERTAINTY_LE = "uncertainty_le"
     VALID = "valid"
     VARI = "vari_green_index"
+    WATERSTRESS = "water_stress"
 
 
 class PercentileValue:

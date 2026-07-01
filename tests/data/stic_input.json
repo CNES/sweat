@@ -36,6 +36,9 @@
         "daily": {
             "method": "toa",
             "use_topo": true
+        },
+        "waterstress": {
+            "method": "ef"
         }
     },
     "debug": {

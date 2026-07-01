@@ -143,6 +143,10 @@ def evaspa(verbose, input_file):
         write_dataset(
             res[1], filename=filename, directory=output_dir, separate=True
         )
+        filename = "evaspa_waterstress.tif"
+        write_dataset(
+            res[2], filename=filename, directory=output_dir, separate=True
+        )
         logger.info("Writing results: OK")
 
 
@@ -191,6 +195,10 @@ def stic(verbose, input_file):
         filename = "stic_daily.tif"
         write_dataset(
             res[1], filename=filename, directory=output_dir, separate=True
+        )
+        filename = "stic_waterstress.tif"
+        write_dataset(
+            res[2], filename=filename, directory=output_dir, separate=True
         )
         logger.info("Writing results: OK")
 

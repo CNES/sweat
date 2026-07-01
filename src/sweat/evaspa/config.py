@@ -21,6 +21,7 @@ from sweat.__about__ import __version__
 from sweat.common.daily import DailyConfig
 from sweat.common.filter import FilteringConfig
 from sweat.common.io import InputConfig, OutputConfig
+from sweat.common.waterstress import WaterStressConfig
 from sweat.debugging import DebuggingConfig
 from sweat.evaspa.ef import EFConfig
 from sweat.evaspa.seb import SEBConfig
@@ -77,6 +78,7 @@ class EVASPAParamsConfig(BaseModel):
     ef: EFConfig
     seb: SEBConfig = Field(default=SEBConfig())
     daily: DailyConfig = Field(default=DailyConfig())
+    waterstress: WaterStressConfig = Field(default=WaterStressConfig())
 
     @model_validator(mode="after")
     def check_merging(self) -> Self:

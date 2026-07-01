@@ -221,6 +221,7 @@ def test_filter_data_for_evaspa():
                     "merging": {"merging_method": "mean"},
                 },
                 "daily": {"use_topo": True, "method": "toa"},
+                "waterstress": {"method": "ef"},
             },
             None,
         ),
@@ -305,6 +306,7 @@ def test_filter_data_for_evaspa():
                     },
                 },
                 "daily": {"use_topo": True, "method": "toa"},
+                "waterstress": {"method": "ef"},
             },
             {
                 "path": "out/debug",
@@ -320,7 +322,16 @@ def test_run_evaspa(entry, params, debug) -> None:
     """
     data = api.read_input_data(entry)
     res = api.run_evaspa(data, params, debug)
-    assert res
+    assert res is not None
+    inst_xr = res[0]
+    daily_xr = res[1]
+    ws_xr = res[2]
+    assert len(inst_xr.data_vars) > 0
+    assert all(inst_xr[var].count() > 0 for var in inst_xr.data_vars)
+    assert len(daily_xr.data_vars) > 0
+    assert all(daily_xr[var].count() > 0 for var in daily_xr.data_vars)
+    assert len(ws_xr.data_vars) > 0
+    assert all(ws_xr[var].count() > 0 for var in ws_xr.data_vars)
 
 
 @pytest.mark.functional
@@ -345,6 +356,7 @@ def test_run_evaspa(entry, params, debug) -> None:
                 "filtering": {"tdp": {"op": ">=", "value": -30.0}},
                 "stic": {"threshold": 0.01, "nb_steps": 15},
                 "daily": {"method": "toa", "use_topo": True},
+                "waterstress": {"method": "ef"},
             },
             None,
         ),
@@ -358,6 +370,7 @@ def test_run_evaspa(entry, params, debug) -> None:
                 "filtering": {"tdp": {"op": ">=", "value": -30.0}},
                 "stic": {"threshold": 0.01, "nb_steps": 15},
                 "daily": {"method": "toa", "use_topo": True},
+                "waterstress": {"method": "ef"},
             },
             {
                 "path": "out/debug",
@@ -373,7 +386,16 @@ def test_run_stic(entry, params, debug) -> None:
     """
     data = api.read_input_data(entry)
     res = api.run_stic(data, params, debug)
-    assert res
+    assert res is not None
+    inst_xr = res[0]
+    daily_xr = res[1]
+    ws_xr = res[2]
+    assert len(inst_xr.data_vars) > 0
+    assert all(inst_xr[var].count() > 0 for var in inst_xr.data_vars)
+    assert len(daily_xr.data_vars) > 0
+    assert all(daily_xr[var].count() > 0 for var in daily_xr.data_vars)
+    assert len(ws_xr.data_vars) > 0
+    assert all(ws_xr[var].count() > 0 for var in ws_xr.data_vars)
 
 
 @pytest.mark.functional

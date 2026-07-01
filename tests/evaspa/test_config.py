@@ -50,6 +50,7 @@ from sweat.evaspa import merging
             "ef": {"models": "default_evaspa"},
             "seb": {"use_topo": True},
             "daily": {"use_topo": True, "method": "toa"},
+            "waterstress": {"method": "ef"},
         },
         {
             "filtering": {"cloud": {"op": "==", "value": 0}},
@@ -71,6 +72,7 @@ from sweat.evaspa import merging
             },
             "seb": {"use_topo": True},
             "daily": {"use_topo": True, "method": "toa"},
+            "waterstress": {"method": "ef"},
         },
     ],
 )
@@ -210,6 +212,7 @@ def test_check() -> None:
             "ef": {"models": "default_evaspa"},
             "seb": {"use_topo": True},
             "daily": {"use_topo": True, "method": "toa"},
+            "waterstress": {"method": "ef"},
         },
     }
     ref_config = {
@@ -290,6 +293,7 @@ def test_check() -> None:
                 "use_topo": True,
                 "method": "toa",
             },
+            "waterstress": {"method": "ef"},
         },
         "debug": {"profile": False, "verbose": False, "path": "out/debug"},
     }

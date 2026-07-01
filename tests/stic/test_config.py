@@ -193,6 +193,7 @@ def test_sticmodelconfig_error(config) -> None:
             "filtering": {"cloud": {"op": "!=", "value": 1}},
             "stic": {"version": "1.3", "threshold": 0.05},
             "daily": {"method": "toa"},
+            "waterstress": {"method": "ef"},
         },
     ],
 )

@@ -21,6 +21,7 @@ from sweat.common.daily import DailyConfig
 from sweat.common.filter import FilteringConfig
 from sweat.common.io import InputConfig, OutputConfig
 from sweat.common.types import ETVar
+from sweat.common.waterstress import WaterStressConfig
 from sweat.debugging import DebuggingConfig
 from sweat.logging import LoggerManager
 from sweat.stic.registry import DEFAULT_VERSION, MODEL_REGISTRY
@@ -101,6 +102,7 @@ class STICParamsConfig(BaseModel):
     filtering: STICFilteringConfig = Field(default=STICFilteringConfig({}))
     stic: STICModelConfig = Field(default=STICModelConfig())
     daily: DailyConfig = Field(default=DailyConfig())
+    waterstress: WaterStressConfig = Field(default=WaterStressConfig())
 
 
 class STICInputFile(BaseModel):

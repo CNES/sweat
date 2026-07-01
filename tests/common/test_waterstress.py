@@ -103,9 +103,9 @@ def test_run(config):
     Test run method
     """
     et_data = setup_et_data()
-    water_stress = ws.run(et_data, **config)
-    assert water_stress.size > 0
-    assert not water_stress.isnull().all().item()
+    ws_xr = ws.run(et_data, **config)
+    assert len(ws_xr.data_vars) > 0
+    assert all(ws_xr[var].count() > 0 for var in ws_xr.data_vars)
 
 
 @pytest.mark.functional

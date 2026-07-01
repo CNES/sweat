@@ -147,15 +147,19 @@ output_dir/
 │   ├── evaspa_daily_uncertainty_et.tif
 │   ├── evaspa_daily_uncertainty_le.tif
 │   └── evaspa_daily_valid.tif
-└── evaspa_inst
-    ├── evaspa_inst_ef.tif
-    ├── evaspa_inst_et.tif
-    ├── evaspa_inst_flags.tif
-    ├── evaspa_inst_le.tif
-    ├── evaspa_inst_uncertainty_ef.tif
-    ├── evaspa_inst_uncertainty_et.tif
-    ├── evaspa_inst_uncertainty_le.tif
-    └── evaspa_inst_valid.tif
+├── evaspa_inst
+│   ├── evaspa_inst_ef.tif
+│   ├── evaspa_inst_et.tif
+│   ├── evaspa_inst_flags.tif
+│   ├── evaspa_inst_le.tif
+│   ├── evaspa_inst_uncertainty_ef.tif
+│   ├── evaspa_inst_uncertainty_et.tif
+│   ├── evaspa_inst_uncertainty_le.tif
+│   └── evaspa_inst_valid.tif
+└── evaspa_waterstress
+    ├── evaspa_waterstress_flags.tif
+    ├── evaspa_waterstress_valid.tif
+    └── evaspa_waterstress_water_stress.tif
 ```
 
 * `config.json` corresponds to the exact configuration used to run EVASPA.

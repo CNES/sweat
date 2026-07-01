@@ -13,6 +13,7 @@ import numpy.typing as npt
 import xarray as xr
 from pydantic import BaseModel, ConfigDict, Field
 
+from sweat.common.constant import FLAGS_TYPE
 from sweat.common.types import ETVar
 from sweat.debugging import register_debugging
 from sweat.logging import LoggerManager
@@ -60,7 +61,7 @@ def compute_waterstress_from_ef(ef: npt.ArrayLike) -> npt.NDArray:
 def run(
     et: xr.Dataset,
     method: WaterStressMethod = DEFAULT_METHOD,
-) -> xr.DataArray:
+) -> xr.Dataset:
     """
     Compute water stress indices
 
@@ -77,6 +78,19 @@ def run(
     if len(et.data_vars) == 0:
         msg = "ET dataset empty"
         raise ValueError(msg)
+    # Get valid and flags
+    if ETVar.VALID.value in et.data_vars:
+        valid = et[ETVar.VALID.value]
+    else:
+        valid = xr.ones_like(
+            next(iter(et.data_vars.values())), dtype=FLAGS_TYPE
+        )
+    if ETVar.FLAGS.value in et.data_vars:
+        flags = et[ETVar.FLAGS.value]
+    else:
+        flags = xr.zeros_like(
+            next(iter(et.data_vars.values())), dtype=FLAGS_TYPE
+        )
     try:
         method_name = WaterStressMethod(method).name
     except ValueError as exc:
@@ -93,4 +107,16 @@ def run(
     except KeyError as exc:
         msg = f"Data missing for {method_name} method: {exc}"
         raise ValueError(msg) from exc
-    return water_stress
+    # Attributes
+    attrs = {
+        "crs": et.attrs.get("crs", None),
+        "transform": et.attrs.get("transform", None),
+    }
+    # Create dataset
+    ws_xr = xr.Dataset(
+        data_vars={ETVar.WATERSTRESS.value: water_stress}, attrs=attrs
+    )
+    # Propagate flags
+    ws_xr[ETVar.VALID.value] = valid
+    ws_xr[ETVar.FLAGS.value] = flags
+    return ws_xr

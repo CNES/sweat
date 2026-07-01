@@ -166,15 +166,19 @@ output_dir/
 │   ├── stic_daily_uncertainty_et.tif
 │   ├── stic_daily_uncertainty_le.tif
 │   └── stic_daily_valid.tif
-└── stic_inst
-    ├── stic_inst_ef.tif
-    ├── stic_inst_et.tif
-    ├── stic_inst_flags.tif
-    ├── stic_inst_le.tif
-    ├── stic_inst_uncertainty_ef.tif
-    ├── stic_inst_uncertainty_et.tif
-    ├── stic_inst_uncertainty_le.tif
-    └── stic_inst_valid.tif
+├── stic_inst
+│   ├── stic_inst_ef.tif
+│   ├── stic_inst_et.tif
+│   ├── stic_inst_flags.tif
+│   ├── stic_inst_le.tif
+│   ├── stic_inst_uncertainty_ef.tif
+│   ├── stic_inst_uncertainty_et.tif
+│   ├── stic_inst_uncertainty_le.tif
+│   └── stic_inst_valid.tif
+└── stic_waterstress
+    ├── stic_waterstress_flags.tif
+    ├── stic_waterstress_valid.tif
+    └── stic_waterstress_water_stress.tif
 ```
 
 * `config.json` corresponds to the exact configuration used to run STIC.

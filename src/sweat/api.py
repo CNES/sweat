@@ -13,6 +13,7 @@ import pandas as pd
 import xarray as xr
 
 from sweat.common import daily, filter, io
+from sweat.common import waterstress as ws
 from sweat.common.flux import get_radiation_variables
 from sweat.common.io import InputConfig
 from sweat.common.types import ETVar
@@ -231,7 +232,7 @@ def filter_data_for_evaspa(
 
 def run_evaspa(
     data: xr.Dataset, params: dict, debug: dict | None = None
-) -> tuple[xr.Dataset, xr.Dataset] | None:
+) -> tuple[xr.Dataset, xr.Dataset, xr.Dataset] | None:
     """
     Run EVASPA
 
@@ -328,12 +329,15 @@ def run_evaspa(
         **params_config.daily.model_dump(),
     )
     logger.debug("Daily extrapolation: OK")
-    return inst_xr, daily_xr
+    # Compute water stress indices
+    ws_xr = ws.run(et=inst_xr, **params_config.waterstress.model_dump())
+    logger.debug("Water stress indices: OK")
+    return inst_xr, daily_xr, ws_xr
 
 
 def run_stic(
     data: xr.Dataset, params: dict, debug: dict | None = None
-) -> tuple[xr.Dataset, xr.Dataset] | None:
+) -> tuple[xr.Dataset, xr.Dataset, xr.Dataset] | None:
     """
     Run STIC
 
@@ -408,7 +412,10 @@ def run_stic(
         **params_config.daily.model_dump(),
     )
     logger.debug("Daily extrapolation: OK")
-    return inst_xr, daily_xr
+    # Compute water stress indices
+    ws_xr = ws.run(et=inst_xr, **params_config.waterstress.model_dump())
+    logger.debug("Water stress indices: OK")
+    return inst_xr, daily_xr, ws_xr
 
 
 def run_timeseries(

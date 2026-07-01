@@ -69,6 +69,7 @@ xarr
 adjs
 adjacents
 fdiff
+waterstress
 
 # Python packages
 numpy
