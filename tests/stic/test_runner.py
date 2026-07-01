@@ -205,7 +205,7 @@ def test_run_batch_init_model(
     le_expected,
 ) -> None:
     """
-    Test runner for STIC model (batch mode)
+    Test runner for STIC model (init only)
     """
     df = pd.DataFrame(data, columns=variables)
     res = run_batch_init_model(

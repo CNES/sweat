@@ -432,7 +432,7 @@ def test_extract_date_from_filename(test_data_dir) -> None:
 @pytest.mark.unit
 def test_read_et_time_series(test_data_dir) -> None:
     """
-    Test function for reading et time series files
+    Test function for reading ET time series files
     """
     et_ts_files, _, _, _ = get_list_files(str(test_data_dir))
     today = dt.datetime.now(tz=dt.UTC).date()
@@ -455,7 +455,7 @@ def test_read_et_time_series(test_data_dir) -> None:
 @pytest.mark.unit
 def test_read_et_time_series_without_dates(test_data_dir) -> None:
     """
-    Test function for reading et time series files (without dates)
+    Test function for reading ET time series files (without dates)
     """
     et_ts_files, _, _, _ = get_list_files(str(test_data_dir))
     ts = ioh.read_et_time_series(et_ts_files, dates=None)
@@ -493,7 +493,7 @@ def test_read_radiation_time_series(test_data_dir) -> None:
 @pytest.mark.unit
 def test_read_et_single_date(test_data_dir) -> None:
     """
-    Test function for reading et single date files
+    Test function for reading ET single date files
     """
     _, _, files, _ = get_list_files(str(test_data_dir))
     ts = ioh.read_et_single_date(files)
@@ -524,7 +524,7 @@ def test_read_et_single_date(test_data_dir) -> None:
 )
 def test_read_input(keys, test_data_dir) -> None:
     """
-    Test TimeSeriesInputConfig
+    Test read inputs
     """
     et_ts_files, radiation_files, et_files, dem_file = get_list_files(
         str(test_data_dir)

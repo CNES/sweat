@@ -256,7 +256,7 @@ def test_backward_extrapolate(
     index, next_index, expected_value, expected_mode
 ) -> None:
     """
-    Test interpolate function
+    Test backward extrapolate function
     """
     ts = setup_data(
         size=7,
@@ -572,7 +572,7 @@ def test_update_time_series(status_arr, expected_values, expected_status):
 @pytest.mark.functional
 def test_update():
     """
-    Test update interpolated data function
+    Test update function
     """
     # Setup data
     window_size = 7
@@ -712,7 +712,7 @@ def test_update():
 @pytest.mark.functional
 def test_update_no_feed():
     """
-    Test update interpolated data function
+    Test update function (without new acquisition)
     """
     # Setup data
     window_size = 7

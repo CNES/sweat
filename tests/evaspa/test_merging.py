@@ -171,7 +171,7 @@ def test_merge_with_nan(
     merging_method, uncertainty_method, expected_value, expected_uncertainty
 ) -> None:
     """:
-    Test merge function
+    Test merge function with nan
     """
     values = np.array(
         [
@@ -217,7 +217,7 @@ def test_merge_with_nan(
 )
 def test_merge_to_dataset(merging_method, uncertainty_method, expected) -> None:
     """
-    Test merge function
+    Test merge_to_dataset function
     """
     data = xr.Dataset(
         data_vars={

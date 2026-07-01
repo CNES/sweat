@@ -62,7 +62,7 @@ def test_command_evaspa_tiling(tmp_path):
 )
 def test_command_stic(filename, tmp_path):
     """
-    Test evaspa CLI
+    Test stic CLI
     """
     output_dir = tmp_path / "tmp_out"
     output_dir.mkdir()
@@ -85,7 +85,7 @@ def test_command_stic(filename, tmp_path):
 )
 def test_command_timeseries(filename, tmp_path):
     """
-    Test evaspa CLI
+    Test timeseries CLI
     """
     output_dir = tmp_path / "tmp_out"
     output_dir.mkdir()
@@ -108,7 +108,7 @@ def test_command_timeseries(filename, tmp_path):
 )
 def test_command_window_timeseries(filename, tmp_path):
     """
-    Test evaspa CLI
+    Test window_timeseries CLI
     """
     output_dir = tmp_path / "tmp_out"
     output_dir.mkdir()

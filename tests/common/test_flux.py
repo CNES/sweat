@@ -332,6 +332,7 @@ def test_correct_shortwave_radiation_with_warnings(
 ):
     """
     Test function for correcting direct shortwave radiation
+    with warnings
     """
     caplog.clear()
     date = dt.datetime(2025, 6, 10, 10, 0, 0, tzinfo=dt.UTC)
@@ -485,6 +486,7 @@ def test_create_net_radiation_exc(params, expected) -> None:
 def test_create_net_radiation_multiple(params, expected) -> None:
     """
     Test create net radiation dataset
+    with multiple input radiation data
     """
     data = setup_data(**params)
     rn, ln = flux.create_net_radiation(data)

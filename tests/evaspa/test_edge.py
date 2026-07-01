@@ -251,7 +251,7 @@ def test_flat_percentile_edge_error(config) -> None:
 )
 def test_get_intervals(config, expected) -> None:
     """
-    Test method get_points in RegressionEdge
+    Test method get_intervals in RegressionEdge
     """
     # Generate data
     var = np.array([0.0, 0.15, 0.21, 0.28, 0.35, 0.57, 0.58, 0.62, 0.81, 1.0])
@@ -385,7 +385,7 @@ def test_linear_edge(config) -> None:
 )
 def test_linear_edge_with_variable_percentile(config) -> None:
     """
-    Test LinearEdge
+    Test LinearEdge (with variable percentile)
     """
     # Generate data
     var, lst = setup_data(

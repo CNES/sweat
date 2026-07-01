@@ -356,7 +356,7 @@ def test_fill_radiation_missing_with_dem() -> None:
 @pytest.mark.unit
 def test_stack_time_series(test_data_dir) -> None:
     """
-    Test function for reading et time series files
+    Test function for stacking time series data
     """
     et_ts_files, radiation_files, _, _ = get_list_files(str(test_data_dir))
     et_ts = ioh.read_et_time_series(et_ts_files, None)
@@ -377,7 +377,7 @@ def test_stack_time_series(test_data_dir) -> None:
 @pytest.mark.unit
 def test_stack_time_series_with_missing_dates(test_data_dir) -> None:
     """
-    Test function for reading et time series files
+    Test function for stacking time series data with missing dates
     """
     et_ts_files, radiation_files, _, _ = get_list_files(str(test_data_dir))
     # Create radiation time series with missing files

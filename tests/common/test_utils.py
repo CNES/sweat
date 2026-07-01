@@ -18,7 +18,9 @@ from sweat.common import utils
     ],
 )
 def test_compute_ndvi(nir, red, expected):
-    """Test NDVI function"""
+    """
+    Test NDVI function
+    """
     res = utils.compute_ndvi(nir, red)
     np.testing.assert_allclose(res, expected, atol=0.01)
 
@@ -36,7 +38,9 @@ def test_compute_ndvi(nir, red, expected):
     ],
 )
 def test_compute_vari_green(red, green, blue, expected):
-    """Test VARIgreen function"""
+    """
+    Test VARIgreen function
+    """
     res = utils.compute_vari_green(red, green, blue)
     np.testing.assert_allclose(res, expected, atol=0.01)
 
@@ -54,7 +58,9 @@ def test_compute_vari_green(red, green, blue, expected):
     ],
 )
 def test_compute_arvi(nir, red, blue, expected):
-    """Test VARIgreen function"""
+    """
+    Test ARVI function
+    """
     res = utils.compute_arvi(nir, red, blue)
     np.testing.assert_allclose(res, expected, atol=0.01)
 
@@ -71,7 +77,9 @@ def test_compute_arvi(nir, red, blue, expected):
     ],
 )
 def test_compute_gndvi(nir, green, expected):
-    """Test GNDVI function"""
+    """
+    Test GNDVI function
+    """
     res = utils.compute_gndvi(nir, green)
     np.testing.assert_allclose(res, expected, atol=0.01)
 
@@ -89,7 +97,9 @@ def test_compute_gndvi(nir, green, expected):
     ],
 )
 def test_compute_gli(red, green, blue, expected):
-    """Test GLI function"""
+    """
+    Test GLI function
+    """
     res = utils.compute_gli(red, green, blue)
     np.testing.assert_allclose(res, expected, atol=0.01)
 
@@ -106,6 +116,8 @@ def test_compute_gli(red, green, blue, expected):
     ],
 )
 def test_compute_msavi(nir, red, expected):
-    """Test NDVI function"""
+    """
+    Test MSAVI function
+    """
     res = utils.compute_msavi(nir, red)
     np.testing.assert_allclose(res, expected, atol=0.01)

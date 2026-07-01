@@ -1129,9 +1129,6 @@ def test_double_filtering() -> None:
     assert not np.isnan(ef_inst["ef"].values[3, 0])
 
 
-# Add test double filtering
-
-
 @pytest.mark.functional
 @pytest.mark.parametrize(
     ("flags", "valid", "options"),

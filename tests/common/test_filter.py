@@ -133,7 +133,10 @@ def test_filteringconfig_model_dump(
     mode: str,
     expected_type: type,
 ) -> None:
-    """Test that values have correct types based on serialization mode"""
+    """
+    Test model_dump function for FilteringConfig
+    The values must have a correct types based on serialization mode
+    """
     model = filter.FilteringConfig.model_validate(config)
     result = (
         model.model_dump(mode=mode) if mode == "json" else model.model_dump()
@@ -217,7 +220,7 @@ def test_eval_condition(entry, cond, expected) -> None:
 )
 def test_apply_condition(entry, cond, expected) -> None:
     """
-    Test eval_condition function
+    Test apply_condition function
     """
     data = convert_dataarray(entry)
     res = filter.apply_condition(data, cond)
@@ -363,7 +366,7 @@ def test_detect_nan_pixels(variables, expected):
 @pytest.mark.unit
 def test_detect_nan_pixels_with_warnings(caplog) -> None:
     """
-    Test function for detecting valid pixels with warnings
+    Test function for detecting nan pixels with warnings
     """
     variables = ["lst", "fcover"]
     data = convert_dataset(
@@ -406,7 +409,7 @@ def test_detect_nan_pixels_with_warnings(caplog) -> None:
 )
 def test_detect_nan_pixels_exc(data, variables, expected) -> None:
     """
-    Test function for detecting valid pixels (with exception)
+    Test function for detecting nan pixels (with exception)
     """
     # Create empty dataset
     with pytest.raises(ValueError, match=expected):
@@ -530,7 +533,7 @@ def test_find_valid_pixels(
     data, nan_config, valid_config, valid_expected, flags_expected
 ):
     """
-    Test function for detect nan pixels
+    Test function for finding valid pixels
     """
     data = convert_dataset(data)
     valid, flags = filter.find_valid_pixels(data, nan_config, valid_config)

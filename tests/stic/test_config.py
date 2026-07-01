@@ -65,7 +65,7 @@ def test_sticprepareconfig(config, expected) -> None:
 )
 def test_sticprepareconfig_error(config) -> None:
     """
-    Test STICModelConfig
+    Test STICModelConfig with error
     """
     with pytest.raises(ValidationError):
         cfg.STICPrepareConfig.model_validate(config)
@@ -167,7 +167,7 @@ def test_sticmodelconfig(config, expected) -> None:
 )
 def test_sticmodelconfig_error(config) -> None:
     """
-    Test STICModelConfig
+    Test STICModelConfig with error
     """
     with pytest.raises(ValidationError):
         cfg.STICModelConfig.model_validate(config)
@@ -199,7 +199,7 @@ def test_sticmodelconfig_error(config) -> None:
 )
 def test_paramsconfig(config) -> None:
     """
-    Test FilterConfig
+    Test STICParamsConfig
     """
     assert cfg.STICParamsConfig.model_validate(config)
 
@@ -258,7 +258,7 @@ def test_check() -> None:
 @pytest.mark.unit
 def test_check_debug() -> None:
     """
-    Test check method
+    Test check method with debug section
     """
     config = {
         "input": {"path": "tests/data/modis_test.tif"},

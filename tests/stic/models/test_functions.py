@@ -404,7 +404,7 @@ def test_initialize_alpha_coefficient(
     slope, ta, da, cp, rho, emis, rn, expected
 ) -> None:
     """
-    Test function for computing vapor pressure deficit at canopy/air height
+    Test function for computing alpha coefficient
     """
     res = functions.initialize_alpha_coefficient(
         slope, ta, da, cp, rho, emis, rn

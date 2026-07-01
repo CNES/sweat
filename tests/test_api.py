@@ -23,7 +23,7 @@ def get_data_path() -> str:
 @pytest.mark.functional
 def test_generate_tiles() -> None:
     """
-    Test methods for regroup tiles
+    Test methods for generate tiles
     """
     data_path = get_data_path()
     tiles, adjs = api.generate_tiles(os.path.join(data_path, "roi.gpkg"))
@@ -382,7 +382,7 @@ def test_run_evaspa(entry, params, debug) -> None:
 )
 def test_run_stic(entry, params, debug) -> None:
     """
-    Test run EVASPA
+    Test run STIC
     """
     data = api.read_input_data(entry)
     res = api.run_stic(data, params, debug)
@@ -728,7 +728,7 @@ def test_run_stic(entry, params, debug) -> None:
 )
 def test_run_timeseries(entry, params, debug) -> None:
     """
-    Test run EVASPA
+    Test run timeseries
     """
     et_ts, radiation_ts, et_sd, dem = api.read_ts_input_data(entry)
     res = api.run_timeseries(et_ts, radiation_ts, et_sd, dem, params, debug)
@@ -747,7 +747,7 @@ def test_run_window_time_series(
     window, shift, params, debug, config_verbose, tmp_path
 ) -> None:
     """
-    Test run_window_time_series
+    Test run window_timeseries
     """
     test_data_dir = str(tmp_path)
     # Copy only radiation et_single_date .tif files in the test directory

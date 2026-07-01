@@ -200,7 +200,7 @@ def test_run_stic_model(
     converged_expected,
 ) -> None:
     """
-    Test function for STIC model calculation function
+    Test function for STIC model calculation function (raster mode)
     """
     le, ef, cv = run_stic_model(
         lst,
@@ -279,7 +279,7 @@ def test_run_batch_stic_model(
     ef_expected,
 ) -> None:
     """
-    Test function for STIC model calculation function
+    Test function for STIC model calculation function (batch mode)
     """
     res = run_batch_stic_model(data, threshold, nb_steps, debug=False)
     assert res.shape == (1, 8)
@@ -328,7 +328,7 @@ def test_run_batch_init_model(
     le_expected,
 ) -> None:
     """
-    Test function for STIC model calculation function
+    Test function for STIC model calculation function (init only)
     """
     res = run_batch_init_stic_model(data, debug=False)
     assert res.shape == (1, 20)

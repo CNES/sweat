@@ -168,7 +168,7 @@ def test_equation_of_time_milne(date, expected):
 )
 def test_equation_of_time_noaa(date, expected):
     """
-    Test equation of time function
+    Test equation of time function (NOAA version)
     """
     tc = solar._equation_of_time_noaa(date)  # noqa: SLF001
     np.testing.assert_almost_equal(tc, expected, decimal=2)

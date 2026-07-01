@@ -29,7 +29,9 @@ def foo2():
 
 @pytest.mark.unit
 def test_register() -> None:
-    """Test register functions for debugging"""
+    """
+    Test register functions for debugging
+    """
     res = get_registered_functions()
     assert "tests.test_debugging.foo1" in sorted(res.keys())
     assert "tests.test_debugging.foo2" in sorted(res.keys())
@@ -37,7 +39,9 @@ def test_register() -> None:
 
 @pytest.mark.unit
 def test_configure() -> None:
-    """Test configure debugging"""
+    """
+    Test configure debugging
+    """
     func = foo1
     assert not func.profile
     assert not func.verbose
@@ -49,6 +53,9 @@ def test_configure() -> None:
 
 @pytest.mark.unit
 def test_debugging() -> None:
+    """
+    Test decorator debugging
+    """
     func = foo
     assert func.profile
     assert func.verbose

@@ -263,7 +263,7 @@ def test_create_le() -> None:
 @pytest.mark.functional
 def test_create_le_with_masks() -> None:
     """
-    Test create LE dataset
+    Test create LE dataset with mask
     """
     ef = setup_dataset(["ef1", "ef2", "ef3"])
     ef["valid"] = xr.ones_like(ef["ef1"])
@@ -312,7 +312,7 @@ def test_create_le_with_masks() -> None:
 )
 def test_sebconfig(config) -> None:
     """
-    Test FilterConfig
+    Test SEBConfig
     """
     assert seb.SEBConfig.model_validate(config)
 

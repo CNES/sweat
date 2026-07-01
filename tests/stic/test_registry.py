@@ -11,7 +11,7 @@ from sweat.stic.registry import (
 @pytest.mark.unit
 def test_default_version() -> None:
     """
-    Test model registry
+    Test default version
     """
     assert DEFAULT_VERSION == "1.3"
 

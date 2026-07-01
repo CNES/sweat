@@ -307,7 +307,7 @@ def test_check() -> None:
 @pytest.mark.unit
 def test_check_debug() -> None:
     """
-    Test check method
+    Test check method with debug section
     """
     config = {
         "input": {"path": "tests/data/modis_test.tif", "date": None},

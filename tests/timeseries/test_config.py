@@ -141,7 +141,7 @@ def test_check_config_timeseries(tmp_path) -> None:
 @pytest.mark.unit
 def test_check_config_timeseries_debug(tmp_path) -> None:
     """
-    Test check method for timeseries with debug option
+    Test check method for timeseries with debug section
     """
     d = Path(tmp_path) / "out"
     config = {
@@ -184,7 +184,7 @@ def test_check_config_timeseries_debug(tmp_path) -> None:
 )
 def test_window_timeseries_input_file(version, tmp_path) -> None:
     """
-    Test version in InputFile
+    Test version in InputFile for timeseries over a period
     """
     d = Path(tmp_path) / "out"
     config = {
@@ -225,7 +225,7 @@ def test_window_timeseries_input_file(version, tmp_path) -> None:
 @pytest.mark.unit
 def test_check_config_window_timeseries(tmp_path) -> None:
     """
-    Test check method
+    Test check method for timeseries over a period
     """
     d = Path(tmp_path) / "out"
     config = {
@@ -246,7 +246,7 @@ def test_check_config_window_timeseries(tmp_path) -> None:
 @pytest.mark.unit
 def test_check_config_window_timeseries_debug(tmp_path) -> None:
     """
-    Test check method
+    Test check method with debug section for timeseries over a period
     """
     d = Path(tmp_path) / "out"
     config = {

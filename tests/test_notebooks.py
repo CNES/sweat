@@ -10,6 +10,9 @@ from nbconvert.preprocessors import ExecutePreprocessor
 
 
 def get_notebooks():
+    """
+    Get notebooks list
+    """
     return [
         path
         for path in Path("notebooks").rglob("*.ipynb")
@@ -23,6 +26,9 @@ def get_notebooks():
 
 
 def get_main_notebooks():
+    """
+    Get main notebooks list
+    """
     return list(Path("notebooks").glob("run_*.ipynb"))
 
 
@@ -33,6 +39,9 @@ def get_main_notebooks():
     "notebook_path", get_notebooks(), ids=lambda path: path.stem
 )
 def test_notebook_execution(notebook_path):
+    """
+    Test run notebooks
+    """
     os.environ["NB_CONVERT"] = "1"
     with open(notebook_path, encoding="utf-8") as f:
         nb = nbformat.read(f, as_version=4)
@@ -52,6 +61,9 @@ def test_notebook_execution(notebook_path):
     "notebook_path", get_main_notebooks(), ids=lambda path: path.stem
 )
 def test_main_notebook_execution(notebook_path):
+    """
+    Test run main notebooks
+    """
     with open(notebook_path, encoding="utf-8") as f:
         nb = nbformat.read(f, as_version=4)
 
