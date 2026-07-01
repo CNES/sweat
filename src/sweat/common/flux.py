@@ -227,13 +227,13 @@ def get_radiation_variables(data: xr.Dataset) -> tuple[list[str], list[str]]:
     msg = f"RSD data available: {rsd_data}"
     logger.debug(msg)
     rld_data: list[str] = [
-        str.replace(v, ETVar.RSD.value, "rld", 1) for v in rsd_data
+        str.replace(v, ETVar.RSD.value, ETVar.RLD.value, 1) for v in rsd_data
     ]
     for v in rld_data:
         if v not in data.data_vars:
             msg = (
                 f"No RLD data ({v}) associated to RSD"
-                f" data ({str.replace(v, 'rld', 'rsd')})"
+                f" data ({str.replace(v, ETVar.RLD.value, ETVar.RSD.value)})"
             )
             raise ValueError(msg)
     msg = f"RLD data available: {rld_data}"
@@ -273,7 +273,8 @@ def create_net_radiation(
     """
     # Check DEM availability if topographic corrections are requested
     if use_topo and (
-        "aspect" not in data.data_vars or "slope" not in data.data_vars
+        ETVar.ASPECT.value not in data.data_vars
+        or ETVar.SLOPE.value not in data.data_vars
     ):
         msg = (
             "No DEM information (aspect or slope) to compute topographic "
@@ -293,25 +294,31 @@ def create_net_radiation(
         if use_topo:
             # Correct RSD with topographic corrections
             # Get diffuse fraction
-            fdiff_name = str.replace(rsd_name, "rsd", "fdiff", 1)
+            fdiff_name = str.replace(
+                rsd_name, ETVar.RSD.value, ETVar.FDIFF.value, 1
+            )
             fdiff = data.get(fdiff_name, None)
             rsd = correct_shortwave_radiation(
                 rsd,
-                data["slope"],
-                data["aspect"],
+                data[ETVar.SLOPE.value],
+                data[ETVar.ASPECT.value],
                 fdiff,
                 data.attrs.get("date", None),
-                data.get("sza", None),
-                data.get("sza", None),
+                data.get(ETVar.SAA.value, None),
+                data.get(ETVar.SZA.value, None),
                 data.attrs.get("crs", None),
             )
         # Compute Rn
-        rn_name = str.replace(rsd_name, "rsd", "rn", 1)
-        ln_name = str.replace(rsd_name, "rsd", "ln", 1)
+        rn_name = str.replace(
+            rsd_name, ETVar.RSD.value, ETVar.NET_RADIATION.value, 1
+        )
+        ln_name = str.replace(
+            rsd_name, ETVar.RSD.value, ETVar.LONGWAVE_NET_RADIATION.value, 1
+        )
         rn_data, ln_data = compute_rn(
-            lst=data["lst"],
-            emis=data["emis"],
-            albedo=data["albedo"],
+            lst=data[ETVar.LST.value],
+            emis=data[ETVar.EMISSIVITY.value],
+            albedo=data[ETVar.ALBEDO.value],
             rsd=rsd,
             rld=rld,
         )

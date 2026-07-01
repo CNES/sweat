@@ -16,6 +16,7 @@ import skimage.morphology as skm
 import xarray as xr
 from shapely.geometry import MultiPolygon, Polygon, shape
 
+from sweat.common.types import ETVar
 from sweat.misc.dem import get_dem_from_tiles
 
 if TYPE_CHECKING:
@@ -159,16 +160,18 @@ def compute_valid_mask(
     -------
     valid: xr.DataArray
     """
-    # Initilization
-    valid = xrds_dem["height"]
+    # Initialization
+    valid = xrds_dem[ETVar.HEIGHT.value]
     # Filter with water_mask
     if "water_mask" in xrds_dem.variables:
         valid = xr.where(
-            xrds_dem["water_mask"] == 0, xrds_dem["height"], np.nan
+            xrds_dem["water_mask"] == 0, xrds_dem[ETVar.HEIGHT.value], np.nan
         )
 
-    # Filtre with slope
-    valid = xr.where(xrds_dem["slope"] < slope_threshold, valid, np.nan)
+    # Filter with slope
+    valid = xr.where(
+        xrds_dem[ETVar.SLOPE.value] < slope_threshold, valid, np.nan
+    )
     # Identify pixels in the same elevation range
     min_h = valid.min(skipna=True).data[()]
     max_h = valid.max(skipna=True).data[()]

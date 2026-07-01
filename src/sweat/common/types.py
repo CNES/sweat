@@ -41,6 +41,8 @@ class ETVar(Enum):
     RED = "red"
     RLD = "rld"
     RSD = "rsd"
+    SAA = "saa"
+    SZA = "sza"
     SLOPE = "slope"
     SWIR = "swir"
     TEMPERATURE = "ta"
