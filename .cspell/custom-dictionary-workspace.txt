@@ -105,6 +105,8 @@ covariation
 libomp
 ldflags
 cppflags
+pvalid
+nbvalid
 
 # Python packages
 parameterization
