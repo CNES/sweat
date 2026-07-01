@@ -203,7 +203,9 @@ def extrapolate_at_daily_scale(
         daily = data.copy(data=None)
         daily.attrs = data.attrs.copy()
         for var in keep:
-            daily[var].data = np.nan * np.ones_like(daily["var"].data)
+            daily[var] = xr.full_like(
+                next(iter(data.data_vars.values())), np.nan
+            )
         valid = xr.zeros_like(
             next(iter(data.data_vars.values())), dtype=FLAGS_TYPE
         )
