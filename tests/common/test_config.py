@@ -10,11 +10,15 @@ from sweat.common.types import ETVar, PercentileValue
 
 
 @pytest.mark.unit
-def test_read_config() -> None:
+@pytest.mark.parametrize(
+    "fmt",
+    ["json", "yaml", "yml"],
+)
+def test_read_config(fmt) -> None:
     """
     Test read configuration
     """
-    p = Path(".") / "tests" / "data" / "evaspa_input.json"
+    p = Path(".") / "tests" / "data" / f"evaspa_input.{fmt}"
     config = cfg.read_config(str(p))
     assert config
 
@@ -24,27 +28,24 @@ def test_read_config_exc() -> None:
     """
     Test read configuration (with exception)
     """
-    p = Path(".") / "tests" / "data" / "input.yaml"
+    p = Path(".") / "tests" / "data" / "input.toml"
     with pytest.raises(OSError, match="Unable to read configuration file"):
         cfg.read_config(str(p))
 
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
-    "fmt",
-    [
-        "json",
-        "JSON",
-    ],
+    ("fmt", "expected_fmt"),
+    [("json", "json"), ("JSON", "json"), ("yaml", "yaml"), ("yml", "yaml")],
 )
-def test_write_config(fmt, tmp_path) -> None:
+def test_write_config(fmt, expected_fmt, tmp_path) -> None:
     """
     Test write configuration
     """
     p = Path(tmp_path)
     config = {"input": "foo", "output": "foo", "params": "foo"}
     cfg.write_config(config, str(p), fmt=fmt)
-    p = p / "config.json"
+    p = p / f"config.{expected_fmt}"
     assert p.exists()
 
 
@@ -63,4 +64,4 @@ def test_write_config_exc(tmp_path) -> None:
     with pytest.raises(
         ValueError, match="Unsupported format for configuration file"
     ):
-        cfg.write_config(config, str(p), fmt="yaml")
+        cfg.write_config(config, str(p), fmt="toml")

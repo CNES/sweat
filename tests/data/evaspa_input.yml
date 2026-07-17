@@ -1,0 +1,69 @@
+input:
+  path: tests/data/modis_test_dem.tif
+  date: '2018-05-16T10:00:00-00:00'
+output:
+  path: out
+params:
+  filtering:
+    albedo:
+      and:
+      - op: ">="
+        value: 0.05
+      - op: "<="
+        value: 0.99
+  ef:
+    check:
+      threshold: 0.02
+    models:
+    - name: model1
+      dry_edge:
+        type: LinearEdge
+        config:
+          interval_type: density
+          interval_nb: 20
+          percentile: 2
+          selection: median
+      wet_edge:
+        type: LinearEdge
+        config:
+          interval_type: density
+          interval_nb: 20
+          percentile: 2
+          selection: median
+      var: albedo
+    - name: model2
+      dry_edge:
+        type: LinearEdge
+        config:
+          interval_type: density
+          interval_nb: 20
+          percentile: 5
+          selection: median
+      wet_edge:
+        type: FlatEdge
+      var: albedo
+    options:
+      filtering:
+        albedo:
+          and:
+          - op: ">="
+            value: percentile(10)
+          - op: "<="
+            value: percentile(90)
+      selection: false
+      merging:
+        merging_method: median
+        uncertainty_method: interquartile
+  seb:
+    use_topo: true
+    models:
+    - kustas
+    merging:
+      merging_method: median
+      uncertainty_method: interquartile
+  daily:
+    use_topo: true
+    method: toa
+debug:
+  profile: true
+  verbose: true
