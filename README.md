@@ -39,6 +39,8 @@ If you encounter any problems during installation, see [troubleshooting page](tr
 
 ### Command-line interface
 
+To run SWEAT algorithms, you need to provide an input file in JSON or YAML format.
+
 #### EVASPA
 
 To run EVASPA
