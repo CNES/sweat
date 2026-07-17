@@ -195,5 +195,32 @@ def test_outputconfig(tmp_path) -> None:
     """
     d = Path(tmp_path) / "out"
     output = {"path": str(d)}
-    io.OutputConfig.model_validate(output)
+    config = io.OutputConfig.model_validate(output)
     assert d.exists()
+    assert config.fmt == "json"
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "fmt",
+    ["json","yaml" , "yml"],
+)
+def test_outputconfig_valid_extension(fmt, tmp_path) -> None:
+    """
+    Test OutputConfig with valid extensions
+    """
+    d = Path(tmp_path) / "out"
+    output = {"path": str(d), "fmt": fmt}
+    config = io.OutputConfig.model_validate(output)
+    assert config.fmt == fmt
+
+@pytest.mark.unit
+@pytest.mark.parametrize("fmt", [".json", ".txt", "invalid", ""])
+def test_outputconfig_invalid_extension(tmp_path, fmt: str) -> None:
+    """
+    Test OutputConfig rejects invalid extensions
+    """
+    d = Path(tmp_path) / "out"
+    output = {"path": str(d), "fmt": fmt}
+    with pytest.raises(ValidationError):
+        io.OutputConfig.model_validate(output)

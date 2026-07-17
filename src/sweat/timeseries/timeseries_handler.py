@@ -11,7 +11,7 @@ from collections.abc import Generator
 import xarray as xr
 
 import sweat.timeseries.config as cfg
-from sweat.common.config import json_serial
+from sweat.common.config import json_yaml_serial
 from sweat.logging import LoggerManager
 
 logger = LoggerManager.get_logger(__name__)
@@ -97,7 +97,7 @@ def create_config(
     verbose: bool
         If true, the configuration dictionary will be stored as a .json file
     config_dir: str
-        Directory to store the json configuration file if verbose is True
+        Directory to store the JSON configuration file if verbose is True
         (default: current directory)
 
     Return
@@ -162,5 +162,7 @@ def create_config(
         filename = f"config_{date_min}_{date_max}.json"
         file_path = os.path.join(config_dir, filename)
         with open(file_path, "w") as f:
-            json.dump(config.model_dump(), f, indent=4, default=json_serial)
+            json.dump(
+                config.model_dump(), f, indent=4, default=json_yaml_serial
+            )
     return config

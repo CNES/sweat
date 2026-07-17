@@ -32,6 +32,7 @@ dependencies = [
   "pwlf",
   "numba",
   "rioxarray",
+  "pyyaml",
 ]
 
 [project.optional-dependencies]
