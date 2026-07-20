@@ -13,6 +13,10 @@ make mypy
 ```
 
 Run tests
+
+/!\ Make sure to get the sweat_test_data repository and set the environment variable SWEAT_TEST_DATA_PATH
+to the path of the repository before running tests.
+
 ```console
 make test # for pytest
 make test-cov # for coverage
