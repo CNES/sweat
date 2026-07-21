@@ -144,7 +144,7 @@ class FilteringConfig(RootModel):
 
 def eval_condition(da: xr.DataArray, cond: dict) -> xr.DataArray:
     """
-    Evaluate a condition for a dataarray
+    Evaluate a condition for a data array
 
     Parameters
     ----------
@@ -171,7 +171,7 @@ def eval_condition(da: xr.DataArray, cond: dict) -> xr.DataArray:
 
 def apply_condition(da: xr.DataArray, cond: dict) -> xr.DataArray:
     """
-    Apply a condition on a dataarray
+    Apply a condition on a data array
 
     Parameters
     ----------

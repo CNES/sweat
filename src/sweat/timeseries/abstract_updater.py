@@ -135,7 +135,7 @@ class Updater(ABC):
         ----------
         index: int
             Index position to considered
-        previous_index: int
+        prev_index: int
             Previous index used to interpolate
         next_index: int
             Next index used to interpolate
@@ -161,10 +161,8 @@ class Updater(ABC):
         ----------
         index: int
             Index position to considered
-        previous_index: int
+        prev_index: int
             Previous index used to extrapolate
-        next_index: int
-            Next index used to extrapolate
         data: xr.Dataset
             Data used to extrapolate
 
@@ -187,8 +185,6 @@ class Updater(ABC):
         ----------
         index: int
             Index position to considered
-        previous_index: int
-            Previous index used to extrapolate
         next_index: int
             Next index used to extrapolate
         data: xr.Dataset

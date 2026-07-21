@@ -135,6 +135,8 @@ def get_adjacent_tiles(
         Relative orbit number to take into account
     orbit: GeoDataFrame, optional
         List of orbit traces
+    by: str
+        Name of the column containing the tile ID
     neighbors_overlap: float
         Minimum overlap percentage to consider two tiles are adjacent
         (default value is 5 which corresponds to 4-connected neighbors)
@@ -507,7 +509,6 @@ def _join_group(
                     + next_grp.split(",")
                 )
             )
-            # print(row.name, new_group)
             # Update
             tiles.loc[tiles["group"] == best_candidate, "next"] = ",".join(
                 new_group

@@ -512,6 +512,8 @@ def run_window_time_series(
         Shift between two consecutive windows (in days)
     params: dict
         Configuration parameters to run one step for timeseries
+    debug: dict
+        Debugging configuration
     config_verbose: bool
         If true, the configuration dictionary will be stored as a .json file
     config_dir: str

@@ -147,7 +147,7 @@ def correct_shortwave_radiation(
     if fdiff is None:
         msg = (
             "No diffuse fraction data for shortwave radiation. "
-            "Use theoritical equation."
+            "Use theoretical equation."
         )
         logger.warning(msg)
         if date is None:
@@ -263,6 +263,8 @@ def create_net_radiation(
     data : xr.Dataset
         Data containing (LST, emissivity, albedo and downward
         shortwave and longwave radiation)
+    use_topo: bool
+        Activate topographic correction for shortwave radiation
 
     Returns
     -------

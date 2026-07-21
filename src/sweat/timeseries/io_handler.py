@@ -276,7 +276,7 @@ def read_time_series(filenames: list[str]) -> xr.Dataset:
     if len(filenames) == 0:
         msg = "No files to read"
         raise ValueError(msg)
-    # Step 1: Read each file into an xarray dataset
+    # Step 1: Read each file into a xarray dataset
     datasets = []
     times = []
 

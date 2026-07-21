@@ -222,7 +222,7 @@ def initialize_soil_moisture(
     # Update vapor pressure deficit at surface
     ds = esstar - es
 
-    return (m, m_canopy, m_soil, m_surf, m_rz, es, tsd, ds, is_stressed)
+    return m, m_canopy, m_soil, m_surf, m_rz, es, tsd, ds, is_stressed
 
 
 @njit(
@@ -420,4 +420,4 @@ def iterate_soil_moisture(
         m = m_rz
         is_stressed = True
 
-    return (m, m_surf, m_canopy, m_soil, m_rz, is_stressed)
+    return m, m_surf, m_canopy, m_soil, m_rz, is_stressed

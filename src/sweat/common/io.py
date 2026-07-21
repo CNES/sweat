@@ -188,7 +188,7 @@ def write_dataset(
     xrds: xr.Dataset,
     filename: str,
     directory: str = os.getcwd(),
-    separate=False,
+    separate: bool = False,
 ) -> None:
     """
     Write dataset in one file or in separated files

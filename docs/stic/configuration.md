@@ -78,7 +78,7 @@ A default configuration is applied:
         "water": {"op": "!=", "value": 1},
         "lulc": {
             "and": [{"op": "!=", "value": 40}, {"op": "!=", "value": 50}],
-        },
+        }
     }
 }
 ```
