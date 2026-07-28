@@ -10,6 +10,178 @@ from sweat.stic.models.v1_4 import smwetness
 @pytest.mark.unit
 @pytest.mark.parametrize(
     (
+        "fc",
+        "ta",
+        "td",
+        "nir",
+        "swir",
+        "vari_green",
+        "gli",
+        "ndvi",
+        "msavi",
+        "expected",
+    ),
+    [
+        pytest.param(
+            0.2,
+            25,
+            -1,
+            0.5,
+            0.3,
+            0.8,
+            0.8,
+            0.8,
+            0.8,
+            True,
+        ),
+        pytest.param(
+            0.2,
+            20,
+            10,
+            0.3,
+            0.5,
+            -0.2,
+            -0.1,
+            0.3,
+            0.2,
+            False,
+        ),
+        pytest.param(
+            0.7,
+            20,
+            -1,
+            0.3,
+            0.5,
+            -0.1,
+            -0.2,
+            0.4,
+            0.2,
+            True,
+        ),
+    ],
+)
+def test_is_soil_wetness(
+    fc,
+    ta,
+    td,
+    nir,
+    swir,
+    vari_green,
+    gli,
+    ndvi,
+    msavi,
+    expected,
+) -> None:
+    """
+    Test function for determining if surface wetness comes from soil
+    """
+    res = smwetness.is_soil_wetness(
+        fc,
+        ta,
+        td,
+        nir,
+        swir,
+        vari_green,
+        gli,
+        ndvi,
+        msavi,
+    )
+    assert res == expected
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    (
+        "nir",
+        "swir",
+        "vari_green",
+        "gli",
+        "ndvi",
+        "gndvi",
+        "msavi",
+        "expected",
+    ),
+    [
+        pytest.param(
+            0.5,
+            0.3,
+            0.8,
+            0.8,
+            0.8,
+            0.8,
+            0.8,
+            False,
+        ),
+        pytest.param(
+            0.3,
+            0.5,
+            -0.2,
+            0.1,
+            0.2,
+            0.2,
+            0.2,
+            True,
+        ),
+        pytest.param(
+            0.3,
+            0.5,
+            -0.1,
+            -0.2,
+            0.4,
+            0.2,
+            0.2,
+            True,
+        ),
+        pytest.param(
+            0.3,
+            0.5,
+            0.2,
+            0.2,
+            0.4,
+            0.2,
+            0.2,
+            True,
+        ),
+        pytest.param(
+            0.3,
+            0.5,
+            -0.1,
+            -0.1,
+            0.5,
+            0.4,
+            0.4,
+            True,
+        ),
+    ],
+)
+def test_is_water_stress(
+    nir,
+    swir,
+    vari_green,
+    gli,
+    ndvi,
+    gndvi,
+    msavi,
+    expected,
+) -> None:
+    """
+    Test function for determining if the pixel is water stressed
+    """
+    res = smwetness.is_water_stressed(
+        nir,
+        swir,
+        vari_green,
+        gli,
+        ndvi,
+        gndvi,
+        msavi,
+    )
+    assert res == expected
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    (
         "slope",
         "lst",
         "ta",
@@ -37,6 +209,7 @@ from sweat.stic.models.v1_4 import smwetness
         "es_expected",
         "t0d_expected",
         "ds_expected",
+        "is_stressed_expected",
     ),
     [
         pytest.param(
@@ -67,6 +240,7 @@ from sweat.stic.models.v1_4 import smwetness
             30.115352630615234,
             24.94073377234243,
             12.314647674560547,
+            False,
         ),
         pytest.param(
             1.9,
@@ -96,6 +270,7 @@ from sweat.stic.models.v1_4 import smwetness
             36.93805552570604,
             29.127939793038575,
             5.491944474293959,
+            True,
         ),
         pytest.param(
             3.0,
@@ -125,6 +300,7 @@ from sweat.stic.models.v1_4 import smwetness
             21.9730459,
             13.492003762935093,
             20.4569541,
+            True,
         ),
         pytest.param(
             3.0,
@@ -154,6 +330,7 @@ from sweat.stic.models.v1_4 import smwetness
             42.4279541,
             41.63918629550321,
             0.0020458999999988237,
+            True,
         ),
         pytest.param(
             3.0,
@@ -183,6 +360,7 @@ from sweat.stic.models.v1_4 import smwetness
             21.9730459,
             2.202257761053626,
             20.4569541,
+            True,
         ),
     ],
 )
@@ -214,39 +392,33 @@ def test_initialize_soilmoisture(
     es_expected,
     t0d_expected,
     ds_expected,
+    is_stressed_expected,
 ) -> None:
     """
     Test function for initiating soil moisture
     """
-    (
-        m,
-        m_canopy,
-        m_soil,
-        m_surf,
-        m_rz,
-        es,
-        t0d,
-        ds,
-    ) = smwetness.initialize_soil_moisture(
-        slope,
-        lst,
-        ta,
-        td,
-        ln,
-        fc,
-        ea,
-        esstar,
-        s1,
-        s2,
-        s3,
-        s4,
-        nir,
-        swir,
-        vari_green,
-        gli,
-        ndvi,
-        gndvi,
-        msavi,
+    (m, m_canopy, m_soil, m_surf, m_rz, es, t0d, ds, is_stressed) = (
+        smwetness.initialize_soil_moisture(
+            slope,
+            lst,
+            ta,
+            td,
+            ln,
+            fc,
+            ea,
+            esstar,
+            s1,
+            s2,
+            s3,
+            s4,
+            nir,
+            swir,
+            vari_green,
+            gli,
+            ndvi,
+            gndvi,
+            msavi,
+        )
     )
     np.testing.assert_almost_equal(m, m_expected, decimal=3)
     np.testing.assert_almost_equal(m_canopy, m_canopy_expected, decimal=3)
@@ -256,6 +428,7 @@ def test_initialize_soilmoisture(
     np.testing.assert_almost_equal(es, es_expected, decimal=3)
     np.testing.assert_almost_equal(t0d, t0d_expected, decimal=3)
     np.testing.assert_almost_equal(ds, ds_expected, decimal=3)
+    np.testing.assert_equal(is_stressed, is_stressed_expected)
 
 
 @pytest.mark.unit
@@ -287,6 +460,7 @@ def test_initialize_soilmoisture(
         "m_canopy_expected",
         "m_soil_expected",
         "m_rz_expected",
+        "is_stressed_expected",
     ),
     [
         pytest.param(
@@ -316,6 +490,7 @@ def test_initialize_soilmoisture(
             0.15395833333333334,
             0.15395833333333334,
             0.040897992403689645,
+            False,
         ),
         pytest.param(
             2.0,
@@ -344,6 +519,7 @@ def test_initialize_soilmoisture(
             0.19244790077209473,
             0.7697916666666667,
             0.15982824427480918,
+            True,
         ),
         pytest.param(
             2.0,
@@ -372,6 +548,7 @@ def test_initialize_soilmoisture(
             0,
             0.7999200000000001,
             0.223399525785418,
+            True,
         ),
         pytest.param(
             4.0,
@@ -400,6 +577,7 @@ def test_initialize_soilmoisture(
             0,
             0.7999200000000001,
             0.13102835998807988,
+            True,
         ),
     ],
 )
@@ -430,41 +608,39 @@ def test_iterate_soilmoisture(
     m_canopy_expected,
     m_soil_expected,
     m_rz_expected,
+    is_stressed_expected,
 ) -> None:
     """
     Test function for computing soil moisture
     """
-    (
-        m,
-        m_surf,
-        m_canopy,
-        m_soil,
-        m_rz,
-    ) = smwetness.iterate_soil_moisture(
-        slope,
-        s1,
-        s2,
-        s3,
-        s4,
-        lst,
-        ta,
-        td,
-        t0d,
-        ln,
-        fc,
-        ea,
-        e0star,
-        esstar,
-        nir,
-        swir,
-        vari_green,
-        gli,
-        ndvi,
-        gndvi,
-        msavi,
+    (m, m_surf, m_canopy, m_soil, m_rz, is_stressed) = (
+        smwetness.iterate_soil_moisture(
+            slope,
+            s1,
+            s2,
+            s3,
+            s4,
+            lst,
+            ta,
+            td,
+            t0d,
+            ln,
+            fc,
+            ea,
+            e0star,
+            esstar,
+            nir,
+            swir,
+            vari_green,
+            gli,
+            ndvi,
+            gndvi,
+            msavi,
+        )
     )
     np.testing.assert_almost_equal(m, m_expected, decimal=3)
     np.testing.assert_almost_equal(m_canopy, m_canopy_expected, decimal=3)
     np.testing.assert_almost_equal(m_soil, m_soil_expected, decimal=3)
     np.testing.assert_almost_equal(m_surf, m_surf_expected, decimal=3)
     np.testing.assert_almost_equal(m_rz, m_rz_expected, decimal=3)
+    np.testing.assert_equal(is_stressed, is_stressed_expected)

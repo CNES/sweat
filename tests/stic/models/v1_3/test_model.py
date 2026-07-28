@@ -29,6 +29,7 @@ from sweat.stic.models.v1_3.model import (
         "le_expected",
         "ef_expected",
         "converged_expected",
+        "stressed_expected",
     ),
     [
         pytest.param(
@@ -43,9 +44,10 @@ from sweat.stic.models.v1_3.model import (
             20000,
             0.01,
             15,
-            210.369,
+            210.528,
             0.6925,
             True,
+            False,
         ),
     ],
 )
@@ -64,11 +66,12 @@ def test_run_stic_model_pixel(
     le_expected,
     ef_expected,
     converged_expected,
+    stressed_expected,
 ) -> None:
     """
     Test function for STIC model calculation function for a single pixel
     """
-    le, _, ef, _, _, _, _, _, converged = run_stic_model_pixel(
+    le, _, ef, _, _, _, _, _, converged, stressed = run_stic_model_pixel(
         lst,
         ta,
         td,
@@ -85,6 +88,7 @@ def test_run_stic_model_pixel(
     np.testing.assert_almost_equal(le, le_expected, decimal=2)
     np.testing.assert_almost_equal(ef, ef_expected, decimal=2)
     np.testing.assert_equal(converged, converged_expected)
+    np.testing.assert_equal(stressed, stressed_expected)
 
 
 @pytest.mark.unit
@@ -105,6 +109,7 @@ def test_run_stic_model_pixel(
         "le_expected",
         "ef_expected",
         "converged_expected",
+        "stressed_expected",
     ),
     [
         pytest.param(
@@ -120,9 +125,10 @@ def test_run_stic_model_pixel(
             np.array([[1, 1], [1, 1]], dtype=np.int64),
             0.01,
             15,
-            np.array([[210.37, 210.37], [210.37, 210.37]]),
+            np.array([[210.528, 210.528], [210.528, 210.528]]),
             np.array([[0.6925, 0.6925], [0.6925, 0.6925]]),
             np.array([[True, True], [True, True]]),
+            np.array([[False, False], [False, False]]),
         ),
     ],
 )
@@ -142,16 +148,18 @@ def test_run_stic_model(
     le_expected,
     ef_expected,
     converged_expected,
+    stressed_expected,
 ) -> None:
     """
     Test function for STIC model calculation function (raster mode)
     """
-    le, ef, cv = run_stic_model(
+    le, ef, cv, st = run_stic_model(
         lst, ta, td, rh, fc, lai, rn, ln, local_time, valid, threshold, nb_steps
     )
     np.testing.assert_almost_equal(le, le_expected, decimal=2)
     np.testing.assert_almost_equal(ef, ef_expected, decimal=2)
     np.testing.assert_equal(cv, converged_expected)
+    np.testing.assert_equal(st, stressed_expected)
 
 
 @pytest.mark.unit
@@ -171,7 +179,7 @@ def test_run_stic_model(
             ),
             0.01,
             15,
-            210.37,
+            210.528,
             0.6925,
         ),
     ],
@@ -187,7 +195,7 @@ def test_run_batch_stic_model(
     Test function for STIC model calculation function (batch mode)
     """
     res = run_batch_stic_model(data, threshold, nb_steps, debug=False)
-    assert res.shape == (1, 8)
+    assert res.shape == (1, 10)
     np.testing.assert_almost_equal(res[0, 0], le_expected, decimal=2)
     np.testing.assert_almost_equal(res[0, 2], ef_expected, decimal=2)
 
@@ -216,7 +224,7 @@ def test_run_batch_stic_model(
                 ],
                 dtype=np.float32,
             ),
-            209.45,
+            210.142,
         ),
     ],
 )
@@ -228,5 +236,5 @@ def test_run_batch_init_stic_model(
     Test function for STIC model calculation function (init only)
     """
     res = run_batch_init_stic_model(data, debug=False)
-    assert res.shape == (1, 20)
+    assert res.shape == (1, 21)
     np.testing.assert_almost_equal(res[0, 0], le_expected, decimal=2)

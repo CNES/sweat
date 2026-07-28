@@ -29,10 +29,12 @@ def test_compute_g_flux(rn, lai, local_time, m, expected) -> None:
         "slope",
         "g_aero",
         "g_surf",
+        "g_r",
         "available_energy",
         "da",
         "rho",
         "cp",
+        "is_stressed",
         "le_expected",
         "h_expected",
     ),
@@ -41,12 +43,29 @@ def test_compute_g_flux(rn, lai, local_time, m, expected) -> None:
             1.89602,
             0.01545,
             0.00992,
+            0.0,
             305.09854,
             9.752996,
             1.1749,
             1016.49268,
-            209.427093,
+            False,
+            210.12,
             94.97875,
+            id="unstressed",
+        ),
+        pytest.param(
+            1.89602,
+            0.01,
+            0.001,
+            0.05,
+            305.09854,
+            9.752996,
+            1.1749,
+            1016.49268,
+            True,
+            81.106,
+            230.099,
+            id="stressed",
         ),
     ],
 )
@@ -54,10 +73,12 @@ def test_initiate_le_h_fluxes(
     slope,
     g_aero,
     g_surf,
+    g_r,
     available_energy,
     da,
     rho,
     cp,
+    is_stressed,
     le_expected,
     h_expected,
 ) -> None:
@@ -65,7 +86,7 @@ def test_initiate_le_h_fluxes(
     Test function for initiating le and h fluxes
     """
     le_flux, h_flux = flux.initiate_le_h_fluxes(
-        slope, g_aero, g_surf, available_energy, da, rho, cp
+        slope, g_aero, g_surf, g_r, available_energy, da, rho, cp, is_stressed
     )
     np.testing.assert_almost_equal(le_flux, le_expected, decimal=3)
     np.testing.assert_almost_equal(h_flux, h_expected, decimal=3)

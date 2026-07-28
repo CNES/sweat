@@ -4,16 +4,19 @@ Module containing functions to compute soil moisture
 for STIC model v1.3
 """
 
+from numba import boolean, njit
 from numba import float32 as f32
 from numba import float64 as f64
-from numba import njit
 from numba.types import Tuple
 
 from sweat.stic.constant import PSYCHROMETRIC_CST, PT_CST
 
 
 @njit(
-    [Tuple((f32,) * 8)(*(f32,) * 14), Tuple((f64,) * 8)(*(f64,) * 14)],
+    [
+        Tuple((f32,) * 8 + (boolean,))(*(f32,) * 14),
+        Tuple((f64,) * 8 + (boolean,))(*(f64,) * 14),
+    ],
     nogil=True,
     cache=True,
 )
@@ -32,7 +35,7 @@ def initialize_soil_moisture(
     s2: float,
     s3: float,
     s4: float,
-) -> tuple[float, float, float, float, float, float, float, float]:
+) -> tuple[float, float, float, float, float, float, float, float, bool]:
     """
     Initiate soil moisture
 
@@ -133,7 +136,10 @@ def initialize_soil_moisture(
         Dewpoint temperature at the reference height (celsius)
     ds: float
         Vapor pressure deficit of the air at the surface (hPa)
+    is_stressed: bool
+        Water stress indicator
     """
+    is_stressed = False
     epsilon = 1.0e-7
     # Compute the surface dewpoint temperature (degC)
     # Handle division by zero
@@ -192,17 +198,23 @@ def initialize_soil_moisture(
     m = m_surf
     if (ep_pt > rn) & (dts > 0.0):
         m = m_rz
+        is_stressed = True
     if (ep_pt > rn) & (fc <= 0.25):
         m = m_rz
+        is_stressed = True
     if (ep_pt > rn) & (ds > da):
         m = m_rz
+        is_stressed = True
 
     if (fc <= 0.25) & (dts > 0.0) & (ta > 10.0) & (td < 0.0) & (ln < -125.0):
         m = m_rz
+        is_stressed = True
     if (fc <= 0.25) & (dts > 0.0) & (ta > 10.0) & (td < 0.0) & (ds > da):
         m = m_rz
+        is_stressed = True
     if (ep_pt < rn) & (fc <= 0.25) & (ds > da):
         m = m_rz
+        is_stressed = True
 
     # Update vapor pressure at surface
     es = ea + m * (esstar - ea)
@@ -210,11 +222,14 @@ def initialize_soil_moisture(
     # Update vapor pressure deficit at surface
     ds = esstar - es
 
-    return (m, m_canopy, m_soil, m_surf, m_rz, es, tsd, ds)
+    return (m, m_canopy, m_soil, m_surf, m_rz, es, tsd, ds, is_stressed)
 
 
 @njit(
-    [Tuple((f32,) * 5)(*(f32,) * 18), Tuple((f64,) * 5)(*(f64,) * 18)],
+    [
+        Tuple((f32,) * 5 + (boolean,))(*(f32,) * 18),
+        Tuple((f64,) * 5 + (boolean,))(*(f64,) * 18),
+    ],
     nogil=True,
     cache=True,
 )
@@ -237,7 +252,7 @@ def iterate_soil_moisture(
     ea: float,
     e0star: float,
     esstar: float,
-) -> tuple[float, float, float, float, float]:
+) -> tuple[float, float, float, float, float, bool]:
     """
     Compute soil moisture during iteration loop
 
@@ -344,7 +359,10 @@ def iterate_soil_moisture(
         Surface moisture availability for soil component (0-1)
     m_rz: float
         Surface moisture availability for root zone wetness (0-1)
+    is_stressed: bool
+        Water stress indicator
     """
+    is_stressed = False
     # Surface available moisture
     m_surf = 1.0
     epsilon = 1.0e-7
@@ -390,6 +408,7 @@ def iterate_soil_moisture(
         & (tdew_index < 1.0)
     ):
         m = m_rz
+        is_stressed = True
     if (
         (fc <= 0.25)
         & (delta_t > 0.0)
@@ -399,5 +418,6 @@ def iterate_soil_moisture(
         & (ln < -125.0)
     ):
         m = m_rz
+        is_stressed = True
 
-    return (m, m_surf, m_canopy, m_soil, m_rz)
+    return (m, m_surf, m_canopy, m_soil, m_rz, is_stressed)

@@ -385,6 +385,8 @@ def test_compute_alpha_coefficient(
         "rho",
         "emis",
         "rn",
+        "tw",
+        "is_stressed",
         "expected",
     ),
     [
@@ -396,18 +398,32 @@ def test_compute_alpha_coefficient(
             1013,
             0.9,
             400,
+            15,
+            False,
+            1.607,
+        ),
+        pytest.param(
+            1.89602,
+            25.0,
+            9.75,
+            1.2,
+            1013,
+            0.9,
+            400,
+            22,
+            True,
             1.07,
         ),
     ],
 )
 def test_initialize_alpha_coefficient(
-    slope, ta, da, cp, rho, emis, rn, expected
+    slope, ta, da, cp, rho, emis, rn, tw, is_stressed, expected
 ) -> None:
     """
     Test function for computing alpha coefficient
     """
     res = functions.initialize_alpha_coefficient(
-        slope, ta, da, cp, rho, emis, rn
+        slope, ta, da, cp, rho, emis, rn, tw, is_stressed
     )
     np.testing.assert_almost_equal(res, expected, decimal=2)
 
@@ -431,3 +447,30 @@ def test_compute_saturated_vapor_pressure(t, expected) -> None:
     """
     res = functions.compute_saturated_vapor_pressure(t)
     np.testing.assert_almost_equal(res, expected, decimal=2)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    (
+        "ta",
+        "cp",
+        "rho",
+        "emis",
+        "expected",
+    ),
+    [
+        pytest.param(
+            29.0,
+            1.2,
+            1013,
+            0.9,
+            0.00463,
+        ),
+    ],
+)
+def test_compute_radiative_conductance(ta, cp, rho, emis, expected) -> None:
+    """
+    Test function for computing radiative conductance
+    """
+    res = functions.compute_radiative_conductance(ta, cp, rho, emis)
+    np.testing.assert_almost_equal(res, expected, decimal=5)

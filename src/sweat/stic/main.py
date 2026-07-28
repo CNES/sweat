@@ -257,7 +257,7 @@ def run(
         flags_arr = np.ones_like(data[ETVar.LST.value].data, dtype=FLAGS_TYPE)
 
     # Run STIC main loop
-    le_arr, ef_arr, converged_arr = run_model(
+    le_arr, ef_arr, converged_arr, _ = run_model(
         data=data,
         valid=valid_arr,
         threshold=threshold,

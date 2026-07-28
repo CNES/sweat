@@ -8,10 +8,10 @@ from __future__ import annotations
 
 from math import copysign, exp
 
+from numba import boolean, njit
 from numba import float32 as f32
 from numba import float64 as f64
 from numba import int8 as i8
-from numba import njit
 from numba.types import Tuple
 
 from sweat.common.flux import CST_SB
@@ -660,7 +660,24 @@ def compute_alpha_coefficient(
 
 
 @njit(
-    [f32(*(f32,) * 7), f64(*(f64,) * 7)],
+    [f32(*(f32,) * 4), f64(*(f64,) * 4)],
+    nogil=True,
+    cache=True,
+    inline="always",
+)
+def compute_radiative_conductance(
+    ta: float,
+    cp: float,
+    rho: float,
+    emis: float,
+) -> float:
+    """ """
+    # Radiative conductance
+    return 4 * emis * CST_SB * (ta + KELVIN_CST) ** 3 / (rho * cp)
+
+
+@njit(
+    [f32(*(f32,) * 8, boolean), f64(*(f64,) * 8, boolean)],
     nogil=True,
     cache=True,
     inline="always",
@@ -673,6 +690,8 @@ def initialize_alpha_coefficient(
     rho: float,
     emis: float,
     rn: float,
+    tw: float,
+    is_stressed: bool,
 ) -> float:
     """
     Initialize the alpha coefficient, i.e. Priestley-Taylor coefficient.
@@ -698,6 +717,8 @@ def initialize_alpha_coefficient(
         Emissivity
     rn: float
         Net radiation
+    is_stressed: bool
+        Water stress indicator
 
     Returns
     -------
@@ -705,14 +726,23 @@ def initialize_alpha_coefficient(
         Priestley-Taylor coefficient
     """
     epsilon = 1.0e-7
-    # Radiative conductance
-    gr = 4 * emis * CST_SB * (ta + KELVIN_CST) ** 3 / (rho * cp)
-    den = (
-        (slope * rn)
-        if abs(slope * rn) > epsilon
-        else _sign(slope * rn) * epsilon
-    )
-    alpha = ((rho * cp * gr * da) / den) + f32(1)
+    if is_stressed:
+        # Radiative conductance
+        g_r = compute_radiative_conductance(ta, cp, rho, emis)
+        den = (
+            (slope * rn)
+            if abs(slope * rn) > epsilon
+            else _sign(slope * rn) * epsilon
+        )
+        alpha = ((rho * cp * g_r * da) / den) + 1
+    else:
+        slope_wet = _tetens_derivative(tw)
+        den = (
+            (slope_wet)
+            if abs(slope_wet) > epsilon
+            else _sign(slope_wet) * epsilon
+        )
+        alpha = 1 + PSYCHROMETRIC_CST / den
     return min(max(alpha, 0.2), 2.0)
 
 
@@ -729,7 +759,14 @@ def compute_wet_surface_temperature(ta: float, ea: float) -> float:
     Notes
     -----
     Solve wet surface temperature (°C)
-    from air temperature, RH, and pressure (no wind needed).
+    from air temperature and pressure (no wind needed).
+    Twet is defined
+    $$e {a} = e^{\\star}(T_{wet}) - \\gamma(T_{a} - T_{wet})$$
+    where $e^{\\star}(T) is saturation vapor pressure
+    as a function of temperature T.
+    The Twet is solve using Newton's method.
+
+    See: https://en.wikipedia.org/wiki/Psychrometric_constant
 
     Parameters
     ----------
@@ -746,7 +783,7 @@ def compute_wet_surface_temperature(ta: float, ea: float) -> float:
     # Initialization
     tw = ta
     epsilon = 1.0e-7
-    # Iterative loop
+    # Iterative loop (Newton's method)
     for _ in range(50):
         esstar_w = _tetens(tw)
         f = esstar_w - PSYCHROMETRIC_CST * (ta - tw) - ea

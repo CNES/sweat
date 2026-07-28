@@ -27,6 +27,7 @@ from sweat.stic.models.functions import (
     compute_canopy_air_saturation_vapor_pressure,
     compute_canopy_air_vapor_pressure_deficit,
     compute_psychrometrics,
+    compute_radiative_conductance,
     compute_saturated_vapor_pressure,
     compute_state_equations,
     compute_wet_surface_temperature,
@@ -82,8 +83,8 @@ REQUIRED_INPUTS: list[str] = [
 
 @njit(
     [
-        Tuple((f32,) * 29)(*(f32,) * 17, boolean),
-        Tuple((f64,) * 29)(*(f64,) * 17, boolean),
+        Tuple((f32,) * 29 + (boolean,))(*(f32,) * 17, boolean),
+        Tuple((f64,) * 29 + (boolean,))(*(f64,) * 17, boolean),
     ],
     nogil=True,
     cache=True,
@@ -194,26 +195,29 @@ def init_stic_model_pixel(
     # es: vapor pressure at surface temperature
     # t0d: dewpoint temperature at source/sink height
     # ds: vapor pressure deficit of the air at the surface
-    (m, m_canopy, m_soil, m_surf, m_rz, es, t0d, ds) = initialize_soil_moisture(
-        slope,
-        ts,
-        ta,
-        td,
-        ln,
-        fc,
-        ea,
-        esstar,
-        s1,
-        s2,
-        s3,
-        s4,
-        nir,
-        swir,
-        vari_green,
-        gli,
-        ndvi,
-        gndvi,
-        msavi,
+    # is_stressed: water stress indicator
+    (m, m_canopy, m_soil, m_surf, m_rz, es, t0d, ds, is_stressed) = (
+        initialize_soil_moisture(
+            slope,
+            ts,
+            ta,
+            td,
+            ln,
+            fc,
+            ea,
+            esstar,
+            s1,
+            s2,
+            s3,
+            s4,
+            nir,
+            swir,
+            vari_green,
+            gli,
+            ndvi,
+            gndvi,
+            msavi,
+        )
     )
     if debug:
         print(  # noqa T201
@@ -229,6 +233,7 @@ def init_stic_model_pixel(
             s4,
             es,
             ds,
+            is_stressed,
         )
 
     # Initialize saturation vapor pressure at t0
@@ -239,7 +244,9 @@ def init_stic_model_pixel(
     tw = compute_wet_surface_temperature(ta, ea)
     esstar_w = compute_saturated_vapor_pressure(tw)
     # Initialize alpha to Priestley taylor parameter
-    alpha = initialize_alpha_coefficient(slope, ta, da, cp, rho, emis, rn)
+    alpha = initialize_alpha_coefficient(
+        slope, ta, da, cp, rho, emis, rn, tw, is_stressed
+    )
     if debug:
         print("alpha = ", alpha)  # noqa T201
     # Compute G flux
@@ -258,9 +265,11 @@ def init_stic_model_pixel(
 
     # Initialize t0
     t0 = delta_t + ta
+    # Radiative conductance
+    g_r = compute_radiative_conductance(ta, cp, rho, emis)
     # Compute LE and H fluxes
     le_flux, h_flux = initiate_le_h_fluxes(
-        slope, g_aero, g_surf, available_energy, da, rho, cp
+        slope, g_aero, g_surf, g_r, available_energy, da, rho, cp, is_stressed
     )
     if debug:
         print("LE/H Fluxes = ", le_flux, h_flux)  # noqa T201
@@ -295,13 +304,14 @@ def init_stic_model_pixel(
         alpha,
         tw,
         esstar_w,
+        is_stressed,
     )
 
 
 @njit(
     [
-        Tuple((f32,) * 8 + (boolean,))(*(f32,) * 18, i64, boolean),
-        Tuple((f64,) * 8 + (boolean,))(*(f64,) * 18, i64, boolean),
+        Tuple((f32,) * 8 + (boolean,) * 2)(*(f32,) * 18, i64, boolean),
+        Tuple((f64,) * 8 + (boolean,) * 2)(*(f64,) * 18, i64, boolean),
     ],
     nogil=True,
     cache=True,
@@ -327,7 +337,7 @@ def run_stic_model_pixel(
     threshold: float,
     nb_steps: int,
     debug: bool,
-) -> tuple[float, float, float, float, float, float, float, float, bool]:
+) -> tuple[float, float, float, float, float, float, float, float, bool, bool]:
     """
     STIC model calculation function for a single pixel
 
@@ -416,29 +426,43 @@ def run_stic_model_pixel(
     # es: vapor pressure at surface temperature
     # t0d: dewpoint temperature at source/sink height
     # ds: vapor pressure deficit of the air at the surface
-    (m, m_canopy, m_soil, m_surf, m_rz, es, t0d, ds) = initialize_soil_moisture(
-        slope,
-        ts,
-        ta,
-        td,
-        ln,
-        fc,
-        ea,
-        esstar,
-        s1,
-        s2,
-        s3,
-        s4,
-        nir,
-        swir,
-        vari_green,
-        gli,
-        ndvi,
-        gndvi,
-        msavi,
+    # is_stressed: water stress indicator
+    (m, m_canopy, m_soil, m_surf, m_rz, es, t0d, ds, is_stressed) = (
+        initialize_soil_moisture(
+            slope,
+            ts,
+            ta,
+            td,
+            ln,
+            fc,
+            ea,
+            esstar,
+            s1,
+            s2,
+            s3,
+            s4,
+            nir,
+            swir,
+            vari_green,
+            gli,
+            ndvi,
+            gndvi,
+            msavi,
+        )
     )
     if debug:
-        print("Init SM = ", m, m_canopy, m_soil, m_surf, m_rz)  # noqa T201
+        print(  # noqa T201
+            "Init SM = ",
+            m,
+            m_canopy,
+            m_soil,
+            m_surf,
+            m_rz,
+            es,
+            ds,
+            t0d,
+            is_stressed,
+        )
 
     # Initialize saturation vapor pressure at t0
     e0star = esstar
@@ -448,7 +472,9 @@ def run_stic_model_pixel(
     tw = compute_wet_surface_temperature(ta, ea)
     estar_w = compute_saturated_vapor_pressure(tw)
     # Initialize alpha to Priestley taylor parameter
-    alpha = initialize_alpha_coefficient(slope, ta, da, cp, rho, emis, rn)
+    alpha = initialize_alpha_coefficient(
+        slope, ta, da, cp, rho, emis, rn, tw, is_stressed
+    )
     if debug:
         print("Alpha = ", alpha, tw, estar_w)  # noqa T201
     # Save dewpoint temperature at source/sink height
@@ -469,9 +495,11 @@ def run_stic_model_pixel(
 
     # Initialize t0
     t0 = delta_t + ta
+    # Radiative conductance
+    g_r = compute_radiative_conductance(ta, cp, rho, emis)
     # Compute LE and H fluxes
     le_flux, h_flux = initiate_le_h_fluxes(
-        slope, g_aero, g_surf, available_energy, da, rho, cp
+        slope, g_aero, g_surf, g_r, available_energy, da, rho, cp, is_stressed
     )
     if debug:
         print("LE/H Fluxes = ", le_flux, h_flux)  # noqa T201
@@ -525,7 +553,7 @@ def run_stic_model_pixel(
             print("t0d = ", t0d)  # noqa T201
 
         # Re-estimate M (direct LST feedback into M computation)
-        (m, _, _, m_soil, _) = iterate_soil_moisture(
+        (m, _, _, m_soil, _, is_stressed) = iterate_soil_moisture(
             slope,
             s1,
             s2,
@@ -602,15 +630,26 @@ def run_stic_model_pixel(
     ef = le_flux / (le_flux + h_flux)
     ef = min(max(ef, 0.0), 1.0)
 
-    return le_flux, h_flux, ef, g_flux, g_aero, g_surf, t0, m, converged
+    return (
+        le_flux,
+        h_flux,
+        ef,
+        g_flux,
+        g_aero,
+        g_surf,
+        t0,
+        m,
+        converged,
+        is_stressed,
+    )
 
 
 @njit(
     [
-        Tuple((Array(f32, 2, "C"),) * 3)(
+        Tuple((Array(f32, 2, "C"),) * 2 + (Array(i64, 2, "C"),) * 2)(
             *(Array(f32, 2, "C"),) * 17, Array(i64, 2, "C"), f32, i64
         ),
-        Tuple((Array(f64, 2, "C"),) * 3)(
+        Tuple((Array(f64, 2, "C"),) * 2 + (Array(i64, 2, "C"),) * 2)(
             *(Array(f64, 2, "C"),) * 17, Array(i64, 2, "C"), f64, i64
         ),
     ],
@@ -639,7 +678,7 @@ def run_stic_model(
     valid: npt.NDArray,
     threshold: float,
     nb_steps: int,
-) -> tuple[npt.NDArray, npt.NDArray, npt.NDArray]:
+) -> tuple[npt.NDArray, npt.NDArray, npt.NDArray, npt.NDArray]:
     """
     STIC model calculation function
 
@@ -698,7 +737,8 @@ def run_stic_model(
     shape = ts.shape
     le_arr = np.empty_like(ts)
     ef_arr = np.empty_like(ts)
-    converged_arr = np.empty_like(ts)
+    converged_arr = np.empty_like(ts, dtype=i64)
+    stressed_arr = np.empty_like(ts, dtype=i64)
     # Pixel loop
     for i in prange(shape[0]):
         for j in prange(shape[1]):
@@ -713,6 +753,7 @@ def run_stic_model(
                     _,
                     _,
                     converged_arr[i, j],
+                    stressed_arr[i, j],
                 ) = run_stic_model_pixel(
                     ts[i, j],
                     ta[i, j],
@@ -736,13 +777,19 @@ def run_stic_model(
                     False,
                 )
             else:
-                le_arr[i, j], ef_arr[i, j], converged_arr[i, j] = (
+                (
+                    le_arr[i, j],
+                    ef_arr[i, j],
+                    converged_arr[i, j],
+                    stressed_arr[i, j],
+                ) = (
                     np.nan,
                     np.nan,
                     0,
+                    0,
                 )
 
-    return le_arr, ef_arr, converged_arr
+    return le_arr, ef_arr, converged_arr, stressed_arr
 
 
 @njit(
@@ -765,30 +812,32 @@ def run_batch_stic_model(
 
     """
     n = data.shape[0]
-    out = np.empty((n, 8), dtype=data.dtype)
+    out = np.empty((n, 10), dtype=data.dtype)
 
     for i in prange(n):
-        (le, h, ef, g, ga, gs, t0, m, _) = run_stic_model_pixel(
-            ts=data[i, 0],
-            ta=data[i, 1],
-            td=data[i, 2],
-            rh=data[i, 3],
-            fc=data[i, 4],
-            lai=data[i, 5],
-            rn=data[i, 6],
-            ln=data[i, 7],
-            nir=data[i, 8],
-            swir=data[i, 9],
-            vari_green=data[i, 10],
-            gli=data[i, 11],
-            ndvi=data[i, 12],
-            gndvi=data[i, 13],
-            msavi=data[i, 14],
-            emis=data[i, 15],
-            local_time=data[i, 16],
-            threshold=threshold,
-            nb_steps=nb_steps,
-            debug=debug,
+        (le, h, ef, g, ga, gs, t0, m, converged, stressed) = (
+            run_stic_model_pixel(
+                ts=data[i, 0],
+                ta=data[i, 1],
+                td=data[i, 2],
+                rh=data[i, 3],
+                fc=data[i, 4],
+                lai=data[i, 5],
+                rn=data[i, 6],
+                ln=data[i, 7],
+                nir=data[i, 8],
+                swir=data[i, 9],
+                vari_green=data[i, 10],
+                gli=data[i, 11],
+                ndvi=data[i, 12],
+                gndvi=data[i, 13],
+                msavi=data[i, 14],
+                emis=data[i, 15],
+                local_time=data[i, 16],
+                threshold=threshold,
+                nb_steps=nb_steps,
+                debug=debug,
+            )
         )
         out[i, 0] = le
         out[i, 1] = h
@@ -798,6 +847,8 @@ def run_batch_stic_model(
         out[i, 5] = gs
         out[i, 6] = t0
         out[i, 7] = m
+        out[i, 8] = converged
+        out[i, 9] = stressed
 
     return out
 
@@ -820,7 +871,7 @@ def run_batch_init_stic_model(
 
     """
     n = data.shape[0]
-    out = np.empty((n, 20), dtype=data.dtype)
+    out = np.empty((n, 21), dtype=data.dtype)
 
     for i in prange(n):
         (
@@ -853,6 +904,7 @@ def run_batch_init_stic_model(
             alpha,
             tw,
             esstar_w,
+            stressed,
         ) = init_stic_model_pixel(
             ts=data[i, 0],
             ta=data[i, 1],
@@ -893,5 +945,6 @@ def run_batch_init_stic_model(
         out[i, 17] = esstar
         out[i, 18] = e0star
         out[i, 19] = alpha
+        out[i, 20] = stressed
 
     return out

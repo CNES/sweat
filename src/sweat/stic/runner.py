@@ -56,7 +56,7 @@ def run_model(
     nb_steps: int = 15,
     version: str | None = None,
     precision: TYPES = "float32",
-) -> tuple[npt.NDArray, npt.NDArray, npt.NDArray]:
+) -> tuple[npt.NDArray, npt.NDArray, npt.NDArray, npt.NDArray]:
     """
     Run STIC model on a dataset
 

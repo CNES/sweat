@@ -4,16 +4,165 @@ Module containing functions to compute soil moisture
 for STIC model v1.4
 """
 
+from numba import boolean, njit
 from numba import float32 as f32
 from numba import float64 as f64
-from numba import njit
 from numba.types import Tuple
 
 from sweat.stic.constant import PSYCHROMETRIC_CST
 
 
 @njit(
-    [Tuple((f32,) * 8)(*(f32,) * 19), Tuple((f64,) * 8)(*(f64,) * 19)],
+    [boolean(*(f32,) * 9), boolean(*(f64,) * 9)],
+    nogil=True,
+    cache=True,
+    inline="always",
+)
+def is_soil_wetness(
+    fc: float,
+    ta: float,
+    td: float,
+    nir: float,
+    swir: float,
+    vari_green: float,
+    gli: float,
+    ndvi: float,
+    msavi: float,
+) -> bool:
+    """
+    Estimate if the surface wetness comes from the soil only
+
+    Parameters
+    ----------
+    fc: float
+        Fraction cover (0-1)
+    ta: float
+        Air temperature (celsius)
+    td: float
+        Dewpoint temperature (celsius)
+    nir: float
+        Near infrared
+    swir: float
+        Shortwave infrared
+    vari_green: float,
+        VARI green index
+    gli: float
+        Green Leaf Index
+    ndvi: float
+        NDVI
+    msavi: float
+        MSAVI
+
+    Returns
+    -------
+    soil_wetness: bool
+        True if the surface wetness comes from the soil
+    """
+    soil_wetness = False
+
+    if (fc <= 0.25) & (ta > 10.0) & (td < 0.0):
+        soil_wetness = True
+    if (
+        (swir > nir)
+        & (vari_green < 0.0)
+        & (gli < 0.0)
+        & (ndvi > msavi)
+        & (td < 0.0)
+    ):
+        soil_wetness = True
+    return soil_wetness
+
+
+@njit(
+    [boolean(*(f32,) * 7), boolean(*(f64,) * 7)],
+    nogil=True,
+    cache=True,
+    inline="always",
+)
+def is_water_stressed(
+    nir: float,
+    swir: float,
+    vari_green: float,
+    gli: float,
+    ndvi: float,
+    gndvi: float,
+    msavi: float,
+):
+    """
+    Estimate if the pixel is water stressed
+
+    Notes
+    -----
+    Vegetation indices calculated from reflectance values \u200b\u200bare used
+    to determine whether or not a pixel is subject to water stress.
+    The conditions to choose between the both equations for $M$
+    depends of the following variables:
+      - swir,
+      - nir,
+      - vari_green,
+      - gli,
+      - ndvi,
+      - gndvi,
+      - msavi
+    and they reflect various cases:
+      - severely stressed vegetation
+      - stressed sparse vegetation
+      - stressed bare soil
+
+    Parameters
+    ----------
+    nir: float
+        Near infrared
+    swir: float
+        Shortwave infrared
+    vari_green: float,
+        VARI green index
+    gli: float
+        Green Leaf Index
+    ndvi: float
+        NDVI
+    gndvi: float
+        GNDVI
+    msavi: float
+        MSAVI
+
+    Returns
+    -------
+    is_stressed: bool
+        True if the pixel is water stressed
+    """
+    is_stressed = False
+    # Severely stressed vegetation
+    if (swir > nir) and (vari_green < 0.0) and (gli > 0.0):
+        is_stressed = True
+    # Severely stressed vegetation
+    if (
+        (swir > nir)
+        and (vari_green < 0.0)
+        and (ndvi > gndvi)
+        and (ndvi > msavi)
+    ):
+        is_stressed = True
+    # Stressed sparse vegetation
+    if (
+        (swir > nir)
+        and (vari_green > 0.0)
+        and (gli > 0.0)
+        and (ndvi > gndvi)
+        and (ndvi > msavi)
+    ):
+        is_stressed = True
+    # Special conditions for stressed bare case
+    if (swir > nir) and (vari_green < 0.0) and (gli < 0.0) and (ndvi > msavi):
+        is_stressed = True
+    return is_stressed
+
+
+@njit(
+    [
+        Tuple((f32,) * 8 + (boolean,))(*(f32,) * 19),
+        Tuple((f64,) * 8 + (boolean,))(*(f64,) * 19),
+    ],
     nogil=True,
     cache=True,
 )
@@ -37,7 +186,7 @@ def initialize_soil_moisture(
     ndvi: float,
     gndvi: float,
     msavi: float,
-) -> tuple[float, float, float, float, float, float, float, float]:
+) -> tuple[float, float, float, float, float, float, float, float, bool]:
     """
     Initiate soil moisture
 
@@ -71,20 +220,6 @@ def initialize_soil_moisture(
     \\Delta s_{1} ( T_{0D} - T_{D} ) }
     $$
     $M_{rz}$ must remain between 0 and 1.
-
-    The conditions to choose between the both equations for $M$
-    depends of the following variables:
-      - swir,
-      - nir,
-      - vari_green,
-      - gli,
-      - ndvi,
-      - gndvi,
-      - msavi
-    and they reflect various cases:
-      - severely stressed vegetation
-      - stressed sparse vegetation
-      - stressed bare soil
 
     Parameters
     ----------
@@ -129,7 +264,6 @@ def initialize_soil_moisture(
     msavi: float
         MSAVI
 
-
     Returns
     -------
     m: float
@@ -148,6 +282,8 @@ def initialize_soil_moisture(
         Dewpoint temperature at the reference height (celsius)
     ds: float
         Vapor pressure deficit of the air at the surface (hPa)
+    is_stressed: bool
+        Water stress indicator
     """
     epsilon = 1.0e-7
     # Compute the surface dewpoint temperature (degC)
@@ -175,28 +311,8 @@ def initialize_soil_moisture(
     m_canopy = fc * m_surf
     m_soil = (1.0 - fc) * m_surf
 
-    # Compute dewpoint temperature index
-    # tdew_index > 1 signifies super dry condition
-    # Handle division by zero
-    # tdew_index = (ts - tsd) / (ta - td) if abs(ta - td) > epsilon else 0
-
     # Surface wetness comes from the soil, vegetation contribution is negligible
-    # if (fc <= 0.25) & (tdew_index < 1):
-    # m_surf = m_soil
-    # m_canopy = 0
-    # if (fc <= 0.25) & (ta > 10) & (td < 0) & (ln < -125):
-    # m_surf = m_soil
-    # m_canopy = 0
-    if (fc <= 0.25) & (ta > 10.0) & (td < 0.0):
-        m_surf = m_soil
-        m_canopy = 0.0
-    if (
-        (swir > nir)
-        & (vari_green < 0.0)
-        & (gli < 0.0)
-        & (ndvi > msavi)
-        & (td < 0.0)
-    ):
+    if is_soil_wetness(fc, ta, td, nir, swir, vari_green, gli, ndvi, msavi):
         m_surf = m_soil
         m_canopy = 0.0
 
@@ -213,28 +329,10 @@ def initialize_soil_moisture(
     m = m_surf
 
     # Conditions to switch to root zone soil moisture
-    # Severely stressed vegetation
-    if (swir > nir) and (vari_green < 0.0) and (gli > 0.0):
-        m = m_rz
-    # Severely stressed vegetation
-    if (
-        (swir > nir)
-        and (vari_green < 0.0)
-        and (ndvi > gndvi)
-        and (ndvi > msavi)
-    ):
-        m = m_rz
-    # Stressed sparse vegetation
-    if (
-        (swir > nir)
-        and (vari_green > 0.0)
-        and (gli > 0.0)
-        and (ndvi > gndvi)
-        and (ndvi > msavi)
-    ):
-        m = m_rz
-    # Special conditions for stressed bare case
-    if (swir > nir) and (vari_green < 0.0) and (gli < 0.0) and (ndvi > msavi):
+    is_stressed = is_water_stressed(
+        nir, swir, vari_green, gli, ndvi, gndvi, msavi
+    )
+    if is_stressed:
         m = m_rz
 
     # Update vapor pressure at surface
@@ -243,11 +341,14 @@ def initialize_soil_moisture(
     # Update vapor pressure deficit at surface
     ds = esstar - es
 
-    return (m, m_canopy, m_soil, m_surf, m_rz, es, tsd, ds)
+    return (m, m_canopy, m_soil, m_surf, m_rz, es, tsd, ds, is_stressed)
 
 
 @njit(
-    [Tuple((f32,) * 5)(*(f32,) * 21), Tuple((f64,) * 5)(*(f64,) * 21)],
+    [
+        Tuple((f32,) * 5 + (boolean,))(*(f32,) * 21),
+        Tuple((f64,) * 5 + (boolean,))(*(f64,) * 21),
+    ],
     nogil=True,
     cache=True,
 )
@@ -273,7 +374,7 @@ def iterate_soil_moisture(
     ndvi: float,
     gndvi: float,
     msavi: float,
-) -> tuple[float, float, float, float, float]:
+) -> tuple[float, float, float, float, float, bool]:
     """
     Compute soil moisture during iteration loop
 
@@ -307,20 +408,6 @@ def iterate_soil_moisture(
     \\Delta s_{1} (T_{0D} - T_{D} ) }
     $$
     $M_{rz}$ must remain between 0 and 1.
-
-    The conditions to choose between the both equations for $M$
-    depends of the following variables:
-      - swir,
-      - nir,
-      - vari_green,
-      - gli,
-      - ndvi,
-      - gndvi,
-      - msavi
-    and they reflect various cases:
-      - severely stressed vegetation
-      - stressed sparse vegetation
-      - stressed bare soil
 
     Parameters
     ----------
@@ -408,22 +495,7 @@ def iterate_soil_moisture(
     # )
 
     # Surface wetness comes from the soil, vegetation contribution is negligible
-    # if (fc <= 0.25) & (tdew_index < 1):
-    # m_surf = m_soil
-    # m_canopy = 0
-    # if (fc <= 0.25) & (ta > 10) & (td < 0) & (ln < -125):
-    # m_surf = m_soil
-    # m_canopy = 0
-    if (fc <= 0.25) & (ta > 10.0) & (td < 0.0):
-        m_surf = m_soil
-        m_canopy = 0.0
-    if (
-        (swir > nir)
-        & (vari_green < 0.0)
-        & (gli < 0.0)
-        & (ndvi > msavi)
-        & (td < 0.0)
-    ):
+    if is_soil_wetness(fc, ta, td, nir, swir, vari_green, gli, ndvi, msavi):
         m_surf = m_soil
         m_canopy = 0.0
 
@@ -440,28 +512,10 @@ def iterate_soil_moisture(
     m = m_surf
 
     # Conditions to switch to root zone soil moisture
-    # Severely stressed vegetation
-    if (swir > nir) and (vari_green < 0.0) and (gli > 0.0):
-        m = m_rz
-    # Severely stressed vegetation
-    if (
-        (swir > nir)
-        and (vari_green < 0.0)
-        and (ndvi > gndvi)
-        and (ndvi > msavi)
-    ):
-        m = m_rz
-    # Stressed sparse vegetation
-    if (
-        (swir > nir)
-        and (vari_green > 0.0)
-        and (gli > 0.0)
-        and (ndvi > gndvi)
-        and (ndvi > msavi)
-    ):
-        m = m_rz
-    # Special conditions for stressed bare case
-    if (swir > nir) and (vari_green < 0.0) and (gli < 0.0) and (ndvi > msavi):
+    is_stressed = is_water_stressed(
+        nir, swir, vari_green, gli, ndvi, gndvi, msavi
+    )
+    if is_stressed:
         m = m_rz
 
-    return (m, m_surf, m_canopy, m_soil, m_rz)
+    return (m, m_surf, m_canopy, m_soil, m_rz, is_stressed)

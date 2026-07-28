@@ -33,6 +33,7 @@ from sweat.stic.runner import (
         "le_expected",
         "ef_expected",
         "converged_expected",
+        "stressed_expected",
     ),
     [
         pytest.param(
@@ -49,9 +50,10 @@ from sweat.stic.runner import (
             0.01,
             15,
             "1.3",
-            np.array([[210.37, 210.37], [210.37, 210.37]]),
+            np.array([[210.53, 210.53], [210.53, 210.53]]),
             np.array([[0.6925, 0.6925], [0.6925, 0.6925]]),
             np.array([[True, True], [True, True]]),
+            np.array([[False, False], [False, False]]),
         ),
     ],
 )
@@ -72,6 +74,7 @@ def test_run_stic_model(
     le_expected,
     ef_expected,
     converged_expected,
+    stressed_expected,
 ) -> None:
     """
     Test runner for STIC model
@@ -94,7 +97,7 @@ def test_run_stic_model(
         },
         attrs={"description": "Test data"},
     )
-    le, ef, cv = run_model(
+    le, ef, cv, st = run_model(
         data=data,
         valid=valid,
         threshold=threshold,
@@ -104,6 +107,7 @@ def test_run_stic_model(
     np.testing.assert_almost_equal(le, le_expected, decimal=2)
     np.testing.assert_almost_equal(ef, ef_expected, decimal=2)
     np.testing.assert_equal(cv, converged_expected)
+    np.testing.assert_equal(st, stressed_expected)
 
 
 @pytest.mark.unit
@@ -137,7 +141,7 @@ def test_run_stic_model(
             0.01,
             15,
             "1.3",
-            210.37,
+            210.53,
             0.6925,
         ),
     ],
@@ -163,7 +167,7 @@ def test_run_batch_model(
         version=version,
         mapping=True,
     )
-    assert res.shape == (1, 8)
+    assert res.shape == (1, 10)
     np.testing.assert_almost_equal(res[0, 0], le_expected, decimal=2)
     np.testing.assert_almost_equal(res[0, 2], ef_expected, decimal=2)
 
@@ -194,7 +198,7 @@ def test_run_batch_model(
                 dtype=np.float32,
             ),
             "1.3",
-            209.45,
+            210.1425,
         ),
     ],
 )
@@ -214,5 +218,5 @@ def test_run_batch_init_model(
         debug=False,
         mapping=True,
     )
-    assert res.shape == (1, 20)
+    assert res.shape == (1, 21)
     np.testing.assert_almost_equal(res[0, 0], le_expected, decimal=2)

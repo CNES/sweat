@@ -4,9 +4,9 @@ Module for STIC flux computation
 """
 
 import numpy as np
+from numba import boolean, njit
 from numba import float32 as f32
 from numba import float64 as f64
-from numba import njit
 from numba.types import Tuple
 
 from sweat.stic.constant import PSYCHROMETRIC_CST
@@ -74,7 +74,10 @@ def compute_g_flux(
 
 
 @njit(
-    [Tuple((f32,) * 2)(*(f32,) * 7), Tuple((f64,) * 2)(*(f64,) * 7)],
+    [
+        Tuple((f32,) * 2)(*(f32,) * 8, boolean),
+        Tuple((f64,) * 2)(*(f64,) * 8, boolean),
+    ],
     nogil=True,
     cache=True,
 )
@@ -82,10 +85,12 @@ def initiate_le_h_fluxes(
     slope: float,
     g_aero: float,
     g_surf: float,
+    g_r: float,
     phi: float,
     da: float,
     rho: float,
     cp: float,
+    is_stressed: bool,
 ) -> tuple[float, float]:
     """
     Initiate latent heat flux and sensible heat flux
@@ -107,6 +112,8 @@ def initiate_le_h_fluxes(
         Aerodynamic conductance (m.s-1)
     g_surf: float
         Surface conductance (m.s-1)
+    g_r: float
+        Radiative conductance (m.s-1)
     phi: float
         Available energy (W.m-2)
     da: float
@@ -115,6 +122,8 @@ def initiate_le_h_fluxes(
         Air density (kg/m^3)
     cp: float
         Specific heat at constant pressure (J/kg/K)
+    is_stressed: bool
+        Water stress indicator
 
     Returns
     -------
@@ -123,15 +132,25 @@ def initiate_le_h_fluxes(
     h_flux: float
         Sensible heat flux
     """
+    # Omega computation in function of water stress
+    if is_stressed:
+        omega = ((slope / PSYCHROMETRIC_CST) + 1.0 + (g_r / g_aero)) / (
+            (slope / PSYCHROMETRIC_CST)
+            + 1.0
+            + g_aero / g_surf
+            + g_r / g_aero
+            + g_aero / g_surf
+        )
+    else:
+        omega = ((slope / PSYCHROMETRIC_CST) + 1.0) / (
+            (slope / PSYCHROMETRIC_CST) + 1.0 + g_aero / g_surf
+        )
     # Calculate ET and H based on initial results from state eqs.
     # with McNaughton and Jarvis (1986)
-    omega = ((slope / PSYCHROMETRIC_CST) + 1) / (
-        (slope / PSYCHROMETRIC_CST) + 1.0 + g_aero / g_surf
-    )
     le_flux_eq = (phi * (slope / PSYCHROMETRIC_CST)) / (
         (slope / PSYCHROMETRIC_CST) + 1.0
     )
-    le_flux_imp = (cp * 0.0289644 / PSYCHROMETRIC_CST) * g_surf * 40.0 * da
+    le_flux_imp = (cp * rho / PSYCHROMETRIC_CST) * g_surf * da
     le_flux = omega * le_flux_eq + (1.0 - omega) * le_flux_imp
 
     h_flux = (

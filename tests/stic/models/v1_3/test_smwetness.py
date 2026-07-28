@@ -32,6 +32,7 @@ from sweat.stic.models.v1_3 import smwetness
         "es_expected",
         "t0d_expected",
         "ds_expected",
+        "is_stressed_expected",
     ),
     [
         pytest.param(
@@ -57,6 +58,7 @@ from sweat.stic.models.v1_3 import smwetness
             28.486478336363362,
             24.94073377234243,
             13.943521663636638,
+            False,
         ),
         pytest.param(
             1.9,
@@ -81,6 +83,7 @@ from sweat.stic.models.v1_3 import smwetness
             36.93805552570604,
             29.127939793038575,
             5.491944474293959,
+            True,
         ),
         pytest.param(
             3.0,
@@ -105,6 +108,7 @@ from sweat.stic.models.v1_3 import smwetness
             21.9730459,
             13.492003762935093,
             20.4569541,
+            True,
         ),
         pytest.param(
             3.0,
@@ -129,6 +133,7 @@ from sweat.stic.models.v1_3 import smwetness
             42.4279541,
             41.63918629550321,
             0.0020458999999988237,
+            True,
         ),
         pytest.param(
             3.0,
@@ -153,6 +158,7 @@ from sweat.stic.models.v1_3 import smwetness
             21.9730459,
             2.202257761053626,
             20.4569541,
+            False,
         ),
     ],
 )
@@ -179,34 +185,28 @@ def test_initialize_soilmoisture(
     es_expected,
     t0d_expected,
     ds_expected,
+    is_stressed_expected,
 ) -> None:
     """
     Test function for initiating soil moisture
     """
-    (
-        m,
-        m_canopy,
-        m_soil,
-        m_surf,
-        m_rz,
-        es,
-        t0d,
-        ds,
-    ) = smwetness.initialize_soil_moisture(
-        slope,
-        lst,
-        ta,
-        td,
-        rn,
-        ln,
-        fc,
-        da,
-        ea,
-        esstar,
-        s1,
-        s2,
-        s3,
-        s4,
+    (m, m_canopy, m_soil, m_surf, m_rz, es, t0d, ds, is_stressed) = (
+        smwetness.initialize_soil_moisture(
+            slope,
+            lst,
+            ta,
+            td,
+            rn,
+            ln,
+            fc,
+            da,
+            ea,
+            esstar,
+            s1,
+            s2,
+            s3,
+            s4,
+        )
     )
     np.testing.assert_almost_equal(m, m_expected, decimal=3)
     np.testing.assert_almost_equal(m_canopy, m_canopy_expected, decimal=3)
@@ -216,6 +216,7 @@ def test_initialize_soilmoisture(
     np.testing.assert_almost_equal(es, es_expected, decimal=3)
     np.testing.assert_almost_equal(t0d, t0d_expected, decimal=3)
     np.testing.assert_almost_equal(ds, ds_expected, decimal=3)
+    np.testing.assert_equal(is_stressed, is_stressed_expected)
 
 
 @pytest.mark.unit
@@ -244,6 +245,7 @@ def test_initialize_soilmoisture(
         "m_canopy_expected",
         "m_soil_expected",
         "m_rz_expected",
+        "is_stressed_expected",
     ),
     [
         pytest.param(
@@ -270,6 +272,7 @@ def test_initialize_soilmoisture(
             0.15395833333333334,
             0.15395833333333334,
             0.040897992403689645,
+            False,
         ),
         pytest.param(
             2.0,
@@ -295,6 +298,7 @@ def test_initialize_soilmoisture(
             0,
             0.7697916666666667,
             0.15982824427480918,
+            False,
         ),
         pytest.param(
             2.0,
@@ -320,6 +324,7 @@ def test_initialize_soilmoisture(
             0,
             0.7999200000000001,
             0.223399525785418,
+            True,
         ),
         pytest.param(
             4.0,
@@ -345,6 +350,7 @@ def test_initialize_soilmoisture(
             0,
             0.7999200000000001,
             0.13102835998807988,
+            True,
         ),
     ],
 )
@@ -372,6 +378,7 @@ def test_iterate_soilmoisture(
     m_canopy_expected,
     m_soil_expected,
     m_rz_expected,
+    is_stressed_expected,
 ) -> None:
     """
     Test function for computing soil moisture
@@ -382,6 +389,7 @@ def test_iterate_soilmoisture(
         m_canopy,
         m_soil,
         m_rz,
+        is_stressed,
     ) = smwetness.iterate_soil_moisture(
         slope,
         s1,
@@ -407,3 +415,4 @@ def test_iterate_soilmoisture(
     np.testing.assert_almost_equal(m_soil, m_soil_expected, decimal=3)
     np.testing.assert_almost_equal(m_surf, m_surf_expected, decimal=3)
     np.testing.assert_almost_equal(m_rz, m_rz_expected, decimal=3)
+    np.testing.assert_equal(is_stressed, is_stressed_expected)
