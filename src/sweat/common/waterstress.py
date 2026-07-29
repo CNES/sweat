@@ -99,10 +99,9 @@ def run(
     # Compute water stress
     try:
         if method_name == WaterStressMethod.EF.name:
-            water_stress = xr.DataArray(
-                data=compute_waterstress_from_ef(et[ETVar.EF.value]),
-                dims=et.dims,
-                coords=et.coords.copy(),
+            water_stress = xr.full_like(et[ETVar.EF.value], np.nan)
+            water_stress.data = compute_waterstress_from_ef(
+                et[ETVar.EF.value].data
             )
     except KeyError as exc:
         msg = f"Data missing for {method_name} method: {exc}"
