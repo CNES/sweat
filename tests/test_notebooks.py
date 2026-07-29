@@ -21,6 +21,7 @@ def get_notebooks():
             and ("Untitled" not in path.name)
             and ("test" not in path.name)
             and ("validation_" not in path.name)
+            and ("prepare_" not in path.name)
         )
     ]
 
