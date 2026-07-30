@@ -68,5 +68,6 @@
   ],
   "[jsonc]": {
     "editor.defaultFormatter": "vscode.json-language-features"
-  }
+  },
+  "jupyter.interactiveWindow.textEditor.magicCommandsAsComments": true
 }
