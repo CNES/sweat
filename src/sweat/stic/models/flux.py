@@ -75,6 +75,87 @@ def compute_g_flux(
 
 @njit(
     [
+        f32(f32, f32, f32),
+        f64(f64, f64, f64),
+    ],
+    nogil=True,
+    cache=True,
+    inline="always",
+)
+def compute_omega_unstressed(
+    slope: float,
+    g_aero: float,
+    g_surf: float,
+) -> float:
+    """
+    Compute omega for unstressed condition
+
+    Parameters
+    ----------
+    slope: float
+        Slope of saturation vapor pressure versus
+        air temperature at TA (hPa/degC)
+    g_aero: float
+        Aerodynamic conductance (m.s-1)
+    g_surf: float
+        Surface conductance (m.s-1)
+
+    Returns
+    -------
+    omega: float
+        Omega
+    """
+    return ((slope / PSYCHROMETRIC_CST) + 1.0) / (
+        (slope / PSYCHROMETRIC_CST) + 1.0 + g_aero / g_surf
+    )
+
+
+@njit(
+    [
+        f32(f32, f32, f32, f32),
+        f64(f64, f64, f64, f64),
+    ],
+    nogil=True,
+    cache=True,
+    inline="always",
+)
+def compute_omega_stressed(
+    slope: float,
+    g_aero: float,
+    g_surf: float,
+    g_r: float,
+) -> float:
+    """
+    Compute omega for stressed condition
+
+    Parameters
+    ----------
+    slope: float
+        Slope of saturation vapor pressure versus
+        air temperature at TA (hPa/degC)
+    g_aero: float
+        Aerodynamic conductance (m.s-1)
+    g_surf: float
+        Surface conductance (m.s-1)
+    g_r: float
+        Radiative conductance (m.s-1)
+
+    Returns
+    -------
+    omega: float
+        Omega
+    """
+    return ((slope / PSYCHROMETRIC_CST) + 1.0 + (g_r / g_aero)) / (
+        (slope / PSYCHROMETRIC_CST)
+        + 1.0
+        + g_aero / g_surf
+        + g_r / g_aero
+        + g_aero / g_surf
+    )
+
+
+@njit(
+    [
         Tuple((f32,) * 2)(*(f32,) * 8, boolean),
         Tuple((f64,) * 2)(*(f64,) * 8, boolean),
     ],
@@ -134,17 +215,9 @@ def initiate_le_h_fluxes(
     """
     # Omega computation in function of water stress
     if is_stressed:
-        omega = ((slope / PSYCHROMETRIC_CST) + 1.0 + (g_r / g_aero)) / (
-            (slope / PSYCHROMETRIC_CST)
-            + 1.0
-            + g_aero / g_surf
-            + g_r / g_aero
-            + g_aero / g_surf
-        )
+        omega = compute_omega_stressed(slope, g_aero, g_surf, g_r)
     else:
-        omega = ((slope / PSYCHROMETRIC_CST) + 1.0) / (
-            (slope / PSYCHROMETRIC_CST) + 1.0 + g_aero / g_surf
-        )
+        omega = compute_omega_unstressed(slope, g_aero, g_surf)
     # Calculate ET and H based on initial results from state eqs.
     # with McNaughton and Jarvis (1986)
     le_flux_eq = (phi * (slope / PSYCHROMETRIC_CST)) / (
