@@ -40,7 +40,9 @@ def safe_polyfit(x, y):
 
         slope, intercept = np.polyfit(x[idx], y[idx], 1)
 
-        if any(issubclass(warn.category, np.RankWarning) for warn in w):
+        if any(
+            issubclass(warn.category, np.exceptions.RankWarning) for warn in w
+        ):
             return np.nan, np.nan
 
     return slope, intercept
@@ -54,7 +56,7 @@ def compute_metrics(
     """
     measured_arr = np.array(measured)
     estimated_arr = np.array(estimated)
-    slope, _ = safe_polyfit(measured, estimated)
+    slope, _ = safe_polyfit(measured_arr, estimated_arr)
     if len(measured_arr - estimated_arr) > 0 and not np.all(
         np.isnan(measured_arr - estimated_arr)
     ):
@@ -98,6 +100,7 @@ def generate_metrics_table(
                 {
                     "name": name[0] if len(name) >= 2 else name,
                     **({"landcover": name[1]} if len(name) >= 2 else {}),
+                    "nb": len(group),
                     "variable": var,
                     "slope": slope,
                     "mbe": mbe,
@@ -110,13 +113,14 @@ def generate_metrics_table(
     for var in variables:
         est_var = var if "_closed" not in var else var[:-7]
         slope, mbe, mae, rmse, r2 = compute_metrics(
-            measured=group[f"ec_{var}"], estimated=group[est_var]
+            measured=df[f"ec_{var}"], estimated=df[est_var]
         )
         metrics.append(
             {
                 "name": "all",
                 **({"landcover": "all"} if len(name) >= 2 else {}),
                 "landcover": "all",
+                "nb": len(df),
                 "variable": var,
                 "slope": slope,
                 "mbe": mbe,

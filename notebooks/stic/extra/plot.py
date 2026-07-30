@@ -330,9 +330,34 @@ def plot_scatter_for_sites(
 
 def plot_data(df: pd.DataFrame, variable: str | None = None):
     """
-    Plot data
+    Plot data over time
     """
-    sites = sorted(df["name"].unique())
+    # Create category dropdown widget
+    category_dropdown = widgets.Dropdown(
+        options=["name", "landcover"],
+        value="name",
+        description="Category:",
+    )
+    category = category_dropdown.value
+
+    # Create class dropdown (updated based on category)
+    selection_dropdown = widgets.Dropdown(
+        options=["All", *sorted(df[category].unique())],
+        value="All",
+        description="Selection:",
+    )
+
+    # Function to update class_dropdown when category changes
+    def update_selection_options(change):
+        category = change["new"]
+        selection_dropdown.options = [
+            "All",
+            *sorted(df[category].unique()),
+        ]
+        selection_dropdown.value = "All"
+
+    category_dropdown.observe(update_selection_options, names="value")
+
     variables = sorted(
         df.columns.difference(
             ["name", "date", "data (utc)", "lat", "lon", "landcover"]
@@ -340,12 +365,6 @@ def plot_data(df: pd.DataFrame, variable: str | None = None):
     )
     if variable is None or variable not in variables:
         variable = "ts"
-    site_dropdown = widgets.Dropdown(
-        options=sites,
-        value=sites[0],
-        description="Site:",
-        style={"description_width": "initial"},
-    )
 
     var_dropdown = widgets.Dropdown(
         options=variables,
@@ -362,101 +381,11 @@ def plot_data(df: pd.DataFrame, variable: str | None = None):
         with output:
             clear_output(wait=True)
 
-            site = site_dropdown.value
+            category = category_dropdown.value
+            selected = selection_dropdown.value
             var = var_dropdown.value
 
-            subset = df[df["name"] == site]
-
-            fig = px.line(
-                subset,
-                x="date",
-                y=var,
-                markers=True,
-            )
-
-            # Print value
-            fig.update_traces(
-                hovertemplate=(
-                    f"<b>Site:</b> {site}<br>"
-                    "<b>Date:</b> %{x|%Y-%m-%d}<br>"
-                    f"<b>{var}:</b> %{{y:.2f}}<br>"
-                    "<extra></extra>"
-                )
-            )
-
-            # Format x-axis as YYYY-MM-DD
-            fig.update_xaxes(tickformat="%Y-%m-%d")
-
-            # Improve layout
-            fig.update_layout(
-                autosize=True,
-                margin={"l": 20, "r": 20, "t": 60, "b": 40},
-                xaxis_title="Date",
-                yaxis_title=var,
-                title={
-                    "text": f"Evolution of {var} over time (site: {site})",
-                    "x": 0.5,
-                    "xanchor": "center",
-                    "font": {"size": 20},
-                },
-            )
-            fig.show(config={"responsive": True})
-
-    # --- Link widgets to function ---
-    site_dropdown.observe(update_plot, names="value")
-    var_dropdown.observe(update_plot, names="value")
-
-    # --- Layout ---
-    controls = widgets.HBox([site_dropdown, var_dropdown])
-
-    display(controls, output)
-
-    # Initial plot
-    update_plot()
-
-
-def plot_data_by_class(df: pd.DataFrame, variable: str | None = None):
-    """
-    Plot data
-    """
-    classes = ["All", *sorted(df["landcover"].unique())]
-    variables = sorted(
-        df.columns.difference(
-            ["name", "date", "data (utc)", "lat", "lon", "landcover"]
-        )
-    )
-    if variable is None or variable not in variables:
-        variable = "ts"
-
-    class_dropdown = widgets.Dropdown(
-        options=classes,
-        value="All",
-        description="Class:",
-        style={"description_width": "initial"},
-    )
-
-    var_dropdown = widgets.Dropdown(
-        options=variables,
-        value="ts",
-        description="Variable:",
-        style={"description_width": "initial"},
-    )
-
-    # Output area for plot
-    output = widgets.Output()
-
-    # --- Update function ---
-    def update_plot(change=None):  # noqa
-        with output:
-            clear_output(wait=True)
-
-            selected_class = class_dropdown.value
-            var = var_dropdown.value
-
-            if selected_class == "All":
-                subset = df
-            else:
-                subset = df[df["landcover"] == selected_class]
+            subset = df if selected == "All" else df[df[category] == selected]
 
             fig = px.line(
                 subset,
@@ -490,8 +419,7 @@ def plot_data_by_class(df: pd.DataFrame, variable: str | None = None):
                 # legend=dict(orientation="h"),
                 title={
                     "text": (
-                        f"Evolution of {var} over "
-                        f"time (Class: {selected_class})"
+                        f"Evolution of {var} over time (Class: {selected})"
                     ),
                     "x": 0.5,
                     "xanchor": "center",
@@ -501,11 +429,14 @@ def plot_data_by_class(df: pd.DataFrame, variable: str | None = None):
             fig.show(config={"responsive": True})
 
     # --- Link widgets to function ---
-    class_dropdown.observe(update_plot, names="value")
+    category_dropdown.observe(update_plot, names="value")
+    selection_dropdown.observe(update_plot, names="value")
     var_dropdown.observe(update_plot, names="value")
 
     # --- Layout ---
-    controls = widgets.HBox([class_dropdown, var_dropdown])
+    controls = widgets.HBox(
+        [category_dropdown, selection_dropdown, var_dropdown]
+    )
 
     display(controls, output)
 
@@ -514,254 +445,6 @@ def plot_data_by_class(df: pd.DataFrame, variable: str | None = None):
 
 
 def plot_scatter(
-    df: pd.DataFrame | list[pd.DataFrame],
-    x: str | None = None,
-    y: str | None = None,
-):
-    """
-    Scatter plot
-    """
-    # --- Normalize input ---
-    if isinstance(df, pd.DataFrame):
-        dfs = [df]
-    elif isinstance(df, (list, tuple)) and len(df) in [1, 2]:
-        dfs = list(df)
-    else:
-        msg = "df must be a DataFrame or a list/tuple of 1 or 2 DataFrames"
-        raise ValueError(msg)
-    names = [dfi.attrs.get("label", f"DF{i + 1}") for i, dfi in enumerate(dfs)]
-
-    # --- Widgets (based on first df) ---
-    ref_df = dfs[0]
-
-    sites = sorted(ref_df["name"].unique())
-    variables = sorted(
-        ref_df.columns.difference(
-            ["name", "date", "data (utc)", "lat", "lon", "landcover"]
-        )
-    )
-
-    if x is None or x not in variables:
-        x = "ta"
-    if y is None or y not in variables:
-        y = "ts"
-
-    site_dropdown = widgets.Dropdown(
-        options=sites,
-        value=sites[0],
-        description="Site:",
-        style={"description_width": "initial"},
-    )
-
-    xvar_dropdown = widgets.Dropdown(
-        options=variables,
-        value=x,
-        description="X axis:",
-        style={"description_width": "initial"},
-    )
-
-    yvar_dropdown = widgets.Dropdown(
-        options=variables,
-        value=y,
-        description="Y axis:",
-        style={"description_width": "initial"},
-    )
-
-    metrics_checkbox = widgets.Checkbox(
-        value=False, description="Compute metrics"
-    )
-
-    range_checkbox = widgets.Checkbox(value=False, description="Fixed range")
-
-    output = widgets.Output()
-
-    # --- Update function ---
-    def update_plot(change=None):  # noqa
-        with output:
-            clear_output(wait=True)
-
-            site = site_dropdown.value
-            xvar = xvar_dropdown.value
-            yvar = yvar_dropdown.value
-
-            # --- Create figure ---
-            if len(dfs) == 2:
-                fig = make_subplots(rows=1, cols=2, subplot_titles=names)
-            else:
-                fig = go.Figure()
-
-            # --- Loop over dataframes ---
-            for i, dfi in enumerate(dfs):
-                subset = dfi[dfi["name"] == site]
-                x_values = subset[xvar]
-                y_values = subset[yvar]
-
-                row, col = (1, i + 1) if len(dfs) == 2 else (None, None)
-
-                trace = go.Scatter(
-                    x=x_values,
-                    y=y_values,
-                    mode="markers",
-                    marker={"size": 6, "opacity": 0.5},
-                    customdata=subset["date"],
-                    showlegend=False,
-                )
-
-                if len(dfs) == 2:
-                    fig.add_trace(trace, row=row, col=col)
-                else:
-                    fig.add_trace(trace)
-
-                # Hover
-                fig.update_traces(
-                    hovertemplate=(
-                        f"<b>Site:</b> {site}<br>"
-                        f"<b>{xvar}:</b> %{{x:.2f}}<br>"
-                        f"<b>{yvar}:</b> %{{y:.2f}}<br>"
-                        "Date: %{customdata|%Y-%m-%d}<extra></extra>"
-                    )
-                )
-
-                # Fixed range
-                if range_checkbox.value:
-                    lims = [
-                        min(x_values.min(), y_values.min()),
-                        max(x_values.max(), y_values.max()),
-                    ]
-                    axis_range = [
-                        lims[0] - 0.1 * abs(lims[0]),
-                        lims[1] + 0.1 * abs(lims[1]),
-                    ]
-
-                    if len(dfs) == 2:
-                        fig.update_xaxes(range=axis_range, row=row, col=col)
-                        fig.update_yaxes(range=axis_range, row=row, col=col)
-                    else:
-                        fig.update_xaxes(range=axis_range)
-                        fig.update_yaxes(range=axis_range)
-
-                # Metrics
-                if metrics_checkbox.value:
-                    slope, intercept = safe_polyfit(x_values, y_values)
-
-                    lims = [
-                        min(x_values.min(), y_values.min()),
-                        max(x_values.max(), y_values.max()),
-                    ]
-
-                    # Identity line
-                    line1 = go.Scatter(
-                        x=lims,
-                        y=lims,
-                        mode="lines",
-                        line={"dash": "dash", "color": "black"},
-                        showlegend=False,
-                    )
-
-                    # Fit line
-                    line2 = None
-                    if not np.isnan(slope) or np.isnan(intercept):
-                        line2 = go.Scatter(
-                            x=lims,
-                            y=[
-                                lims[0] * slope + intercept,
-                                lims[1] * slope + intercept,
-                            ],
-                            mode="lines",
-                            line={"color": "red"},
-                            showlegend=False,
-                        )
-
-                    if len(dfs) == 2:
-                        fig.add_trace(line1, row=row, col=col)
-                        if line2:
-                            fig.add_trace(line2, row=row, col=col)
-                    else:
-                        fig.add_trace(line1)
-                        if line2:
-                            fig.add_trace(line2)
-
-                    # --- Metrics text ---
-                    slope_m, mbe, mae, rmse, r2 = compute_metrics(
-                        x_values, y_values
-                    )
-
-                    if len(dfs) == 2:
-                        fig.add_annotation(
-                            x=0.97,
-                            y=0.03,
-                            xref="x domain",
-                            yref="y domain",
-                            text=(
-                                f"slope = {slope_m:.2f}<br>"
-                                f"MBE = {mbe:.2f}<br>"
-                                f"MAE = {mae:.2f}<br>"
-                                f"RMSE = {rmse:.2f}<br>"
-                                f"R² = {r2:.2f}"
-                            ),
-                            showarrow=False,
-                            align="right",
-                            row=row,
-                            col=col,
-                        )
-                    else:
-                        fig.add_annotation(
-                            x=0.97,
-                            y=0.03,
-                            xref="x domain",
-                            yref="y domain",
-                            text=(
-                                f"slope = {slope_m:.2f}<br>"
-                                f"MBE = {mbe:.2f}<br>"
-                                f"MAE = {mae:.2f}<br>"
-                                f"RMSE = {rmse:.2f}<br>"
-                                f"R² = {r2:.2f}"
-                            ),
-                            showarrow=False,
-                            align="right",
-                        )
-            # Layout
-            fig.update_layout(
-                template="plotly_white",
-                height=700,
-                width=1400 if len(dfs) == 2 else 700,
-            )
-            if len(dfs) == 2:
-                fig.update_xaxes(title_text=xvar, row=row, col=col)
-                fig.update_yaxes(title_text=yvar, row=row, col=col)
-            else:
-                fig.update_xaxes(title_text=xvar)
-                fig.update_yaxes(title_text=yvar)
-
-            fig.show(config={"responsive": True})
-
-    # --- Bind widgets ---
-    for w in [
-        site_dropdown,
-        xvar_dropdown,
-        yvar_dropdown,
-        metrics_checkbox,
-        range_checkbox,
-    ]:
-        w.observe(update_plot, names="value")
-
-    controls = widgets.HBox(
-        [
-            site_dropdown,
-            xvar_dropdown,
-            yvar_dropdown,
-            metrics_checkbox,
-            range_checkbox,
-        ]
-    )
-
-    display(controls, output)
-
-    # Initial plot
-    update_plot()
-
-
-def plot_scatter_by_class(
     df: pd.DataFrame | list[pd.DataFrame],
     x: str | None = None,
     y: str | None = None,
@@ -781,10 +464,34 @@ def plot_scatter_by_class(
         dfi.attrs.get("label", f"Data {i + 1}") for i, dfi in enumerate(dfs)
     ]
 
-    # --- Widgets (based on first df) ---
     ref_df = dfs[0]
 
-    classes = ["All", *sorted(ref_df["landcover"].unique())]
+    # Create category dropdown widget
+    category_dropdown = widgets.Dropdown(
+        options=["name", "landcover"],
+        value="name",
+        description="Category:",
+    )
+    category = category_dropdown.value
+
+    # Create class dropdown (updated based on category)
+    selection_dropdown = widgets.Dropdown(
+        options=["All", *sorted(ref_df[category].unique())],
+        value="All",
+        description="Selection:",
+    )
+
+    # Function to update class_dropdown when category changes
+    def update_selection_options(change):
+        category = change["new"]
+        selection_dropdown.options = [
+            "All",
+            *sorted(ref_df[category].unique()),
+        ]
+        selection_dropdown.value = "All"
+
+    category_dropdown.observe(update_selection_options, names="value")
+
     variables = sorted(
         ref_df.columns.difference(
             ["name", "date", "data (utc)", "lat", "lon", "landcover"]
@@ -795,13 +502,6 @@ def plot_scatter_by_class(
         x = "ta"
     if y is None or y not in variables:
         y = "ts"
-
-    class_dropdown = widgets.Dropdown(
-        options=classes,
-        value=classes[0],
-        description="Site:",
-        style={"description_width": "initial"},
-    )
 
     xvar_dropdown = widgets.Dropdown(
         options=variables,
@@ -830,9 +530,27 @@ def plot_scatter_by_class(
         with output:
             clear_output(wait=True)
 
-            selected_class = class_dropdown.value
+            category = category_dropdown.value
+            selected = selection_dropdown.value
             xvar = xvar_dropdown.value
             yvar = yvar_dropdown.value
+
+            # --- Create consistent color map for site names ---
+            all_sites = set()
+            for dfi in dfs:
+                if selected == "All":
+                    subset = dfi
+                else:
+                    subset = dfi[dfi[category] == selected]
+                all_sites.update(subset["name"].unique())
+
+            all_sites = sorted(all_sites)
+            color_map = {site: i for i, site in enumerate(all_sites)}
+            colors = [
+                f"hsl({(i % 10) * 36}, 70%, 50%)" for i in range(len(all_sites))
+            ]
+            # Track which sites have been added to legend
+            sites_in_legend = set()
 
             # --- Create figure ---
             if len(dfs) == 2:
@@ -842,23 +560,33 @@ def plot_scatter_by_class(
 
             # --- Loop over dataframes ---
             for i, dfi in enumerate(dfs):
-                if selected_class == "All":
+                if selected == "All":
                     subset = dfi
                 else:
-                    subset = dfi[dfi["landcover"] == selected_class]
+                    subset = dfi[dfi[category] == selected]
                 x_values = subset[xvar]
                 y_values = subset[yvar]
 
                 row, col = (1, i + 1) if len(dfs) == 2 else (None, None)
 
                 for site_name, group in subset.groupby("name"):
+                    color_idx = color_map[site_name]
+                    show_in_legend = site_name not in sites_in_legend
+                    sites_in_legend.add(site_name)
                     trace = go.Scatter(
                         x=group[xvar],
                         y=group[yvar],
                         mode="markers",
                         name=site_name,
-                        marker={"size": 6, "opacity": 0.5},
+                        marker={
+                            "size": 6,
+                            "opacity": 0.5,
+                            "color": colors[color_idx],
+                        },
                         customdata=group["date"],
+                        legendgroup=site_name,  # Group legend entries
+                        # Show only on first appearance
+                        showlegend=show_in_legend,
                     )
 
                     if len(dfs) == 2:
@@ -914,7 +642,7 @@ def plot_scatter_by_class(
 
                     # Fit line
                     line2 = None
-                    if np.isnan(slope) or np.isnan(intercept):
+                    if not np.isnan(slope) and not np.isnan(intercept):
                         line2 = go.Scatter(
                             x=lims,
                             y=[
@@ -974,24 +702,25 @@ def plot_scatter_by_class(
                             showarrow=False,
                             align="right",
                         )
+                if len(dfs) == 2:
+                    fig.update_xaxes(title_text=xvar, row=row, col=col)
+                    fig.update_yaxes(title_text=yvar, row=row, col=col)
+                else:
+                    fig.update_xaxes(title_text=xvar)
+                    fig.update_yaxes(title_text=yvar)
+
             # Layout
             fig.update_layout(
                 template="plotly_white",
                 height=700,
                 width=1400 if len(dfs) == 2 else 700,
             )
-            if len(dfs) == 2:
-                fig.update_xaxes(title_text=xvar, row=row, col=col)
-                fig.update_yaxes(title_text=yvar, row=row, col=col)
-            else:
-                fig.update_xaxes(title_text=xvar)
-                fig.update_yaxes(title_text=yvar)
-
             fig.show(config={"responsive": True})
 
     # --- Bind widgets ---
     for w in [
-        class_dropdown,
+        category_dropdown,
+        selection_dropdown,
         xvar_dropdown,
         yvar_dropdown,
         metrics_checkbox,
@@ -1001,7 +730,8 @@ def plot_scatter_by_class(
 
     controls = widgets.HBox(
         [
-            class_dropdown,
+            category_dropdown,
+            selection_dropdown,
             xvar_dropdown,
             yvar_dropdown,
             metrics_checkbox,
@@ -1035,20 +765,327 @@ def plot_metrics(
     for name, dfi in zip(names, dfs, strict=True):
         dfi_mean = (
             dfi[dfi["variable"] == variable]
-            .groupby("landcover", as_index=False)[metric]
-            .mean()
+            .groupby("landcover", as_index=False)
+            .agg({metric: "mean", "nb": "sum"})
+            # [metric]
+            # .mean()
         )
         dfi_mean["source"] = name
         df_mean.append(dfi_mean)
-    df_mean = pd.concat(df_mean, ignore_index=True)
+    global_df = pd.concat(df_mean, ignore_index=True)
     fig = px.bar(
-        df_mean,
+        global_df,
         x="landcover",
         y="rmse",
         color="source",
         barmode="group",
         title=f"Average RMSE for {variable.upper()} per landcover",
         labels={"rmse": "Mean RMSE", "landcover": "Landcover"},
+        custom_data=["nb"],
+    )
+    # Update hover template to include "nb"
+    fig.update_traces(
+        hovertemplate=(
+            "<b>Landcover:</b> %{x}<br>"
+            "<b>Mean RMSE:</b> %{y:.2f}<br>"
+            "<b>Count:</b> %{customdata[0]}<br>"
+            "<b>Source:</b> %{fullData.name}<extra></extra>"
+        )
+    )
+    fig.show()
+
+
+def plot_scatter_with_colorbar(
+    df: pd.DataFrame | list[pd.DataFrame],
+    x: str | None = None,
+    y: str | None = None,
+    c: str | None = None,
+):
+    """
+    Plot scatter plots with dynamic coloring,
+    marker shape differentiation,
+    and category selection.
+    """
+    # --- Normalize input ---
+    if isinstance(df, pd.DataFrame):
+        dfs = [df]
+    elif isinstance(df, (list, tuple)) and len(df) in [1, 2]:
+        dfs = list(df)
+    else:
+        msg = "df must be a DataFrame or a list/tuple of 1 or 2 DataFrames"
+        raise ValueError(msg)
+    names = [
+        dfi.attrs.get("label", f"Data {i + 1}") for i, dfi in enumerate(dfs)
+    ]
+    ref_df = dfs[0]
+
+    # Create category dropdown widget
+    category_dropdown = widgets.Dropdown(
+        options=["name", "landcover"],
+        value="name",
+        description="Category:",
+    )
+    category = category_dropdown.value
+
+    # Create class dropdown (updated based on category)
+    selection_dropdown = widgets.Dropdown(
+        options=["All", *sorted(ref_df[category].unique())],
+        value="All",
+        description="Selection:",
     )
 
-    fig.show()
+    # Function to update class_dropdown when category changes
+    def update_selection_options(change):
+        category = change["new"]
+        selection_dropdown.options = [
+            "All",
+            *sorted(ref_df[category].unique()),
+        ]
+        selection_dropdown.value = "All"
+
+    category_dropdown.observe(update_selection_options, names="value")
+
+    variables = sorted(
+        ref_df.columns.difference(
+            [
+                "name",
+                "date",
+                "data (utc)",
+                "lat",
+                "lon",
+                "landcover",
+            ]
+        )
+    )
+
+    if x is None or x not in variables:
+        x = "ta"
+    if y is None or y not in variables:
+        y = "ts"
+
+    xvar_dropdown = widgets.Dropdown(
+        options=variables,
+        value=x,
+        description="X axis:",
+        style={"description_width": "initial"},
+    )
+
+    yvar_dropdown = widgets.Dropdown(
+        options=variables,
+        value=y,
+        description="Y axis:",
+        style={"description_width": "initial"},
+    )
+
+    cvar_dropdown = widgets.Dropdown(
+        options=[None, *variables],
+        value=c,
+        description="Color bar:",
+        style={"description_width": "initial"},
+    )
+
+    range_checkbox = widgets.Checkbox(value=False, description="Fixed range")
+
+    output = widgets.Output()
+
+    # --- Update function ---
+    def update_plot(change=None):  # noqa
+        with output:
+            clear_output(wait=True)
+
+            category = category_dropdown.value
+            selected = selection_dropdown.value
+            xvar = xvar_dropdown.value
+            yvar = yvar_dropdown.value
+            cvar = cvar_dropdown.value
+
+            # --- Create figure ---
+            if len(dfs) == 2:
+                fig = make_subplots(rows=1, cols=2, subplot_titles=names)
+            else:
+                fig = go.Figure()
+
+            # Track if it is the first trace with colorbar for this subplot
+            is_first_trace_in_subplot = True
+
+            # Get min/max for the colorbar if colorbar is selected
+            color_min = np.inf
+            color_max = -np.inf
+            if cvar is not None:
+                for dfi in dfs:
+                    if selected == "All":
+                        subset = dfi
+                    else:
+                        subset = dfi[dfi[category] == selected]
+                    # Get color values if colorbar is selected
+                    color_values = subset[cvar]
+                    if color_values.min() < color_min:
+                        color_min = color_values.min()
+                    if color_values.max() > color_max:
+                        color_max = color_values.max()
+
+            # --- Loop over dataframes ---
+            for i, dfi in enumerate(dfs):
+                if selected == "All":
+                    subset = dfi
+                else:
+                    subset = dfi[dfi[category] == selected]
+                x_values = subset[xvar]
+                y_values = subset[yvar]
+
+                row, col = (1, i + 1) if len(dfs) == 2 else (None, None)
+
+                for site_name, group in subset.groupby("name"):
+                    # Separate by stressed status
+                    stressed_groups = [
+                        (group[group["stressed"] == 0], "circle"),
+                        (group[group["stressed"] == 1], "square"),
+                    ]
+
+                    for group_data, marker_symbol in stressed_groups:
+                        if len(group_data) == 0:
+                            continue
+
+                        # Prepare marker color
+                        if cvar is not None:
+                            marker_color = group_data[cvar]
+                            marker_dict = {
+                                "size": 6,
+                                "opacity": 0.5,
+                                "symbol": marker_symbol,
+                                "color": marker_color,
+                                "colorscale": "Viridis",
+                                "cmin": color_min,
+                                "cmax": color_max,
+                                "showscale": is_first_trace_in_subplot,
+                                "colorbar": {
+                                    "title": cvar,
+                                    "x": 1.02,
+                                }
+                                if is_first_trace_in_subplot
+                                else None,
+                            }
+                        else:
+                            marker_dict = {
+                                "size": 6,
+                                "opacity": 0.5,
+                                "symbol": marker_symbol,
+                                "color": "blue",
+                            }
+
+                        # Prepare custom data for hover
+                        custom_data = ["date", "stressed"]  # Always included
+                        if cvar is not None:
+                            custom_data.append(
+                                cvar
+                            )  # Add colorbar variable to custom data
+
+                        trace = go.Scatter(
+                            x=group_data[xvar],
+                            y=group_data[yvar],
+                            mode="markers",
+                            name=site_name,
+                            marker=marker_dict,
+                            customdata=group_data[custom_data],
+                            hovertemplate=(
+                                "<b>Site:</b> %{fullData.name}<br>"
+                                f"<b>{xvar}:</b> %{{x:.2f}}<br>"
+                                f"<b>{yvar}:</b> %{{y:.2f}}<br>"
+                                f"<b>Stressed:</b> %{{customdata[1]}}<br>"
+                                + (
+                                    f"<b>{cvar}:</b> %{{customdata[2]:.2f}}<br>"
+                                    if cvar is not None
+                                    else ""
+                                )
+                                + (
+                                    "Date: %{customdata[0]|%Y-%m-%d}"
+                                    "<extra></extra>"
+                                )
+                            ),
+                        )
+
+                        if len(dfs) == 2:
+                            fig.add_trace(trace, row=row, col=col)
+                        else:
+                            fig.add_trace(trace)
+
+                        # Mark that the first trace has been added
+                        is_first_trace_in_subplot = False
+
+                # Fixed range
+                if range_checkbox.value:
+                    lims = [
+                        min(x_values.min(), y_values.min()),
+                        max(x_values.max(), y_values.max()),
+                    ]
+                    axis_range = [
+                        lims[0] - 0.1 * abs(lims[0]),
+                        lims[1] + 0.1 * abs(lims[1]),
+                    ]
+
+                    if len(dfs) == 2:
+                        fig.update_xaxes(range=axis_range, row=row, col=col)
+                        fig.update_yaxes(range=axis_range, row=row, col=col)
+                    else:
+                        fig.update_xaxes(range=axis_range)
+                        fig.update_yaxes(range=axis_range)
+
+                # Identity line
+                lims = [
+                    min(x_values.min(), y_values.min()),
+                    max(x_values.max(), y_values.max()),
+                ]
+
+                line1 = go.Scatter(
+                    x=lims,
+                    y=lims,
+                    mode="lines",
+                    line={"dash": "dash", "color": "black"},
+                    showlegend=False,
+                )
+
+                if len(dfs) == 2:
+                    fig.add_trace(line1, row=row, col=col)
+                    fig.update_xaxes(title_text=xvar, row=row, col=col)
+                    fig.update_yaxes(title_text=yvar, row=row, col=col)
+                else:
+                    fig.add_trace(line1)
+                    fig.update_xaxes(title_text=xvar)
+                    fig.update_yaxes(title_text=yvar)
+
+            # Layout
+            fig.update_layout(
+                template="plotly_white",
+                height=700,
+                width=1400 if len(dfs) == 2 else 700,
+                showlegend=False,  # Add this line
+            )
+
+            fig.show(config={"responsive": True})
+
+    # --- Bind widgets ---
+    for w in [
+        category_dropdown,
+        selection_dropdown,
+        xvar_dropdown,
+        yvar_dropdown,
+        cvar_dropdown,
+        range_checkbox,
+    ]:
+        w.observe(update_plot, names="value")
+
+    controls = widgets.HBox(
+        [
+            category_dropdown,
+            selection_dropdown,
+            xvar_dropdown,
+            yvar_dropdown,
+            cvar_dropdown,
+            range_checkbox,
+        ]
+    )
+
+    display(controls, output)
+
+    # Initial plot
+    update_plot()

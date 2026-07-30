@@ -8,6 +8,10 @@ import datetime as dt
 import pandas as pd
 
 from sweat.common.flux import compute_et_from_le
+from sweat.stic.models.flux import (
+    compute_omega_stressed,
+    compute_omega_unstressed,
+)
 from sweat.stic.runner import run_batch_init_model, run_batch_model
 
 
@@ -139,8 +143,12 @@ def init_stic(df: pd.DataFrame, version: str) -> pd.DataFrame:
             "e0": res[:, 16],
             "esstar": res[:, 17],
             "e0star": res[:, 18],
-            "alpha": res[:, 19],
-            "stressed": res[:, 20],
+            "slope": res[:, 19],
+            "alpha": res[:, 20],
+            "tw": res[:, 21],
+            "essatr_w": res[:, 22],
+            "g_r": res[:, 23],
+            "stressed": res[:, 24],
         }
     )
     output_df["stressed"] = output_df["stressed"].astype(int)
@@ -150,3 +158,19 @@ def init_stic(df: pd.DataFrame, version: str) -> pd.DataFrame:
     output_df = pd.merge(left=output_df, right=df[cols], on=["date", "name"])
     output_df.attrs["label"] = f"STIC {version}"
     return output_df
+
+
+def analyze(df: pd.DataFrame):
+    """
+    Analyze data
+    """
+    df["omega1"] = df.apply(
+        lambda x: compute_omega_unstressed(x["slope"], x["ga"], x["gs"]), axis=1
+    )
+    df["omega2"] = df.apply(
+        lambda x: compute_omega_stressed(
+            x["slope"], x["ga"], x["gs"], x["g_r"]
+        ),
+        axis=1,
+    )
+    df["ts-ta"] = df["ts"] - df["ta"]
