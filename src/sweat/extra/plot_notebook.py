@@ -137,6 +137,12 @@ def plot_data(
 
     ax = plt.gca()
 
+    if ETVar.VALID.value in data.data_vars:
+        var = data[var_name].where(data[ETVar.VALID.value]).data
+        lst = data[ETVar.LST.value].where(data[ETVar.VALID.value]).data
+    else:
+        var = data[var_name].data
+        lst = data[ETVar.LST.value].data
     lst = data[ETVar.LST.value].data
     var = data[var_name].data
     # plot all points
@@ -202,22 +208,22 @@ def plot_dataset(
 
 def plot_dem(xrds_dem: xr.Dataset):
     fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(18, 4))
-    xrds_dem["height"].plot(  # type: ignore[call-arg]
+    xrds_dem[ETVar.HEIGHT.value].plot(  # type: ignore[call-arg]
         ax=axes[0],
-        vmin=xrds_dem["height"].min(),
-        vmax=xrds_dem["height"].max(),
+        vmin=xrds_dem[ETVar.HEIGHT.value].min(),
+        vmax=xrds_dem[ETVar.HEIGHT.value].max(),
         cmap="RdYlGn_r",
     )
-    xrds_dem["slope"].plot(  # type: ignore[call-arg]
+    xrds_dem[ETVar.SLOPE.value].plot(  # type: ignore[call-arg]
         ax=axes[1],
-        vmin=xrds_dem["slope"].min(),
-        vmax=xrds_dem["slope"].max(),
+        vmin=xrds_dem[ETVar.SLOPE.value].min(),
+        vmax=xrds_dem[ETVar.SLOPE.value].max(),
         cmap="Reds",
     )
-    xrds_dem["aspect"].plot(  # type: ignore[call-arg]
+    xrds_dem[ETVar.ASPECT.value].plot(  # type: ignore[call-arg]
         ax=axes[2],
-        vmin=xrds_dem["aspect"].min(),
-        vmax=xrds_dem["aspect"].max(),
+        vmin=xrds_dem[ETVar.ASPECT.value].min(),
+        vmax=xrds_dem[ETVar.ASPECT.value].max(),
         cmap="twilight_shifted",
     )
 
@@ -239,11 +245,15 @@ def plot_models(
     j = 0
     # Loop over models
     for model_name in models.data_vars:
-        if model_name not in ["valid", "flags"]:
+        if model_name not in [ETVar.VALID.value, ETVar.FLAGS.value]:
             model = EFModel.create(models[model_name].attrs)
             var_name = model.var
-            var = data[model.var].data
-            lst = data["lst"].data
+            if ETVar.VALID.value in data.data_vars:
+                var = data[model.var].where(data[ETVar.VALID.value]).data
+                lst = data[ETVar.LST.value].where(data[ETVar.VALID.value]).data
+            else:
+                var = data[model.var].data
+                lst = data[ETVar.LST.value].data
             ax = plt.subplot2grid((row, col), (i, j))
             # plot LST points
             ax.scatter(var, lst, s=20, alpha=1, color="moccasin", clip_on=False)
