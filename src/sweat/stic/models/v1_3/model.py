@@ -727,7 +727,7 @@ def run_batch_init_stic_model(data: npt.NDArray, debug: bool) -> npt.NDArray:
 
     """
     n = data.shape[0]
-    out = np.empty((n, 21), dtype=data.dtype)
+    out = np.empty((n, 25), dtype=data.dtype)
 
     for i in prange(n):
         (
@@ -750,7 +750,7 @@ def run_batch_init_stic_model(data: npt.NDArray, debug: bool) -> npt.NDArray:
             e0,
             esstar,
             e0star,
-            _,
+            slope,
             _,
             _,
             _,
@@ -790,7 +790,11 @@ def run_batch_init_stic_model(data: npt.NDArray, debug: bool) -> npt.NDArray:
         out[i, 16] = e0
         out[i, 17] = esstar
         out[i, 18] = e0star
-        out[i, 19] = alpha
-        out[i, 20] = stressed
+        out[i, 19] = slope
+        out[i, 20] = alpha
+        out[i, 21] = np.nan
+        out[i, 22] = np.nan
+        out[i, 23] = np.nan
+        out[i, 24] = stressed
 
     return out

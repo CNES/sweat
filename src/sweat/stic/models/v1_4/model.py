@@ -83,8 +83,8 @@ REQUIRED_INPUTS: list[str] = [
 
 @njit(
     [
-        Tuple((f32,) * 29 + (boolean,))(*(f32,) * 17, boolean),
-        Tuple((f64,) * 29 + (boolean,))(*(f64,) * 17, boolean),
+        Tuple((f32,) * 30 + (boolean,))(*(f32,) * 17, boolean),
+        Tuple((f64,) * 30 + (boolean,))(*(f64,) * 17, boolean),
     ],
     nogil=True,
     cache=True,
@@ -304,6 +304,7 @@ def init_stic_model_pixel(
         alpha,
         tw,
         esstar_w,
+        g_r,
         is_stressed,
     )
 
@@ -871,7 +872,7 @@ def run_batch_init_stic_model(
 
     """
     n = data.shape[0]
-    out = np.empty((n, 21), dtype=data.dtype)
+    out = np.empty((n, 25), dtype=data.dtype)
 
     for i in prange(n):
         (
@@ -894,7 +895,7 @@ def run_batch_init_stic_model(
             e0,
             esstar,
             e0star,
-            _,
+            slope,
             _,
             _,
             _,
@@ -903,6 +904,7 @@ def run_batch_init_stic_model(
             _,
             alpha,
             tw,
+            g_r,
             esstar_w,
             stressed,
         ) = init_stic_model_pixel(
@@ -944,7 +946,11 @@ def run_batch_init_stic_model(
         out[i, 16] = e0
         out[i, 17] = esstar
         out[i, 18] = e0star
-        out[i, 19] = alpha
-        out[i, 20] = stressed
+        out[i, 19] = slope
+        out[i, 20] = alpha
+        out[i, 21] = tw
+        out[i, 22] = g_r
+        out[i, 23] = esstar_w
+        out[i, 24] = stressed
 
     return out

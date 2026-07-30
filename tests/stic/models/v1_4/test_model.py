@@ -339,5 +339,5 @@ def test_run_batch_init_model(
     Test function for STIC model calculation function (init only)
     """
     res = run_batch_init_stic_model(data, debug=False)
-    assert res.shape == (1, 21)
+    assert res.shape == (1, 25)
     np.testing.assert_almost_equal(res[0, 0], le_expected, decimal=2)
