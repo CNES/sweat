@@ -107,6 +107,7 @@ ldflags
 cppflags
 pvalid
 nbvalid
+colorbar
 
 # Python packages
 parameterization
