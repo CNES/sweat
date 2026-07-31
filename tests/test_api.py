@@ -60,25 +60,9 @@ def test_regroup() -> None:
     "entry",
     [
         {
-            "path": "tests/data/modis_test.tif",
-            "date": "2018-05-16T10:00:00-00:00",
+            "path": "tests/data/data_test_20230303T112730.tif",
         },
-        {
-            "path": "tests/data/modis_test_geo.tif",
-            "date": "2018-05-16T10:00:00-00:00",
-        },
-        {
-            "path": "tests/data/modis_test_dem.tif",
-            "date": "2018-05-16T10:00:00-00:00",
-        },
-        {
-            "path": "tests/data/modis_test_full.tif",
-            "date": "2018-05-16T10:00:00-00:00",
-        },
-        {
-            "path": "tests/data/modis_dir",
-            "date": "2018-05-16T10:00:00-00:00",
-        },
+        {"path": "tests/data/data_dir", "date": "2023-03-03T11:27:30-00:00"},
     ],
 )
 def test_read_input_data(entry: dict[str, str]) -> None:
@@ -151,8 +135,8 @@ def test_filter_data_for_evaspa():
     [
         pytest.param(
             {
-                "path": "tests/data/modis_test_geo.tif",
-                "date": "2018-05-16T10:00:00-00:00",
+                "path": "tests/data/data_test_20230303T112730.tif",
+                "date": "2023-03-03T11:27:30-00:00",
             },
             {
                 "ef": {
@@ -163,8 +147,8 @@ def test_filter_data_for_evaspa():
         ),
         pytest.param(
             {
-                "path": "tests/data/modis_test_geo.tif",
-                "date": "2018-05-16T10:00:00-00:00",
+                "path": "tests/data/data_test_20230303T112730.tif",
+                "date": "2023-03-03T11:27:30-00:00",
             },
             {
                 "filtering": {},
@@ -227,8 +211,8 @@ def test_filter_data_for_evaspa():
         ),
         pytest.param(
             {
-                "path": "tests/data/modis_test_dem.tif",
-                "date": "2018-05-16T10:00:00-00:00",
+                "path": "tests/data/data_test_20230303T112730.tif",
+                "date": "2023-03-03T11:27:30-00:00",
             },
             {
                 "filtering": {
@@ -340,16 +324,16 @@ def test_run_evaspa(entry, params, debug) -> None:
     [
         pytest.param(
             {
-                "path": "tests/data/modis_test_full.tif",
-                "date": "2018-05-16T10:00:00-00:00",
+                "path": "tests/data/data_test_20230303T112730.tif",
+                "date": "2023-03-03T11:27:30-00:00",
             },
             {},
             None,
         ),
         pytest.param(
             {
-                "path": "tests/data/modis_test_full.tif",
-                "date": "2018-05-16T10:00:00-00:00",
+                "path": "tests/data/data_test_20230303T112730.tif",
+                "date": "2023-03-03T11:27:30-00:00",
             },
             {
                 "prepare": {"use_topo": True},
@@ -362,8 +346,8 @@ def test_run_evaspa(entry, params, debug) -> None:
         ),
         pytest.param(
             {
-                "path": "tests/data/modis_test_full.tif",
-                "date": "2018-05-16T10:00:00-00:00",
+                "path": "tests/data/data_test_20230303T112730.tif",
+                "date": "2023-03-03T11:27:30-00:00",
             },
             {
                 "prepare": {"use_topo": True},

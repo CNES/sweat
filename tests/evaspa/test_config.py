@@ -172,7 +172,7 @@ def test_version(version, tmp_path) -> None:
     """
     d = Path(tmp_path) / "out"
     config = {
-        "input": {"path": "tests/data/modis_test.tif"},
+        "input": {"path": "tests/data/data_test_20230303T112730.tif"},
         "output": {"path": str(d)},
         "params": {
             "ef": {
@@ -194,8 +194,8 @@ def test_check() -> None:
     """
     config = {
         "input": {
-            "path": "tests/data/modis_test.tif",
-            "date": "2018-05-16T10:00:00Z",
+            "path": "tests/data/data_test_20230303T112730.tif",
+            "date": "2023-03-03T11:27:30-00:00",
         },
         "output": {"path": "out"},
         "params": {
@@ -217,8 +217,8 @@ def test_check() -> None:
     }
     ref_config = {
         "input": {
-            "path": "tests/data/modis_test.tif",
-            "date": "2018-05-16T10:00:00Z",
+            "path": "tests/data/data_test_20230303T112730.tif",
+            "date": "2023-03-03T11:27:30Z",
         },
         "output": {"path": "out"},
         "params": {
@@ -310,7 +310,9 @@ def test_check_debug() -> None:
     Test check method with debug section
     """
     config = {
-        "input": {"path": "tests/data/modis_test.tif", "date": None},
+        "input": {
+            "path": "tests/data/data_test_20230303T112730.tif",
+        },
         "output": {"path": "out"},
         "params": {
             "ef": {

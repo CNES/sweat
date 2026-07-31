@@ -27,11 +27,8 @@ report/
 out/
 
 # Test
-!tests/data/modis_test.tif
-!tests/data/modis_test_geo.tif
-!tests/data/modis_test_dem.tif
-!tests/data/modis_test_full.tif
-!tests/data/modis_dir/*.tif
+!tests/data/data_test_20230303T112730.tif
+!tests/data/data_dir/*.tif
 !tests/data/timeseries/*.tif
 !tests/data/dem.tif
 

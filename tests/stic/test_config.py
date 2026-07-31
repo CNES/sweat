@@ -215,7 +215,7 @@ def test_version(version, tmp_path) -> None:
     """
     d = Path(tmp_path) / "out"
     config = {
-        "input": {"path": "tests/data/modis_test.tif"},
+        "input": {"path": "tests/data/data_test_20230303T112730.tif"},
         "output": {"path": str(d)},
         "params": {},
     }
@@ -232,7 +232,7 @@ def test_version_with_warnings(tmp_path, caplog) -> None:
     """
     d = Path(tmp_path) / "out"
     config = {
-        "input": {"path": "tests/data/modis_test.tif"},
+        "input": {"path": "tests/data/data_test_20230303T112730.tif"},
         "output": {"path": str(d)},
         "params": {},
         "version": "1000",
@@ -248,7 +248,7 @@ def test_check() -> None:
     Test check method
     """
     config = {
-        "input": {"path": "tests/data/modis_test.tif"},
+        "input": {"path": "tests/data/data_test_20230303T112730.tif"},
         "output": {"path": "out"},
         "params": {},
     }
@@ -261,7 +261,7 @@ def test_check_debug() -> None:
     Test check method with debug section
     """
     config = {
-        "input": {"path": "tests/data/modis_test.tif"},
+        "input": {"path": "tests/data/data_test_20230303T112730.tif"},
         "output": {"path": "out"},
         "params": {},
         "debug": {"profile": True, "verbose": True},

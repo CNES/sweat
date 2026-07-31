@@ -18,25 +18,39 @@ def test_read_data_from_file() -> None:
     """
     Test read data from a file
     """
-    input_path = os.path.join("tests", "data", "modis_test_full.tif")
+    input_path = os.path.join("tests", "data", "data_test_20230303T112730.tif")
     xarr = io.read_data_from_file(input_path)
-    assert xarr.sizes["x"] == 145
-    assert xarr.sizes["y"] == 145
-    assert set(xarr.data_vars) == {
+    assert xarr.sizes["x"] == 131
+    assert xarr.sizes["y"] == 134
+    assert len(xarr) == 26
+    assert sorted(xarr.data_vars) == [
+        "albedo",
+        "aspect",
+        "blue",
+        "cloud",
+        "daily_msg",
+        "emis",
+        "fcover",
+        "fdiff_msg",
+        "green",
+        "height",
+        "lai",
+        "lst",
+        "ndvi",
+        "nir",
+        "qa",
+        "red",
+        "rld_era5",
+        "rld_msg",
+        "rsd_era5",
+        "rsd_msg",
+        "slope",
+        "swir1",
+        "swir2",
         "ta",
         "tdp",
-        "rld",
-        "emis",
-        "lai",
-        "albedo",
-        "lst",
-        "rsd",
-        "height",
-        "aspect",
-        "slope",
-        "fcover",
-        "ndvi",
-    }
+        "water",
+    ]
 
 
 @pytest.mark.unit
@@ -44,25 +58,39 @@ def test_read_data() -> None:
     """
     Test read data
     """
-    input_path = os.path.join("tests", "data", "modis_dir")
+    input_path = os.path.join("tests", "data", "data_dir")
     xarr = io.read_data(input_path)
-    assert xarr.sizes["x"] == 145
-    assert xarr.sizes["y"] == 145
-    assert set(xarr.data_vars) == {
+    assert xarr.sizes["x"] == 131
+    assert xarr.sizes["y"] == 134
+    assert len(xarr) == 26
+    assert sorted(xarr.data_vars) == [
+        "albedo",
+        "aspect",
+        "blue",
+        "cloud",
+        "daily_msg",
+        "emis",
+        "fcover",
+        "fdiff_msg",
+        "green",
+        "height",
+        "lai",
+        "lst",
+        "ndvi",
+        "nir",
+        "qa",
+        "red",
+        "rld_era5",
+        "rld_msg",
+        "rsd_era5",
+        "rsd_msg",
+        "slope",
+        "swir1",
+        "swir2",
         "ta",
         "tdp",
-        "rld",
-        "emis",
-        "lai",
-        "albedo",
-        "lst",
-        "rsd",
-        "height",
-        "aspect",
-        "slope",
-        "fcover",
-        "ndvi",
-    }
+        "water",
+    ]
 
 
 def setup_data(georef: bool = False) -> xr.Dataset:
@@ -122,10 +150,12 @@ def test_write_data(georef, separated, expected, tmp_path) -> None:
 @pytest.mark.parametrize(
     "entry",
     [
-        {"path": "tests/data/modis_test.tif"},
         {
-            "path": "tests/data/modis_test.tif",
-            "date": "2018-05-16T10:00:00-00:00",
+            "path": "tests/data/data_test_20230303T112730.tif",
+        },
+        {
+            "path": "tests/data/data_test_20230303T112730.tif",
+            "date": "2023-03-03T11:27:30-00:00",
         },
     ],
 )
@@ -145,7 +175,7 @@ def test_inputconfig(entry) -> None:
             {"path": "foo"}, pytest.raises(OSError, match="Path not found")
         ),
         pytest.param(
-            {"path": "tests/data/modis_test.tif", "date": "foo"},
+            {"path": "tests/data/data_test_20230303T112730.tif", "date": "foo"},
             pytest.raises(ValidationError),
         ),
     ],

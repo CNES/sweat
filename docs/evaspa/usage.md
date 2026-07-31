@@ -21,8 +21,8 @@ An example of input file:
 ```json
 {
     "input":{
-        "path":"tests/data/modis_test_geo.tif",
-        "date":"2018-05-16T10:00:00-00:00"
+        "path": "tests/data/data_test_20230303T112730.tif",
+        "date": "2023-03-03T11:27:30-00:00"
     },
     "output":{
         "path":"out"
@@ -59,8 +59,8 @@ Example:
 
 ```json
 "input":{
-    "path":"tests/data/modis_test_geo.tif",
-    "date":"2018-05-16T10:00:00-00:00"
+    "path": "tests/data/data_test_20230303T112730.tif",
+    "date": "2023-03-03T11:27:30-00:00"
 }
 ```
 
