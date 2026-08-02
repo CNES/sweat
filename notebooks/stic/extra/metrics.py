@@ -50,7 +50,7 @@ def safe_polyfit(x, y):
 
 def compute_metrics(
     measured: npt.ArrayLike, estimated: npt.ArrayLike
-) -> tuple[float, float, float, float, float]:
+) -> tuple[float, ...]:
     """
     Compute slope, mbe, mae, rmse, r2
     """
@@ -70,31 +70,73 @@ def compute_metrics(
             mean_squared_error(measured_arr[idx], estimated_arr[idx])
         )
         r2 = safe_r2_score(measured_arr[idx], estimated_arr[idx])
+        nrmse_mean = rmse / np.abs(np.nanmean(measured_arr[idx]))
+        if np.nanmax(measured_arr[idx]) - np.nanmin(measured_arr[idx]) > 1.0e-6:
+            nrmse_minmax = rmse / (
+                np.nanmax(measured_arr[idx]) - np.nanmin(measured_arr[idx])
+            )
+        else:
+            nrmse_minmax = np.nan
+        if (
+            np.nanpercentile(measured_arr[idx], 0.75)
+            - np.nanpercentile(measured_arr[idx], 0.25)
+        ) > 1.0e-6:
+            nrmse_iq = rmse / (
+                np.nanpercentile(measured_arr[idx], 0.75)
+                - np.nanpercentile(measured_arr[idx], 0.25)
+            )
+        else:
+            nrmse_iq = np.nan
     else:
         mae = np.nan
         rmse = np.nan
         r2 = np.nan
-    return (slope, mbe, mae, rmse, r2)
+        nrmse_mean = np.nan
+        nrmse_minmax = np.nan
+        nrmse_iq = np.nan
+    return (slope, mbe, mae, rmse, r2, nrmse_mean, nrmse_minmax, nrmse_iq)
 
 
 def generate_metrics_table(
-    df: pd.DataFrame, variables: list[str] | None = None
+    df: pd.DataFrame,
+    variables: list[str] | None = None,
+    ranges: dict[str, list[tuple[int, int]]] | None = None,
 ) -> pd.DataFrame:
     """
-    Generate metrics table
+    Generate metrics table for a lits of variables with optional value ranges.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input dataframe
+    variables : list[str]
+        Variables to compute metrics for
+    ranges : dict[str, list[tuple[int, int]]]
+        Dictionary mapping variable names to list of (min, max) tuples.
+        Example: {"le": [(0, 200), (200, 400), (400, 600), (600, float('inf'))]}
     """
     if variables is None:
         variables = ["le", "h", "le_closed"]
+    if ranges is None:
+        ranges = {}
+
     metrics = []
+
     # Compute by site and landcover
     cols = ["name"]
     if "landcover" in df.columns:
         cols = ["name", "landcover"]
+
+    # Group by site name and landcover if provided
     for name, group in df.groupby(cols):
         for var in variables:
             est_var = var if "_closed" not in var else var[:-7]
-            slope, mbe, mae, rmse, r2 = compute_metrics(
-                measured=group[f"ec_{var}"], estimated=group[est_var]
+
+            # Compute for the entire group
+            slope, mbe, mae, rmse, r2, nrmse_mean, nrmse_minmax, nrmse_iq = (
+                compute_metrics(
+                    measured=group[f"ec_{var}"], estimated=group[est_var]
+                )
             )
             metrics.append(
                 {
@@ -102,33 +144,145 @@ def generate_metrics_table(
                     **({"landcover": name[1]} if len(name) >= 2 else {}),
                     "nb": len(group),
                     "variable": var,
+                    "range": "all",
                     "slope": slope,
                     "mbe": mbe,
                     "mae": mae,
                     "rmse": rmse,
                     "r2": r2,
+                    "nrmse_mean": nrmse_mean,
+                    "nrmse_minmax": nrmse_minmax,
+                    "nrmse_iq": nrmse_iq,
                 }
             )
+
+            # Compute for each range if specified
+            if var in ranges:
+                for min_val, max_val in ranges[var]:
+                    mask = (group[f"ec_{var}"] >= min_val) & (
+                        group[f"ec_{var}"] < max_val
+                    )
+                    group_range = group[mask]
+
+                    if len(group_range) > 0:
+                        (
+                            slope,
+                            mbe,
+                            mae,
+                            rmse,
+                            r2,
+                            nrmse_mean,
+                            nrmse_minmax,
+                            nrmse_iq,
+                        ) = compute_metrics(
+                            measured=group_range[f"ec_{var}"],
+                            estimated=group_range[est_var],
+                        )
+
+                        range_label = (
+                            f">{min_val}"
+                            if max_val == float("inf")
+                            else f"<{max_val}"
+                            if min_val == float("-inf")
+                            else f"{min_val}-{max_val}"
+                        )
+                        metrics.append(
+                            {
+                                "name": name[0] if len(name) >= 2 else name,
+                                **(
+                                    {"landcover": name[1]}
+                                    if len(name) >= 2
+                                    else {}
+                                ),
+                                "nb": len(group_range),
+                                "variable": var,
+                                "range": range_label,
+                                "slope": slope,
+                                "mbe": mbe,
+                                "mae": mae,
+                                "rmse": rmse,
+                                "r2": r2,
+                                "nrmse_mean": nrmse_mean,
+                                "nrmse_minmax": nrmse_minmax,
+                                "nrmse_iq": nrmse_iq,
+                            }
+                        )
+
     # Compute for all
     for var in variables:
         est_var = var if "_closed" not in var else var[:-7]
-        slope, mbe, mae, rmse, r2 = compute_metrics(
-            measured=df[f"ec_{var}"], estimated=df[est_var]
+        slope, mbe, mae, rmse, r2, nrmse_mean, nrmse_minmax, nrmse_iq = (
+            compute_metrics(measured=df[f"ec_{var}"], estimated=df[est_var])
         )
         metrics.append(
             {
                 "name": "all",
-                **({"landcover": "all"} if len(name) >= 2 else {}),
-                "landcover": "all",
+                **({"landcover": "all"} if "landcover" in df.columns else {}),
                 "nb": len(df),
                 "variable": var,
+                "range": "all",
                 "slope": slope,
                 "mbe": mbe,
                 "mae": mae,
                 "rmse": rmse,
                 "r2": r2,
+                "nrmse_mean": nrmse_mean,
+                "nrmse_minmax": nrmse_minmax,
+                "nrmse_iq": nrmse_iq,
             }
         )
+
+        # Compute for each range if specified
+        if var in ranges:
+            for min_val, max_val in ranges[var]:
+                mask = (df[f"ec_{var}"] >= min_val) & (
+                    df[f"ec_{var}"] < max_val
+                )
+                df_range = df[mask]
+
+                if len(df_range) > 0:
+                    (
+                        slope,
+                        mbe,
+                        mae,
+                        rmse,
+                        r2,
+                        nrmse_mean,
+                        nrmse_minmax,
+                        nrmse_iq,
+                    ) = compute_metrics(
+                        measured=df_range[f"ec_{var}"],
+                        estimated=df_range[est_var],
+                    )
+                    range_label = (
+                        f">{min_val}"
+                        if max_val == float("inf")
+                        else f"<{max_val}"
+                        if min_val == float("-inf")
+                        else f"{min_val}-{max_val}"
+                    )
+                    metrics.append(
+                        {
+                            "name": "all",
+                            **(
+                                {"landcover": "all"}
+                                if "landcover" in df.columns
+                                else {}
+                            ),
+                            "nb": len(df_range),
+                            "variable": var,
+                            "range": range_label,
+                            "slope": slope,
+                            "mbe": mbe,
+                            "mae": mae,
+                            "rmse": rmse,
+                            "r2": r2,
+                            "nrmse_mean": nrmse_mean,
+                            "nrmse_minmax": nrmse_minmax,
+                            "nrmse_iq": nrmse_iq,
+                        }
+                    )
+
     df_metrics = pd.DataFrame.from_records(metrics)
     if df.attrs.get("label") is not None:
         df_metrics.attrs["label"] = df.attrs["label"]
