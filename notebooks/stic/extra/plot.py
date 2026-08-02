@@ -9,6 +9,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from IPython.display import clear_output, display
+from plotly.colors import sample_colorscale
 from plotly.subplots import make_subplots
 
 from extra.metrics import compute_metrics, safe_polyfit
@@ -143,7 +144,9 @@ def plot_metrics_for_sites(df: pd.DataFrame, variable: str = "le"):
         )
 
         # Metrics
-        slope_m, mbe, mae, rmse, r2 = compute_metrics(measured, estimated)
+        slope_m, mbe, mae, rmse, r2, _, _, _ = compute_metrics(
+            measured, estimated
+        )
 
         fig.add_annotation(
             x=0.97,
@@ -664,7 +667,7 @@ def plot_scatter(
                             fig.add_trace(line2)
 
                     # --- Metrics text ---
-                    slope_m, mbe, mae, rmse, r2 = compute_metrics(
+                    slope_m, mbe, mae, rmse, r2, _, _, _ = compute_metrics(
                         x_values, y_values
                     )
 
@@ -746,7 +749,10 @@ def plot_scatter(
 
 
 def plot_metrics(
-    df: pd.DataFrame | list[pd.DataFrame], variable: str, metric: str
+    df: pd.DataFrame | list[pd.DataFrame],
+    variable: str,
+    metric: str,
+    facet_by_range: bool = False,
 ):
     """
     Plot metrics per landcover class
@@ -765,29 +771,106 @@ def plot_metrics(
     for name, dfi in zip(names, dfs, strict=True):
         dfi_mean = (
             dfi[dfi["variable"] == variable]
-            .groupby("landcover", as_index=False)
+            .groupby(["landcover", "range"], as_index=False)
             .agg({metric: "mean", "nb": "sum"})
-            # [metric]
-            # .mean()
         )
-        dfi_mean["source"] = name
+        dfi_mean["label"] = name
         df_mean.append(dfi_mean)
     global_df = pd.concat(df_mean, ignore_index=True)
-    fig = px.bar(
-        global_df,
-        x="landcover",
-        y="rmse",
-        color="source",
-        barmode="group",
-        title=f"Average RMSE for {variable.upper()} per landcover",
-        labels={"rmse": "Mean RMSE", "landcover": "Landcover"},
-        custom_data=["nb"],
+
+    # Sort ranges: "All" first, then by extracting numeric bounds
+    def sort_key(r):
+        if r == "all":
+            return (3, 0, 0)  # "All" comes last
+        if r.startswith("<"):
+            val = int(r[1:])
+            return (0, val, val)
+        if r.startswith(">"):
+            val = int(r[1:])
+            return (2, val, val)
+        if "-" in r:
+            parts = r.split("-")
+            return (1, int(parts[0]), int(parts[1]))
+        return (4, 0, 0)
+
+    range_order = sorted(global_df["range"].unique(), key=sort_key)
+    global_df["range"] = pd.Categorical(
+        global_df["range"], categories=range_order, ordered=True
     )
+    global_df = global_df.sort_values("range")
+
+    # Get the number of ranges
+    n_ranges = len(range_order)
+
+    # Sample colors from continuous scales
+    blues = sample_colorscale(
+        "Blues", [i / n_ranges for i in range(1, n_ranges + 1)]
+    )
+    oranges = sample_colorscale(
+        "Oranges", [i / n_ranges for i in range(1, n_ranges + 1)]
+    )
+
+    # Build color mapping dynamically
+    color_map = {}
+    palettes = [blues, oranges]
+
+    for idx, name in enumerate(names):
+        palette = palettes[idx % len(palettes)]
+
+        for range_idx, r in enumerate(range_order):
+            label_range = f"{name} - {r}"
+            color_map[label_range] = palette[range_idx]
+
+    if facet_by_range:
+        fig = px.bar(
+            global_df,
+            x="landcover",
+            y=metric,
+            color="label",
+            facet_col="range",
+            category_orders={
+                "range": range_order,
+                "landcover": sorted(global_df["landcover"].unique()),
+            },
+            barmode="group",
+            color_discrete_map=color_map,
+            title=(
+                f"Average {metric.upper()} for {variable.upper()} per landcover"
+            ),
+            labels={metric: f"{metric.upper()}", "landcover": "Landcover"},
+            custom_data=["nb"],
+        )
+    else:
+        # Create a single plot with range in the legend
+        global_df["label_range"] = (
+            global_df["label"] + " - " + global_df["range"].astype(str)
+        )
+
+        fig = px.bar(
+            global_df,
+            x="landcover",
+            y=metric,
+            color="label_range",
+            barmode="group",
+            title=(
+                f"Average {metric.upper()} for {variable.upper()} per landcover"
+            ),
+            labels={metric: f"{metric.upper()}", "landcover": "Landcover"},
+            custom_data=["nb", "range"],
+            color_discrete_map=color_map,
+            category_orders={
+                "label_range": [
+                    f"{n} - {r}" for n in names for r in range_order
+                ],
+                "landcover": sorted(global_df["landcover"].unique()),
+            },
+        )
+
     # Update hover template to include "nb"
     fig.update_traces(
         hovertemplate=(
             "<b>Landcover:</b> %{x}<br>"
-            "<b>Mean RMSE:</b> %{y:.2f}<br>"
+            "<b>Metric:</b> %{y:.2f}<br>"
             "<b>Count:</b> %{customdata[0]}<br>"
             "<b>Source:</b> %{fullData.name}<extra></extra>"
         )
