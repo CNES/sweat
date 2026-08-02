@@ -174,3 +174,4 @@ def analyze(df: pd.DataFrame):
         axis=1,
     )
     df["ts-ta"] = df["ts"] - df["ta"]
+    df["nir/swir"] = df["nir"] / df["swir"]
