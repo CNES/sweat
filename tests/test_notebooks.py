@@ -58,6 +58,37 @@ def test_notebook_execution(notebook_path):
 
 
 @pytest.mark.notebooks
+@pytest.mark.require_test_data
+@pytest.mark.parametrize("version", ["1.3", "1.4"])
+def test_stic_notebook_execution(version):
+    """
+    Test run main notebooks with different versions
+    """
+    notebook_path = Path("notebooks") / "stic" / "model_validation.ipynb"
+    with open(notebook_path, encoding="utf-8") as f:
+        nb = nbformat.read(f, as_version=4)
+
+    # Find and replace the version cell
+    for cell in nb.cells:
+        if 'version = "1.3"' in cell.source:
+            cell.source = f'version = "{version}"'
+            break
+
+    ep = ExecutePreprocessor(timeout=300, kernel_name="python3")
+
+    try:
+        ep.preprocess(nb, {"metadata": {"path": notebook_path.parent}})
+    except CellExecutionError as e:
+        pytest.fail(
+            f"Error executing the STIC notebook (version {version}):\n{e}"
+        )
+    except CellTimeoutError as e:
+        pytest.fail(
+            f"Timeout executing the STIC notebook (version {version}):\n{e}"
+        )
+
+
+@pytest.mark.notebooks
 @pytest.mark.parametrize(
     "notebook_path", get_main_notebooks(), ids=lambda path: path.stem
 )
