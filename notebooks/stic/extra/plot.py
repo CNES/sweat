@@ -1172,3 +1172,130 @@ def plot_scatter_with_colorbar(
 
     # Initial plot
     update_plot()
+
+
+def plot_scatter_3d(df: pd.DataFrame):
+    """
+    Scatter plot in 3 dimensions
+    """
+    # Define available columns for selection
+    variables = sorted(
+        df.columns.difference(
+            [
+                "name",
+                "date",
+                "data (utc)",
+                "lat",
+                "lon",
+            ]
+        )
+    )
+    numeric_variables = (
+        df[variables].select_dtypes(include=["number"]).columns.tolist()
+    )
+    metadata = [
+        "nir",
+        "swir",
+        "vari_green",
+        "gli",
+        "gndvi",
+        "msavi",
+        "landcover",
+    ]
+
+    # Create category dropdown widget
+    category_dropdown = widgets.Dropdown(
+        options=["name", "landcover"],
+        value="name",
+        description="Category:",
+    )
+    category = category_dropdown.value
+
+    # Function to update class_dropdown when category changes
+    def update_selection_options(change):
+        category = change["new"]
+        selection_dropdown.options = [
+            "All",
+            *sorted(df[category].unique()),
+        ]
+        selection_dropdown.value = "All"
+
+    category_dropdown.observe(update_selection_options, names="value")
+
+    # Create class dropdown (updated based on category)
+    selection_dropdown = widgets.Dropdown(
+        options=["All", *sorted(df[category].unique())],
+        value="All",
+        description="Selection:",
+    )
+
+    # Create dropdown widgets
+    xvar_dropdown = widgets.Dropdown(
+        options=numeric_variables,
+        value="nir/swir",
+        description="X Axis:",
+        disabled=False,
+    )
+
+    yvar_dropdown = widgets.Dropdown(
+        options=numeric_variables,
+        value="vari_green",
+        description="Y Axis:",
+        disabled=False,
+    )
+
+    zvar_dropdown = widgets.Dropdown(
+        options=numeric_variables,
+        value="gli",
+        description="Z Axis:",
+        disabled=False,
+    )
+
+    cvar_dropdown = widgets.Dropdown(
+        options=variables,
+        value="landcover",
+        description="Color:",
+        disabled=False,
+    )
+
+    # Define the plotting function
+    def update_plot(category, selection, x_axis, y_axis, z_axis, color_axis):
+        subset = df if selection == "All" else df[df[category] == selection]
+        fig = px.scatter_3d(
+            subset,
+            x=x_axis,
+            y=y_axis,
+            z=z_axis,
+            color=color_axis,
+            hover_data=metadata,
+            size_max=1,
+            color_continuous_scale="Viridis",
+        )
+        fig.update_traces(marker={"size": 2})
+        fig.show(renderer="browser")
+
+    # Create interactive output
+    output = widgets.interactive_output(
+        update_plot,
+        {
+            "category": category_dropdown,
+            "selection": selection_dropdown,
+            "x_axis": xvar_dropdown,
+            "y_axis": yvar_dropdown,
+            "z_axis": zvar_dropdown,
+            "color_axis": cvar_dropdown,
+        },
+    )
+
+    # Display dropdowns and plot
+    return widgets.HBox(
+        [
+            category_dropdown,
+            selection_dropdown,
+            xvar_dropdown,
+            yvar_dropdown,
+            zvar_dropdown,
+            cvar_dropdown,
+            output,
+        ]
+    )
