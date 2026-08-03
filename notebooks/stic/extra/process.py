@@ -5,6 +5,7 @@ Module containing functions to process data
 
 import datetime as dt
 
+import numpy as np
 import pandas as pd
 
 from sweat.common.flux import compute_et_from_le
@@ -174,4 +175,6 @@ def analyze(df: pd.DataFrame):
         axis=1,
     )
     df["ts-ta"] = df["ts"] - df["ta"]
-    df["nir/swir"] = df["nir"] / df["swir"]
+    df["nir/swir"] = np.clip(
+        (df["nir"] - df["swir"]) / (df["nir"] + df["swir"] + 0.01), -1, 1
+    )
