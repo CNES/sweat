@@ -64,6 +64,8 @@ def run_model(
     ----------
     data: xr.Dataset
         Data
+    valid: npt.ArrayLike
+        Valid mask
     threshold: float
         Threshold value
     nb_steps: int

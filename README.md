@@ -1,6 +1,6 @@
 # Spatial Water stress and Evapotranspiration Assessment for TRISHNA
 
-SWEAT contains contains several algorithms
+SWEAT contains several algorithms
 used in TRISHNA mission to compute evapotranspiration:
 
 * [EVASPA][1]
@@ -80,7 +80,7 @@ An example of configuration file:
     },
     "output":{
         "path":"out"
-    },
+    }
 }
 ```
 
@@ -99,21 +99,21 @@ An example of configuration file:
             "2025-08-23",
             "2025-08-24",
             "2025-08-25",
-            "2025-08-26",
+            "2025-08-26"
         ],
         "et_time_series": [
             "tests/data/timeseries/et_time_series_20250823.tif",
             "tests/data/timeseries/et_time_series_20250824.tif",
-            "tests/data/timeseries/et_time_series_20250825.tif",
+            "tests/data/timeseries/et_time_series_20250825.tif"
         ],
         "radiation": [
             "tests/data/timeseries/radiation_20250823.tif",
             "tests/data/timeseries/radiation_20250824.tif",
             "tests/data/timeseries/radiation_20250825.tif",
-            "tests/data/timeseries/radiation_20250826.tif",
+            "tests/data/timeseries/radiation_20250826.tif"
         ],
         "et_single_date": [
-            "tests/data/timeseries/et_single_date_20250826.tif",
+            "tests/data/timeseries/et_single_date_20250826.tif"
         ]
     },
     "output": {

@@ -72,6 +72,8 @@ def create_net_radiation(
     data : xr.Dataset
         Data containing (LST, emissivity, albedo and downward
         shortwave and longwave radiation)
+    use_topo: bool
+        Use topographic corrections
 
     Returns
     -------
@@ -228,8 +230,8 @@ def _ratio_from_choudhury(
 
     Parameters
     ----------
-    fcover: np.array_like
-        Fcover
+    lai: np.array_like
+        Leaf Area Index
     c1: float
         c1 parameter (default = 0.3)
     c2: float
@@ -408,7 +410,7 @@ def run(
 
     Parameters
     ----------
-    rn: xr.Dataset
+    data: xr.Dataset
         Net radiation dataset
     ef : xr.Dataset
         Evaporative fraction dataset

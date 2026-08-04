@@ -55,6 +55,8 @@ def toa_daily_estimate(
         Instantaneous data
     date: dt.datetime
         Date time
+    dem: xr.Dataset | None
+        DEM data
 
     Returns
     -------

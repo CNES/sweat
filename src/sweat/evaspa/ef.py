@@ -149,7 +149,7 @@ class EFConfig(BaseModel):
         names = [model.name for model in self.models]
         duplicates = [k for k, v in Counter(names).items() if v > 1]
         if len(duplicates) > 0:
-            msg = f"All EF models must a different name: {duplicates}"
+            msg = f"All EF models must have a different name: {duplicates}"
             raise EFConfigError(msg)
         return self
 

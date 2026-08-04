@@ -610,9 +610,9 @@ def compute_toa_solar_radiation_from_hour_angle(
                 + cos(delta)sin(lat)sin(slope)cos(aspect)cos(w)
                 + cos(delta)sin(aspect)sin(slope)sin(w)
     where delta is the declination of the earth (positive during
-    northern hemisphere summer), lat is the latitude of the
-    pixel (positive for the northern hemisphere and negative
-    for the southern hemisphere), slope is the surface slope, where
+    Northern Hemisphere summer), lat is the latitude of the
+    pixel (positive for the Northern Hemisphere and negative
+    for the Southern Hemisphere), slope is the surface slope, where
     slope = 0 for horizontal and slope = pi/2 radians for vertical slope
     (slope is always positive and represents the slope in any
     direction), and aspect is the surface aspect angle, where aspect = 0
@@ -794,6 +794,7 @@ def _toa_daily_irradiance(
     lat = np.deg2rad(lat)
     # Solar declination
     delta = _declination_angle(date)
+
     # Sunrise hour angle
     cosh0 = -np.tan(lat) * np.tan(delta)
     if cosh0 > 1:
@@ -803,6 +804,7 @@ def _toa_daily_irradiance(
         # The sun never sets on this location (on the specified date)
         cosh0 = np.pi
     h0 = np.arccos(-np.tan(lat) * np.tan(delta))
+
     return (
         24.0
         * 3600
@@ -847,9 +849,9 @@ def compute_daily_toa_solar_radiation_from_hour_angle(
                 + cos(delta)sin(lat)sin(slope)cos(aspect)cos(w)
                 + cos(delta)sin(aspect)sin(slope)sin(w)
     where delta is the declination of the earth (positive during
-    northern hemisphere summer), lat is the latitude of the
-    pixel (positive for the northern hemisphere and negative
-    for the southern hemisphere), slope is the surface slope, where
+    Northern Hemisphere summer), lat is the latitude of the
+    pixel (positive for the Northern Hemisphere and negative
+    for the Southern Hemisphere), slope is the surface slope, where
     slope = 0 for horizontal and slope = pi/2 radians for vertical slope
     (slope is always positive and represents the slope in any
     direction), and aspect is the surface aspect angle, where aspect = 0
@@ -969,9 +971,9 @@ def compute_daily_toa_solar_radiation(
     cos(theta) = cos(sza)cos(slope)
                 + sin(sza)sin(slope)cos(aspect-saa)
     where delta is the declination of the earth (positive during
-    northern hemisphere summer), lat is the latitude of the
-    pixel (positive for the northern hemisphere and negative
-    for the southern hemisphere), slope is the surface slope, where
+    Northern Hemisphere summer), lat is the latitude of the
+    pixel (positive for the Northern Hemisphere and negative
+    for the Southern Hemisphere), slope is the surface slope, where
     slope = 0 for horizontal and slope = pi/2 radians for vertical slope
     (slope is always positive and represents the slope in any
     direction), and aspect is the surface aspect angle, where for

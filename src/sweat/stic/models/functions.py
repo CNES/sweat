@@ -418,14 +418,17 @@ def compute_state_equations(
     g_surf_den = (
         g_surf_den if abs(g_surf_den) > epsilon else _sign(g_surf_den) * epsilon
     )
-    g_surf = -(
-        2
-        * (
-            phi * alpha * slope * ea * PSYCHROMETRIC_CST
-            - phi * alpha * slope * e0 * PSYCHROMETRIC_CST
+    g_surf = (
+        -(
+            2
+            * (
+                phi * alpha * slope * ea * PSYCHROMETRIC_CST
+                - phi * alpha * slope * e0 * PSYCHROMETRIC_CST
+            )
         )
-    ) / (g_surf_den)
-    # Adjust the abnormal conductances
+        / g_surf_den
+    )
+    # Adjust the abnormal conductance
     g_surf = min(max(g_surf, 0.0001), 0.1)
 
     # T0 - TA
@@ -445,7 +448,7 @@ def compute_state_equations(
         + m * e0star * PSYCHROMETRIC_CST
         + 2 * alpha * slope * ea
         - 2 * alpha * slope * e0
-    ) / (delta_t_den)
+    ) / delta_t_den
     # Maximum surface-air temperature difference rarely overpasses 20 degC
     delta_t = min(max(delta_t, -10), 20)
 
@@ -460,11 +463,11 @@ def compute_state_equations(
         + m * e0star * PSYCHROMETRIC_CST
     )
     ef_den = ef_den if abs(ef_den) > epsilon else _sign(ef_den) * epsilon
-    ef = -(2 * alpha * slope * ea - 2 * alpha * slope * e0) / (ef_den)
+    ef = -(2 * alpha * slope * ea - 2 * alpha * slope * e0) / ef_den
     # Clip value for EF
     ef = min(max(ef, 0.0001), 1.0)
 
-    return (g_aero, g_surf, delta_t, ef)
+    return g_aero, g_surf, delta_t, ef
 
 
 @njit(

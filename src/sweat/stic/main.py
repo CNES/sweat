@@ -134,7 +134,7 @@ def prepare(
     row = next((name for name in row_names if name in coords), None)
     col = next((name for name in col_names if name in coords), None)
     if row is None or col is None:
-        msg = "Coordinate unkown for local time conversion"
+        msg = "Coordinate unknown for local time conversion"
         raise ValueError(msg)
     local_time = convert_to_local_time(
         new_data.attrs["date"],

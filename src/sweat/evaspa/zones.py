@@ -229,11 +229,13 @@ def define_valid_pixels(
     ----------
     xrds_dem: xarray.Dataset
         Dataset containing DEM information
+    land: gpd.GeoDataFrame | None
+        List of land polygons
     slope_threshold: float, default = 30
         Maximum slope value accepted
     range_threshold: int, default = 300
         Range of altitude for pixels selection
-    simplify: boo, default = True
+    simplify: bool, default = True
         Activate cleaning step
 
     Returns
@@ -317,6 +319,8 @@ def define_valid_zones(
     ----------
     tiles: List[str]
         Dataset containing DEM information
+    land: gpd.GeoDataFrame | None
+         list of land polygons
     slope_threshold: float, default = 30
         Maximum slope value accepted
     range_threshold: int, default = 300

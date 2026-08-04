@@ -188,8 +188,12 @@ def merge_to_dataset(
     ----------
     data: xr.Dataset
         Data to merge
-    method:
+    merging_method: MergingMethod
         Method used to merge
+    uncertainty_method: UncertaintyMethod
+        Method used to compute uncertainty
+    name: str
+        Name of the merged variable
 
     Returns
     -------

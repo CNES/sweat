@@ -26,7 +26,7 @@ An example of input file:
     },
     "output":{
         "path":"out"
-    },
+    }
 }
 ```
 

@@ -45,7 +45,7 @@ def window_generator(
     k = 1
     stop = False
     while not stop:
-        # Initial window must contains only the period start date
+        # Initial window must contain only the period start date
         if k == 1:
             pass
         else:

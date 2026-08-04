@@ -119,7 +119,7 @@ def test_to_localtime(date, lat, lon, expected):
 )
 def test_day_angle(date, expected):
     """
-    Test day angle function function
+    Test day angle function
     """
     res = solar._day_angle(date)  # noqa: SLF001
     np.testing.assert_almost_equal(res, expected, decimal=2)
@@ -136,7 +136,7 @@ def test_day_angle(date, expected):
 )
 def test_fractional_year_angle(date, expected):
     """
-    Test fractional year angle function function
+    Test fractional year angle function
     """
     res = solar._fractional_year_angle(date)  # noqa: SLF001
     np.testing.assert_almost_equal(res, expected, decimal=2)
