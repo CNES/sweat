@@ -103,6 +103,12 @@ def run_stic(df: pd.DataFrame, version: str) -> pd.DataFrame:
     output_df["rn-g"] = output_df["rn"] - output_df["g"]
     output_df["diff_le"] = output_df["le"] - df["ec_le"]
     output_df["diff_le_closed"] = output_df["le"] - df["ec_le_closed"]
+    output_df["ts-ta"] = df["ts"] - df["ta"]
+    output_df["nir/swir"] = np.clip(
+        (df["nir"] - df["swir"]) / (df["nir"] + df["swir"] + 0.01),
+        -1,
+        1,
+    )
     cols = list(df.columns.difference(output_df.columns))
     cols.append("date")
     cols.append("name")
@@ -153,6 +159,12 @@ def init_stic(df: pd.DataFrame, version: str) -> pd.DataFrame:
         }
     )
     output_df["stressed"] = output_df["stressed"].astype(int)
+    output_df["ts-ta"] = df["ts"] - df["ta"]
+    output_df["nir/swir"] = np.clip(
+        (df["nir"] - df["swir"]) / (df["nir"] + df["swir"] + 0.01),
+        -1,
+        1,
+    )
     cols = list(df.columns.difference(output_df.columns))
     cols.append("date")
     cols.append("name")
@@ -173,8 +185,4 @@ def analyze(df: pd.DataFrame):
             x["slope"], x["ga"], x["gs"], x["g_r"]
         ),
         axis=1,
-    )
-    df["ts-ta"] = df["ts"] - df["ta"]
-    df["nir/swir"] = np.clip(
-        (df["nir"] - df["swir"]) / (df["nir"] + df["swir"] + 0.01), -1, 1
     )

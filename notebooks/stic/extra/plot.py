@@ -753,6 +753,7 @@ def plot_metrics(
     variable: str,
     metric: str,
     facet_by_range: bool = False,
+    only_all: bool = False,
 ):
     """
     Plot metrics per landcover class
@@ -798,6 +799,8 @@ def plot_metrics(
         global_df["range"], categories=range_order, ordered=True
     )
     global_df = global_df.sort_values("range")
+    if only_all:
+        global_df = global_df[global_df["range"] == "all"]
 
     # Get the number of ranges
     n_ranges = len(range_order)
