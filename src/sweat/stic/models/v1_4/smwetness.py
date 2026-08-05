@@ -13,14 +13,12 @@ from sweat.stic.constant import PSYCHROMETRIC_CST
 
 
 @njit(
-    [boolean(*(f32,) * 9), boolean(*(f64,) * 9)],
+    [boolean(*(f32,) * 7), boolean(*(f64,) * 7)],
     nogil=True,
     cache=True,
     inline="always",
 )
 def is_soil_wetness(
-    fc: float,
-    ta: float,
     td: float,
     nir: float,
     swir: float,
@@ -60,8 +58,6 @@ def is_soil_wetness(
     """
     soil_wetness = False
 
-    if (fc <= 0.25) & (ta > 10.0) & (td < 0.0):
-        soil_wetness = True
     if (
         (swir > nir)
         & (vari_green < 0.0)
@@ -133,27 +129,19 @@ def is_water_stressed(
     """
     is_stressed = False
     # Severely stressed vegetation
-    if (swir > nir) and (vari_green < 0.0) and (gli > 0.0):
+    if (swir > nir) and (vari_green < 0.1):
         is_stressed = True
     # Severely stressed vegetation
+    if (swir > nir) and (vari_green > 0.1) and (gli < 0.0) and (ndvi > msavi):
+        is_stressed = True
+    # Stressed dense vegetation (forest)
     if (
-        (swir > nir)
-        and (vari_green < 0.0)
+        (swir < nir)
+        and (vari_green < 0.1)
+        and (gli < 0.0)
         and (ndvi > gndvi)
         and (ndvi > msavi)
     ):
-        is_stressed = True
-    # Stressed sparse vegetation
-    if (
-        (swir > nir)
-        and (vari_green > 0.0)
-        and (gli > 0.0)
-        and (ndvi > gndvi)
-        and (ndvi > msavi)
-    ):
-        is_stressed = True
-    # Special conditions for stressed bare case
-    if (swir > nir) and (vari_green < 0.0) and (gli < 0.0) and (ndvi > msavi):
         is_stressed = True
     return is_stressed
 
@@ -312,7 +300,7 @@ def initialize_soil_moisture(
     m_soil = (1.0 - fc) * m_surf
 
     # Surface wetness comes from the soil, vegetation contribution is negligible
-    if is_soil_wetness(fc, ta, td, nir, swir, vari_green, gli, ndvi, msavi):
+    if is_soil_wetness(td, nir, swir, vari_green, gli, ndvi, msavi):
         m_surf = m_soil
         m_canopy = 0.0
 
@@ -495,7 +483,7 @@ def iterate_soil_moisture(
     # )
 
     # Surface wetness comes from the soil, vegetation contribution is negligible
-    if is_soil_wetness(fc, ta, td, nir, swir, vari_green, gli, ndvi, msavi):
+    if is_soil_wetness(td, nir, swir, vari_green, gli, ndvi, msavi):
         m_surf = m_soil
         m_canopy = 0.0
 

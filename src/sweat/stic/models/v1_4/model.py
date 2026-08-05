@@ -31,7 +31,6 @@ from sweat.stic.models.functions import (
     compute_saturated_vapor_pressure,
     compute_state_equations,
     compute_wet_surface_temperature,
-    initialize_alpha_coefficient,
 )
 from sweat.stic.models.v1_4.smwetness import (
     initialize_soil_moisture,
@@ -244,9 +243,7 @@ def init_stic_model_pixel(
     tw = compute_wet_surface_temperature(ta, ea)
     esstar_w = compute_saturated_vapor_pressure(tw)
     # Initialize alpha to Priestley taylor parameter
-    alpha = initialize_alpha_coefficient(
-        slope, ta, da, cp, rho, emis, rn, tw, is_stressed
-    )
+    alpha = 1.26
     if debug:
         print("alpha = ", alpha)  # noqa T201
     # Compute G flux
@@ -473,9 +470,7 @@ def run_stic_model_pixel(
     tw = compute_wet_surface_temperature(ta, ea)
     estar_w = compute_saturated_vapor_pressure(tw)
     # Initialize alpha to Priestley taylor parameter
-    alpha = initialize_alpha_coefficient(
-        slope, ta, da, cp, rho, emis, rn, tw, is_stressed
-    )
+    alpha = 1.26
     if debug:
         print("Alpha = ", alpha, tw, estar_w)  # noqa T201
     # Save dewpoint temperature at source/sink height
@@ -543,6 +538,9 @@ def run_stic_model_pixel(
             e0 = esstar
         if debug:
             print("e0 = ", e0)  # noqa T201
+            print("es = ", es)  # noqa T201
+            print("ea = ", ea)  # noqa T201
+            print("e0star - d0 = ", e0star - d0)  # noqa T201
 
         # Re-estimate dewpoint temperature at source/sink height
         t0d = td + (PSYCHROMETRIC_CST * le_flux) / (rho * cp * g_aero * s1)
@@ -552,6 +550,7 @@ def run_stic_model_pixel(
             t0d = t0d_old
         if debug:
             print("t0d = ", t0d)  # noqa T201
+            print("t0d_old = ", t0d_old)  # noqa T201
 
         # Re-estimate M (direct LST feedback into M computation)
         (m, _, _, m_soil, _, is_stressed) = iterate_soil_moisture(
