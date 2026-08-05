@@ -26,21 +26,21 @@ An example of input file:
             "2025-08-23",
             "2025-08-24",
             "2025-08-25",
-            "2025-08-26",
+            "2025-08-26"
         ],
         "et_time_series": [
             "tests/data/timeseries/et_time_series_20250823.tif",
             "tests/data/timeseries/et_time_series_20250824.tif",
-            "tests/data/timeseries/et_time_series_20250825.tif",
+            "tests/data/timeseries/et_time_series_20250825.tif"
         ],
         "radiation": [
             "tests/data/timeseries/radiation_20250823.tif",
             "tests/data/timeseries/radiation_20250824.tif",
             "tests/data/timeseries/radiation_20250825.tif",
-            "tests/data/timeseries/radiation_20250826.tif",
+            "tests/data/timeseries/radiation_20250826.tif"
         ],
         "et_single_date": [
-            "tests/data/timeseries/et_single_date_20250826.tif",
+            "tests/data/timeseries/et_single_date_20250826.tif"
         ]
     },
     "output": {
@@ -196,7 +196,8 @@ An example of input file:
         "radiation_dir": "tests/data/timeseries/"
     },
     "output": {
-        "path": "out"
+        "path": "out",
+        "fmt": "json "
     }
 }
 ```
@@ -234,15 +235,17 @@ Example:
 
 The **output** section is composed of:
 
-| Name | Description | Type | Mandatory | Default value |
-|------|-------------|------|-----------|---------------|
-| `path` | Path to write results | str | yes | - |
+| Name | Description                      | Type | Mandatory | Default value | Possible value       |
+|------|----------------------------------|------|-----------|---------------|----------------------|
+| `path` | Path to write results            | str | yes | -             | -                    |
+ |`fmt` | Format of the output config file | str | no | "json"        | "json", "yaml, "yml" |
 
 Example:
 
 ```json
 "output":{
-    "path":"out"
+    "path":"out",
+    "fmt": "json"
 }
 ```
 #### Params section
@@ -278,7 +281,7 @@ Example:
 **window-timeseries** produces the following results:
 
  - files corresponding to ET time series **et_time_series_YYYYMMDD.tif**
- - a file **config.json** which contains the detailed configuration used
+ - a file **config.(json/JSON/yaml/yml)** which contains the detailed configuration used
  - a directory **debug** containing intermediary results if debug mode is activated
 
 Here is the directory tree for the results:

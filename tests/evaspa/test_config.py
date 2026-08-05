@@ -220,7 +220,7 @@ def test_check() -> None:
             "path": "tests/data/data_test_20230303T112730.tif",
             "date": "2023-03-03T11:27:30Z",
         },
-        "output": {"path": "out"},
+        "output": {"path": "out", "fmt": "json"},
         "params": {
             "filtering": {
                 "cloud": {"op": "==", "value": 0},

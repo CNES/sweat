@@ -10,7 +10,7 @@ import fnmatch
 import os
 import warnings
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 import numpy as np
 import rasterio as rio
@@ -60,6 +60,7 @@ class OutputConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     path: OutputPath
+    fmt: Literal["yaml", "yml", "json"] = Field(default="json")
 
 
 def _open_rasterio(filename: str) -> xr.Dataset:

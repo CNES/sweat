@@ -130,7 +130,7 @@ def evaspa(verbose, input_file):
     logger.info("Run evaspa: OK")
     # Save configuration
     logger.debug("Write results...")
-    write_config(config.model_dump(), output_dir, fmt="json")
+    write_config(config.model_dump(), output_dir, fmt=config.output.fmt)
     logger.info("Write configuration: OK")
     # Write results
     if res is not None:
@@ -183,7 +183,7 @@ def stic(verbose, input_file):
     logger.info("Run stic: OK")
     # Save configuration
     logger.debug("Write results...")
-    write_config(config.model_dump(), output_dir, fmt="json")
+    write_config(config.model_dump(), output_dir, fmt=config.output.fmt)
     logger.info("Write configuration: OK")
     # Write results
     if res is not None:
@@ -238,7 +238,7 @@ def timeseries(verbose, input_file):
     logger.info("Run timeseries: OK")
     # Save configuration
     logger.debug("Write results...")
-    write_config(config.model_dump(), output_dir, fmt="json")
+    write_config(config.model_dump(), output_dir, fmt=config.output.fmt)
     logger.info("Write configuration: OK")
     # Write results
     if res is not None:
@@ -272,7 +272,7 @@ def window_timeseries(
     # Verify config and manage default parameters
     config = WindowTimeSeriesInputFile.model_validate(dict_config)
     # Write config
-    write_config(config.model_dump(), config.output.path, fmt="json")
+    write_config(config.model_dump(), config.output.path, fmt=config.output.fmt)
     # Run
     logger.debug("Run timeseries over a period...")
     run_window_time_series(

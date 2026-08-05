@@ -100,7 +100,7 @@ def pytest_collection_modifyitems(
         ):
             msg = (
                 f"Test {item.nodeid} is marked with @pytest.mark.require_data, "
-                "but the SWEAT_TEST_DATA environment variable is not set."
+                "but the SWEAT_TEST_DATA_PATH environment variable is not set."
             )
             raise pytest.UsageError(msg)
 

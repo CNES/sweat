@@ -114,15 +114,17 @@ For each radiation data, the code expects to have two bands, respectively named 
 
 The **output** section is composed of:
 
-| Name | Description | Type | Mandatory | Default value |
-|------|-------------|------|-----------|---------------|
-| `path` | Path to write results | str | yes | - |
+| Name | Description                      | Type | Mandatory | Default value | Possible value       |
+|------|----------------------------------|------|-----------|---------------|----------------------|
+| `path` | Path to write results            | str | yes | -             | -                    |
+ |`fmt` | Format of the output config file | str | no | "json"        | "json", "yaml, "yml" |
 
 Example:
 
 ```json
 "output":{
-    "path":"out"
+    "path":"out",
+    "fmt": "json"
 }
 ```
 ### Params section
