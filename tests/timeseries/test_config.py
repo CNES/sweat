@@ -17,7 +17,7 @@ from sweat.__about__ import __version__
             "stack": {"et_single_date_filtering": {}},
             "update": {
                 "method": "linear",
-                "params": {"strict_mode": True, "radiation_mode": 0},
+                "params": {"parallel": True, "num_workers": 8},
             },
         },
     ],

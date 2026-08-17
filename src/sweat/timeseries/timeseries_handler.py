@@ -26,18 +26,18 @@ def window_generator(
 
     Parameters
     ----------
-    period_start: dt.datetime
+    period_start : dt.datetime
         Period start date
-    period_end: dt.datetime
+    period_end : dt.datetime
         Period end date
-    window: int
+    window : int
         Size of the window (in days)
-    shift: int
+    shift : int
         Shift between two consecutive windows (in days)
 
     Yields
     ------
-    window_start, window_end: tuple[dt.datetime, dt.datetime]
+    window_start, window_end : tuple[dt.datetime, dt.datetime]
         Start and end dates of each sliding window.
     """
     window_start = period_start
@@ -78,31 +78,31 @@ def create_config(
 
     Parameters
     ----------
-    window_start: dt.datetime
+    window_start : dt.datetime
         Window start date
-    window_end: dt.datetime
+    window_end : dt.datetime
         Window end date
-    et_single_date_dir: str
+    et_single_date_dir : str
         Directory where et_single_date .tif files are downloaded
-    radiation_dir: str
+    radiation_dir : str
         Directory where radiation .tif files are downloaded
-    et_time_series_dir: str
+    et_time_series_dir : str
         Directory where et_time_series .tif files are downloaded
-    dem: str
+    dem : str
         Path to DEM file
-    params: dict
+    params : dict
         Parameters configuration to use
-    debug: dict
+    debug : dict
         Debugging configuration to use
-    verbose: bool
+    verbose : bool
         If true, the configuration dictionary will be stored as a .json file
-    config_dir: str
+    config_dir : str
         Directory to store the JSON configuration file if verbose is True
         (default: current directory)
 
-    Return
+    Returns
     -------
-    config_dict: dict
+    config_dict : dict
         Configuration dictionary
     """
     # Define parameters

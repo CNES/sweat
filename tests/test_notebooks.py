@@ -20,8 +20,8 @@ def get_notebooks():
             (".ipynb_checkpoints") not in path.parts
             and ("Untitled" not in path.name)
             and ("test" not in path.name)
-            and ("validation_" not in path.name)
             and ("prepare_" not in path.name)
+            and ("ameriflux" not in path.name)
         )
     ]
 

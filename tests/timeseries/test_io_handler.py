@@ -43,8 +43,8 @@ def setup_test_data(test_data_dir):
     # Setup data
     # Define parameters
     window_size = 7  # Time
-    x_size = 1
-    y_size = 2
+    x_size = 2
+    y_size = 1
     today = dt.datetime.now(tz=dt.UTC).date()
     dates = np.array(pd.date_range(end=today, periods=window_size).to_list())
     # Define transform: (origin_x, origin_y), pixel size = 0.1 degree
@@ -58,39 +58,33 @@ def setup_test_data(test_data_dir):
     et_ts = xr.Dataset(
         {
             TSVar.ET.value: (
-                ["time", "y", "x"],
-                np.transpose(
-                    np.array(
+                ["y", "x", "time"],
+                np.array(
+                    [
                         [
-                            [
-                                [1.2, 1.4, 1.6, 1.8, 1.8, 1.8],
-                                [1.4, 1.4, 1.4, 1.4, 1.4, 1.4],
-                            ]
+                            [1.2, 1.4, 1.6, 1.8, 1.8, 1.8],
+                            [1.4, 1.4, 1.4, 1.4, 1.4, 1.4],
                         ]
-                    ),
-                    (2, 1, 0),
+                    ]
                 ),
             ),
             TSVar.FLAGS.value: (
-                ["time", "y", "x"],
-                np.transpose(
-                    np.array(
+                ["y", "x", "time"],
+                np.array(
+                    [
                         [
-                            [
-                                [0, 386, 386, 0, 131, 275],
-                                [132, 0, 131, 259, 387, 531],
-                            ]
-                        ],
-                        dtype=sh.STATUS_TYPE,
-                    ),
-                    (2, 1, 0),
+                            [16, 816, 816, 16, 336, 592],
+                            [368, 0, 336, 592, 880, 1136],
+                        ]
+                    ],
+                    dtype=sh.STATUS_TYPE,
                 ),
             ),
         },
         coords={
             "time": dates[:-1],
-            "x": x_coords,
             "y": y_coords,
+            "x": x_coords,
         },
     )
     # Add CRS and transform metadata (compatible with rioxarray)
@@ -100,17 +94,14 @@ def setup_test_data(test_data_dir):
     radiation_ts = xr.Dataset(
         {
             TSVar.RADIATION.value: (
-                ["time", "y", "x"],
-                np.transpose(
-                    np.array(
+                ["y", "x", "time"],
+                np.array(
+                    [
                         [
-                            [
-                                [200, 200, 200, 200, 200, 200, 200],
-                                [200, 200, 200, 200, 200, 200, 200],
-                            ]
+                            [200, 200, 200, 200, 200, 200, 200],
+                            [200, 200, 200, 200, 200, 200, 200],
                         ]
-                    ),
-                    (2, 1, 0),
+                    ]
                 ),
             ),
         },
@@ -126,27 +117,18 @@ def setup_test_data(test_data_dir):
     # Create a dataset for ET single dates
     acquisition_dates = [1, 3, 5, 6]
     feed_dates = dates[acquisition_dates]
+    # Add CRS and transform metadata (compatible with rioxarray)
     feed = xr.Dataset(
         {
             TSVar.ET.value: (
-                ["time", "y", "x"],
-                np.transpose(
-                    np.array(
-                        [
-                            [
-                                [np.nan, 1.8, np.nan, 2.4],
-                                [1.4, np.nan, 2.2, np.nan],
-                            ]
-                        ]
-                    ),
-                    (2, 1, 0),
+                ["y", "x", "time"],
+                np.array(
+                    [[[np.nan, 1.8, np.nan, 2.4], [1.4, np.nan, 2.2, np.nan]]]
                 ),
             ),
             TSVar.FLAGS.value: (
-                ["time", "y", "x"],
-                np.transpose(
-                    np.array([[[0, 1, 0, 1], [1, 0, 1, 0]]]), (2, 1, 0)
-                ),
+                ["y", "x", "time"],
+                np.array([[[0, 1, 0, 1], [1, 0, 1, 0]]]),
             ),
         },
         coords={
@@ -155,7 +137,6 @@ def setup_test_data(test_data_dir):
             "y": y_coords,
         },
     )
-    # Add CRS and transform metadata (compatible with rioxarray)
     feed = feed.rio.write_crs(CRS(4236))
     feed = feed.rio.write_transform(transform)
     # Create a DEM dataset
@@ -163,15 +144,15 @@ def setup_test_data(test_data_dir):
         {
             TSVar.HEIGHT.value: (
                 ["y", "x"],
-                np.array([[10.0], [10.0]]),
+                np.array([[10.0, 10.0]]),
             ),
             TSVar.SLOPE.value: (
                 ["y", "x"],
-                np.array([[5.0], [5.0]]),
+                np.array([[5.0, 5.0]]),
             ),
             TSVar.ASPECT.value: (
                 ["y", "x"],
-                np.array([[10.0], [10.0]]),
+                np.array([[10.0, 10.0]]),
             ),
         },
         coords={
@@ -440,15 +421,15 @@ def test_read_et_time_series(test_data_dir) -> None:
     ts = ioh.read_et_time_series(et_ts_files, dates)
     assert ts
     assert ts.sizes[TSVar.TIME.value] == 7
-    assert ts.sizes["x"] == 1
-    assert ts.sizes["y"] == 2
+    assert ts.sizes["x"] == 2
+    assert ts.sizes["y"] == 1
     np.testing.assert_almost_equal(
-        ts[TSVar.ET.value].values[:, 0, 0],
+        ts[TSVar.ET.value].values[0, 0, :],
         np.array([1.2, 1.4, 1.6, 1.8, 1.8, 1.8, np.nan]),
     )
     np.testing.assert_almost_equal(
-        ts[TSVar.FLAGS.value].values[:, 1, 0],
-        np.array([132, 0, 131, 259, 387, 515, 1], dtype=sh.STATUS_TYPE),
+        ts[TSVar.FLAGS.value].values[0, 1, :],
+        np.array([368, 0, 336, 592, 880, 1136, 65504], dtype=sh.STATUS_TYPE),
     )
 
 
@@ -461,15 +442,15 @@ def test_read_et_time_series_without_dates(test_data_dir) -> None:
     ts = ioh.read_et_time_series(et_ts_files, dates=None)
     assert ts
     assert ts.sizes[TSVar.TIME.value] == 6
-    assert ts.sizes["x"] == 1
-    assert ts.sizes["y"] == 2
+    assert ts.sizes["x"] == 2
+    assert ts.sizes["y"] == 1
     np.testing.assert_almost_equal(
-        ts[TSVar.ET.value].values[:, 0, 0],
+        ts[TSVar.ET.value].values[0, 0, :],
         np.array([1.2, 1.4, 1.6, 1.8, 1.8, 1.8]),
     )
     np.testing.assert_almost_equal(
-        ts[TSVar.FLAGS.value].values[:, 1, 0],
-        np.array([132, 0, 131, 259, 387, 515], dtype=sh.STATUS_TYPE),
+        ts[TSVar.FLAGS.value].values[0, 1, :],
+        np.array([368, 0, 336, 592, 880, 1136], dtype=sh.STATUS_TYPE),
     )
 
 
@@ -482,10 +463,10 @@ def test_read_radiation_time_series(test_data_dir) -> None:
     ts = ioh.read_radiation_time_series(ts_files)
     assert ts
     assert ts.sizes[TSVar.TIME.value] == 7
-    assert ts.sizes["x"] == 1
-    assert ts.sizes["y"] == 2
+    assert ts.sizes["x"] == 2
+    assert ts.sizes["y"] == 1
     np.testing.assert_almost_equal(
-        ts[TSVar.RADIATION.value].values[:, 0, 0],
+        ts[TSVar.RADIATION.value].values[0, 0, :],
         np.array([200, 200, 200, 200, 200, 200, 200]),
     )
 
@@ -499,14 +480,14 @@ def test_read_et_single_date(test_data_dir) -> None:
     ts = ioh.read_et_single_date(files)
     assert ts
     assert ts.sizes[TSVar.TIME.value] == 4
-    assert ts.sizes["x"] == 1
-    assert ts.sizes["y"] == 2
+    assert ts.sizes["x"] == 2
+    assert ts.sizes["y"] == 1
     np.testing.assert_almost_equal(
-        ts[TSVar.ET.value].values[:, 0, 0],
+        ts[TSVar.ET.value].values[0, 0, :],
         np.array([np.nan, 1.8, np.nan, 2.4]),
     )
     np.testing.assert_almost_equal(
-        ts[TSVar.FLAGS.value].values[:, 1, 0],
+        ts[TSVar.FLAGS.value].values[0, 1, :],
         np.array([1, 0, 1, 0], dtype=sh.STATUS_TYPE),
     )
 

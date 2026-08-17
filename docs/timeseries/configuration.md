@@ -83,15 +83,15 @@ This configuration describes the parameters for update processing step
 
 | Name | Description | Type | Mandatory | Default value | Possible value |
 |------|-------------|------|-----------|---------------|----------------|
-| `strict_mode` | Only use acquisition to interpolate/extrapolate | bool | no | true | true or false |
-| `radiation_mode` | Radiation mode to use | str | no | "EXTERNAL" | "THEORETICAL", "EXTERNAL" |
+| `parallel` | Use Dask parallelization |  bool | no | false | true or false |
+| `num_workers` | Number of workers used for parallelization | int | no | 4 | - |
 
 
 ```json
 {
     "params": {
-        "strict_mode": true,
-        "radiation_mode": "EXTERNAL"
+        "parallel": true,
+        "num_workers": 8
     }
 }
 ```
@@ -103,8 +103,8 @@ This configuration describes the parameters for update processing step
     "update": {
         "method": "linear",
         "params": {
-            "strict_mode": true,
-            "radiation_mode": "EXTERNAL"
+            "parallel": true,
+            "num_workers": 8
         }
     }
 }

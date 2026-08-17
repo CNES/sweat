@@ -1,8 +1,5 @@
 # Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 
-
-import datetime as dt
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -10,7 +7,10 @@ import xarray as xr
 from pydantic import ValidationError
 
 from sweat.timeseries import updater_handler
-from sweat.timeseries.status_handler import STATUS_TYPE
+from sweat.timeseries.status_handler import (
+    INIT_STATUS,
+    STATUS_TYPE,
+)
 from sweat.timeseries.types import TimeSeriesVar as TSVar
 
 
@@ -21,7 +21,15 @@ from sweat.timeseries.types import TimeSeriesVar as TSVar
         {"method": "linear"},
         {
             "method": "linear",
-            "params": {"strict_mode": True, "radiation_mode": "EXTERNAL"},
+            "params": {},
+        },
+        {
+            "method": "linear",
+            "params": {"parallel": True},
+        },
+        {
+            "method": "linear",
+            "params": {"parallel": True, "num_workers": 8},
         },
     ],
 )
@@ -53,13 +61,28 @@ def test_updaterconfig_error(config, error) -> None:
 
 
 @pytest.mark.functional
-def test_create() -> None:
+@pytest.mark.parametrize(
+    "config",
+    [
+        {"method": "linear"},
+        {
+            "method": "linear",
+            "params": {},
+        },
+        {
+            "method": "linear",
+            "params": {"parallel": True},
+        },
+        {
+            "method": "linear",
+            "params": {"parallel": True, "num_workers": 8},
+        },
+    ],
+)
+def test_create(config) -> None:
     """
     Test create function
     """
-    config = {
-        "method": "linear",
-    }
     updater_config = updater_handler.UpdaterConfig.model_validate(config)
     assert updater_handler.create(
         method=updater_config.method, params=updater_config.params
@@ -67,85 +90,76 @@ def test_create() -> None:
 
 
 @pytest.mark.functional
-def test_run() -> None:
+@pytest.mark.parametrize(
+    "config",
+    [
+        {
+            "method": "linear",
+            "params": {"parallel": False},
+        },
+        {
+            "method": "linear",
+            "params": {"parallel": True},
+        },
+    ],
+)
+def test_run(config) -> None:
     """
     Test run function
     """
-    # Setup data
-    window_size = 7
-    today = dt.datetime.now(tz=dt.UTC).date()
-    dates = np.array(pd.date_range(end=today, periods=window_size).to_list())
+    # Generate 7 dates until now
+    window = 7
+    today = pd.Timestamp.now()
+    dates = pd.date_range(end=today, periods=window, freq="D").date
+
+    # Create dimensions
+    size_x = 600
+    size_y = 400
+    x = np.arange(size_x)
+    y = np.arange(size_y)
+
+    shape = (size_y, size_x, window)
+
+    # Create data variables
+    et_data = np.full(shape, np.nan)
+    radiation_data = np.ones(shape)
+    flags_data = np.full(shape, INIT_STATUS, dtype=STATUS_TYPE)
+
+    # Create the dataset
     ts = xr.Dataset(
-        {
-            TSVar.ET.value: (
-                ["x", "y", "time"],
-                np.array(
-                    [
-                        [
-                            [1.2, 1.4, 1.6, 1.8, 1.8, 1.8, np.nan],
-                            [1.4, 1.4, 1.4, 1.4, 1.4, 1.4, np.nan],
-                        ]
-                    ]
-                ),
-            ),
-            TSVar.RADIATION.value: (
-                ["x", "y", "time"],
-                np.array(
-                    [
-                        [
-                            [200, 200, 200, 200, 200, 200, 200],
-                            [200, 200, 200, 200, 200, 200, 200],
-                        ]
-                    ]
-                ),
-            ),
-            TSVar.FLAGS.value: (
-                ["x", "y", "time"],
-                np.array(
-                    [
-                        [
-                            [0, 386, 386, 0, 131, 132, 1],
-                            [132, 0, 131, 259, 387, 515, 1],
-                        ]
-                    ],
-                    dtype=STATUS_TYPE,
-                ),
-            ),
+        data_vars={
+            TSVar.ET.value: (["y", "x", "time"], et_data),
+            TSVar.RADIATION.value: (["y", "x", "time"], radiation_data),
+            TSVar.FLAGS.value: (["y", "x", "time"], flags_data),
         },
         coords={
-            "time": np.array(
-                pd.date_range(end=today, periods=window_size).to_list()
-            ),
-            "x": np.arange(1),
-            "y": np.arange(2),
+            "time": dates,
+            "x": x,
+            "y": y,
         },
     )
-    ts = ts.transpose("time", "x", "y")
-    acquisition_dates = [1, 3, 5, 6]
-    feed_dates = dates[acquisition_dates]
+    # Select first date randomly from first 4 dates (leaves room for gap)
+    first_idx = np.random.randint(0, 4)
+    # Select second date from at least 3 positions after first
+    second_idx = np.random.randint(first_idx + 3, len(dates))
+
+    acquisition_dates = sorted([dates[first_idx], dates[second_idx]])
+
+    # Create data variables
+    et_feed = np.random.uniform(low=1.0, high=6.0, size=(size_y, size_x, 2))
+    valid_feed = np.random.randint(0, 2, size=(size_y, size_x, 2))
+
+    # Create the dataset
     feed = xr.Dataset(
-        {
-            TSVar.ET.value: (
-                ["x", "y", "time"],
-                np.array(
-                    [[[np.nan, 1.8, np.nan, 2.4], [1.4, np.nan, 2.2, np.nan]]]
-                ),
-            ),
-            TSVar.VALID.value: (
-                ["x", "y", "time"],
-                np.array([[[0, 1, 0, 1], [1, 0, 1, 0]]]),
-            ),
+        data_vars={
+            TSVar.ET.value: (["y", "x", "time"], et_feed),
+            TSVar.VALID.value: (["y", "x", "time"], valid_feed),
         },
         coords={
-            "time": feed_dates,
-            "x": np.arange(1),
-            "y": np.arange(2),
+            "time": acquisition_dates,
+            "x": x,
+            "y": y,
         },
     )
-    feed = feed.transpose("time", "x", "y")
-    # Setup config
-    config = {
-        "method": "linear",
-    }
-    # Run
-    assert updater_handler.run(ts, feed=feed, config=config)
+    updated_ts = updater_handler.run(ts, feed=feed, config=config)
+    assert updated_ts.attrs == ts.attrs

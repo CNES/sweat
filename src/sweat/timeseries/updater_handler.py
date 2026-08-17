@@ -17,8 +17,10 @@ from pydantic import (
     model_validator,
 )
 
+import sweat.timeseries.status_handler as sh
 from sweat.timeseries.abstract_updater import Updater
 from sweat.timeseries.linear_updater import LinearUpdater, LinearUpdaterParams
+from sweat.timeseries.types import TimeSeriesVar as TSVar
 
 
 class UpdateMethod(str, Enum):
@@ -69,14 +71,14 @@ def create(method=UpdateMethod, params=dict) -> Updater:
 
     Parameters
     ----------
-    method: UpdateMethod
+    method : UpdateMethod
         Type of updater to create
-    params: dict
+    params : dict
         Parameters used to configure the updater
 
     Returns
     -------
-    updater: Updater
+    updater : Updater
         Updater instance
     """
     if method == UpdateMethod.linear:
@@ -92,26 +94,56 @@ def create(method=UpdateMethod, params=dict) -> Updater:
     raise ValueError(msg)
 
 
-def run(data: xr.Dataset, feed: xr.Dataset | None, config=dict):
+def run(data: xr.Dataset, feed: xr.Dataset | None = None, config=dict):
     """
     Run update
 
     Parameters
     ----------
-    data: xr.Dataset
+    data : xr.Dataset
         Data to update
-    feed: xr.Dataset
+    feed : xr.Dataset
         Data corresponding new acquisitions
-    config: dict
+    config : dict
         Configuration for update the time series
 
     Returns
     -------
-    updated: xr.Dataset
+    updated : xr.Dataset
         Updated data
     """
     updater_config = UpdaterConfig.model_validate(config)
     # Create updater
     updater = create(method=updater_config.method, params=updater_config.params)
+    # Decode status
+    (
+        data[TSVar.UPDATED.value],
+        data[TSVar.STATE.value],
+        data[TSVar.DISTANCE.value],
+        data[TSVar.VALIDITY_FLAGS.value],
+    ) = sh.decode_status(data[TSVar.FLAGS.value])
+    data = data.drop_vars(TSVar.FLAGS.value)
     # Update time series
-    return updater.update(data, feed=feed)
+    updated_data = updater.update(data, feed=feed)
+    # Processing failed
+    updated_data[TSVar.VALIDITY_FLAGS.value] = sh.set_bit(
+        updated_data[TSVar.VALIDITY_FLAGS.value],
+        sh.PROCESSING_BIT_POSITION,
+        updated_data[TSVar.ET.value].isnull(),
+        force_zero=False,
+    )
+    # Encode status
+    updated_data[TSVar.FLAGS.value] = sh.encode_status(
+        updated_data[TSVar.UPDATED.value],
+        updated_data[TSVar.STATE.value],
+        updated_data[TSVar.DISTANCE.value],
+        updated_data[TSVar.VALIDITY_FLAGS.value],
+    )
+    return updated_data.drop_vars(
+        [
+            TSVar.UPDATED.value,
+            TSVar.STATE.value,
+            TSVar.DISTANCE.value,
+            TSVar.VALIDITY_FLAGS.value,
+        ]
+    )

@@ -49,8 +49,7 @@
         "update": {
             "method": "linear",
             "params": {
-                "strict_mode": true,
-                "radiation_mode": "EXTERNAL"
+                "parallel": false
             }
         }
     },

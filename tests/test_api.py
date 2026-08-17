@@ -597,7 +597,7 @@ def test_run_stic(entry, params, debug) -> None:
                 "stack": {"et_single_date_filtering": {}},
                 "update": {
                     "method": "linear",
-                    "params": {"strict_mode": True, "radiation_mode": 0},
+                    "params": {"parallel": False},
                 },
             },
             None,

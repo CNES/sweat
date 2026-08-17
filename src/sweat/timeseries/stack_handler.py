@@ -8,6 +8,7 @@ import pandas as pd
 import xarray as xr
 from pydantic import BaseModel, ConfigDict, Field
 
+import sweat.timeseries.status_handler as sh
 from sweat.common import filter
 from sweat.common.solar import compute_daily_toa_solar_radiation
 from sweat.debugging import register_debugging
@@ -30,18 +31,18 @@ def fill_radiation_missing(
     data: xr.DataArray, dem: xr.Dataset | None
 ) -> xr.DataArray:
     """
-    Compute radiation at a missing date
+    Compute radiation at a missing date using theoretical formula
 
     Parameters
     ----------
-    data: xr.Dataset
+    data : xr.Dataset
         Data to update
-    dem: xr.Dataset
+    dem : xr.Dataset
         DEM
 
     Returns
     -------
-    updated: xr.Dataset
+    updated : xr.Dataset
         Updated data
     """
     date = pd.to_datetime(data["time"].item()).date()
@@ -70,47 +71,50 @@ def fill_radiation_missing(
 
 def stack_time_series(
     et_time_series: xr.Dataset,
-    radiation_time_series: xr.Dataset,
+    radiation_time_series: xr.Dataset | None,
     dem: xr.Dataset | None,
 ) -> xr.Dataset:
     """
-    Create a stack containing ET and radiation time series
+    Create a stack time series
+
+    A time series contains ET and radiation time series
     if radiation do not exist compute theoretical value.
 
     Parameters
     ----------
-    et_time_series: xr.Dataset
+    et_time_series : xr.Dataset
         ET time series
-    radiation_time_series: xr.Dataset
+    radiation_time_series : xr.Dataset
         Radiation time series
-    dem: xr.Dataset
+    dem : xr.Dataset
         DEM
 
     Returns
     -------
-    updated: xr.Dataset
+    updated : xr.Dataset
         Updated data
     """
-    # Reindex radiation time series to match the time dimension
-    # of ET time series
-    aligned_radiation_ts = radiation_time_series.reindex(
-        {TSVar.TIME.value: et_time_series[TSVar.TIME.value]}, method=None
-    )
-    # Iterate over the time dimension and fill missing values
-    # using the custom function
-    for time in aligned_radiation_ts[TSVar.TIME.value]:
-        if (
-            aligned_radiation_ts[TSVar.RADIATION.value]
-            .sel(time=time)
-            .isnull()
-            .all()
-            .item()
-        ):
+    # Prepare radiation
+    if radiation_time_series is None:
+        aligned_radiation_ts = xr.Dataset(
+            {
+                TSVar.RADIATION.value: xr.full_like(
+                    et_time_series[TSVar.ET.value], fill_value=np.nan
+                )
+            }
+        )
+        for time in aligned_radiation_ts[TSVar.TIME.value]:
             aligned_radiation_ts[TSVar.RADIATION.value].loc[
                 {TSVar.TIME.value: time}
             ] = fill_radiation_missing(
                 aligned_radiation_ts[TSVar.RADIATION.value].sel(time=time), dem
             )
+    else:
+        # Reindex radiation time series to match the time dimension
+        # of ET time series
+        aligned_radiation_ts = radiation_time_series.reindex(
+            {TSVar.TIME.value: et_time_series[TSVar.TIME.value]}, method=None
+        )
 
     return et_time_series.assign(
         {TSVar.RADIATION.value: aligned_radiation_ts[TSVar.RADIATION.value]}
@@ -130,20 +134,20 @@ def run(
 
     Parameters
     ----------
-    et_time_series: xr.Dataset
+    et_time_series : xr.Dataset
         ET time series
-    radiation_time_series: xr.Dataset
+    radiation_time_series : xr.Dataset
         Radiation time series
-    et_single_date: xr.Dataset
+    et_single_date : xr.Dataset
         ET single date
-    dem: xr.Dataset
+    dem : xr.Dataset
         DEM
-    et_single_date_filtering: dict
+    et_single_date_filtering : dict
         Configuration to filter ET single date
 
     Returns
     -------
-    updated: xr.Dataset
+    updated : xr.Dataset
         Updated data
     """
     # Process ET single date
@@ -157,11 +161,30 @@ def run(
         )
         et_sd = et_single_date.assign({TSVar.VALID.value: valid})
     # Process time series
-    if radiation_time_series is None:
-        radiation_xr = xr.full_like(
-            et_time_series[TSVar.ET.value], fill_value=np.nan
-        ).rename(TSVar.RADIATION.value)
-        radiation_time_series = xr.Dataset(
-            {TSVar.RADIATION.value: radiation_xr}
-        )
-    return stack_time_series(et_time_series, radiation_time_series, dem), et_sd
+    et_ts = stack_time_series(et_time_series, radiation_time_series, dem)
+    # Set validity flags
+    et_ts[TSVar.FLAGS.value] = sh.set_bit(
+        et_ts[TSVar.FLAGS.value],
+        sh.PROCESSING_BIT_POSITION,
+        xr.zeros_like(et_ts[TSVar.FLAGS.value]),
+        force_zero=True,
+    )
+    et_ts[TSVar.FLAGS.value] = sh.set_bit(
+        et_ts[TSVar.FLAGS.value],
+        sh.RADIATION_BIT_POSITION,
+        et_ts[TSVar.RADIATION.value].notnull(),
+        force_zero=True,
+    )
+    et_ts[TSVar.FLAGS.value] = sh.set_bit(
+        et_ts[TSVar.FLAGS.value],
+        sh.AUX_DATA_BIT_POSITION,
+        xr.zeros_like(et_ts[TSVar.FLAGS.value]),
+        force_zero=True,
+    )
+    et_ts[TSVar.FLAGS.value] = sh.set_bit(
+        et_ts[TSVar.FLAGS.value],
+        sh.FILTERED_DATA_BIT_POSITION,
+        xr.zeros_like(et_ts[TSVar.FLAGS.value]),
+        force_zero=True,
+    )
+    return et_ts, et_sd

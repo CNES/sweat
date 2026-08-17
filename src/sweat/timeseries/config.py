@@ -159,12 +159,12 @@ def check_config_timeseries(config: dict) -> dict:
 
     Parameters
     ----------
-    config: dict
+    config : dict
         Dictionary containing the configuration parameters
 
     Returns
     -------
-    checked_config: dict
+    checked_config : dict
         Checked dictionary containing the configuration parameters
     """
     cfg = TimeSeriesInputFile.model_validate(config)
@@ -177,12 +177,12 @@ def check_config_window_timeseries(config: dict) -> dict:
 
     Parameters
     ----------
-    config: dict
+    config : dict
         Dictionary containing the configuration parameters
 
     Returns
     -------
-    checked_config: dict
+    checked_config : dict
         Checked dictionary containing the configuration parameters
     """
     cfg = WindowTimeSeriesInputFile.model_validate(config)

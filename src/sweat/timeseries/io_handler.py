@@ -212,11 +212,11 @@ def write_timeseries(
 
     Parameters
     ----------
-    data: xr.Dataset
+    data : xr.Dataset
         Dataset to write
-    root_name: str
+    root_name : str
         Root used for filenames
-    directory: str
+    directory : str
         Path to the directory
     """
     for date, data_by_date in data.groupby("time"):
@@ -238,12 +238,12 @@ def extract_date_from_filename(filename: str) -> pd.Timestamp:
 
     Parameters
     ----------
-    filename: str
+    filename : str
         Filename containing a date (format YYYYMMDD)
 
     Returns
     -------
-    date: pd.Timestamp
+    date : pd.Timestamp
         Date
     """
     pattern = r".*_([0-9]{8})\..*"
@@ -265,12 +265,12 @@ def read_time_series(filenames: list[str]) -> xr.Dataset:
 
     Parameters
     ----------
-    filenames: list[str]
+    filenames : list[str]
         List of filenames
 
     Returns
     -------
-    xarr: xr.Dataset
+    xarr : xr.Dataset
         Data
     """
     if len(filenames) == 0:
@@ -289,13 +289,18 @@ def read_time_series(filenames: list[str]) -> xr.Dataset:
         ds = read_data_from_file(filename)
 
         # Add a new time dimension (length 1)
-        ds = ds.expand_dims(time=[date])
+        ds = ds.expand_dims({TSVar.TIME.value: [date]})
 
         datasets.append(ds)
         times.append(date)
 
     # Step 2: Concatenate all datasets along the time dimension
-    return xr.concat(datasets, dim="time")
+    combined = xr.concat(datasets, dim=TSVar.TIME.value)
+
+    # Step 3: Transpose to move time from first to last dimension
+    # This changes (time, y, x) → (y, x, time)
+    dims = list(combined.dims)
+    return combined.transpose(*dims[1:], dims[0])
 
 
 def read_et_time_series(
@@ -306,47 +311,31 @@ def read_et_time_series(
 
     Parameters
     ----------
-    filenames: list[str]
+    filenames : list[str]
         List of filenames
-    dates: list[pd.Timestamp]
+    dates : list[pd.Timestamp]
         List of dates to consider in the time series
 
     Returns
     -------
-    xarr: xr.Dataset
+    xarr : xr.Dataset
         Data
     """
-    # Read the time series
+    # Read the time series and rename flags to status
     ts = read_time_series(filenames)
     # Convert type
     ts[TSVar.ET.value] = ts[TSVar.ET.value].astype("float32")
     ts[TSVar.FLAGS.value] = ts[TSVar.FLAGS.value].astype(sh.STATUS_TYPE)
-    # Update status to remove is_updated flag
-    ts[TSVar.FLAGS.value] = xr.apply_ufunc(
-        np.vectorize(sh.update_status),
-        ts[TSVar.FLAGS.value],
-        kwargs={
-            "updated": False,
-        },
-        vectorize=True,
-    )
-    # Fill missing dates
+    # If dates are provided, reindex dataset
     if dates is not None:
-        filled_et = ts[TSVar.ET.value].reindex(
-            {TSVar.TIME.value: dates}, fill_value=np.nan
-        )
-        filled_flags = (
-            ts[TSVar.FLAGS.value]
-            .reindex({TSVar.TIME.value: dates}, fill_value=sh.INIT_STATUS)
-            .astype(sh.STATUS_TYPE)
-        )
-        # Combine into new dataset
-        return xr.Dataset(
-            {
-                TSVar.ET.value: filled_et,
-                TSVar.FLAGS.value: filled_flags,
+        # Reindex feed to match data's time dimension
+        # Fill missing values
+        ts = ts.reindex(
+            {TSVar.TIME.value: dates},
+            fill_value={
+                TSVar.ET.value: np.nan,
+                TSVar.FLAGS.value: sh.INIT_STATUS,
             },
-            attrs=ts.attrs.copy(),
         )
     return ts
 
@@ -357,20 +346,20 @@ def read_radiation_time_series(filenames: list[str]) -> xr.Dataset:
 
     Parameters
     ----------
-    filenames: list[str]
+    filenames : list[str]
         List of filenames
 
     Returns
     -------
-    xarr: xr.Dataset
+    xarr : xr.Dataset
         Data
     """
     # Read the time series
     ts = read_time_series(filenames)
     # TODO: Workaround to avoid NaN in radiation data (fill hole)
-    ts[TSVar.RADIATION.value] = ts[TSVar.RADIATION.value].interpolate_na(
-        dim="x", method="linear"
-    )
+    # ts[TSVar.RADIATION.value] = ts[TSVar.RADIATION.value].interpolate_na(
+    #    dim="x", method="linear"
+    # )
     # Convert type
     ts[TSVar.RADIATION.value] = ts[TSVar.RADIATION.value].astype("float32")
     return ts
@@ -382,12 +371,12 @@ def read_et_single_date(filenames: list[str]) -> xr.Dataset:
 
     Parameters
     ----------
-    filenames: list[str]
+    filenames : list[str]
         List of filenames
 
     Returns
     -------
-    xarr: xr.Dataset
+    xarr : xr.Dataset
         Data
     """
     # Read the time series
@@ -411,18 +400,18 @@ def read_input(
 
     Parameters
     ----------
-    config: dict
+    config : dict
         Input information
 
     Returns
     -------
-    et_ts: xr.Dataset
+    et_ts : xr.Dataset
         ET time series
-    radiation_ts: xr.Dataset
+    radiation_ts : xr.Dataset
         Radiation time series
-    et_sd: xr.Dataset
+    et_sd : xr.Dataset
         ET single dates
-    dem: xr.Dataset
+    dem : xr.Dataset
         DEM
     """
     # Configuration

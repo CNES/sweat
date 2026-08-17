@@ -6,581 +6,310 @@ Module for time series update
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
+from dataclasses import dataclass
+from typing import ClassVar
 
+import dask
 import numpy as np
-import numpy.typing as npt
 import xarray as xr
 
-from sweat.timeseries import status_handler as sh
+import sweat.timeseries.status_handler as sh
 from sweat.timeseries.types import TimeSeriesVar as TSVar
 
 
+@dataclass(frozen=True)
 class Updater(ABC):
     """
     Class to update time series
     """
 
-    def __init__(self, strict_mode: bool, radiation_mode: sh.RadiationMode):
+    # Class attributes
+    variables: ClassVar[Sequence[str]] = []
+
+    # Instance attributes
+    parallel: bool = False
+    num_workers: int = 4
+
+    @staticmethod
+    def find_next(state: xr.DataArray, condition: xr.DataArray) -> xr.DataArray:
         """
-        Init method
+        Find next index. Return size of time dimensions if not found.
 
         Parameters
         ----------
-        strict_mode: bool
-            Only use acquisition to interpolate/extrapolate
-        radiation_mode: RadiationMode
-            Radiation mode to use
-        """
-        self.strict_mode = strict_mode
-        self.radiation_mode = radiation_mode
-        self.variables: list[str] = []
-
-    def get_requested_variables(self) -> list[str]:
-        """
-        Get the requested variables for updating time series
-
+        state : xr.DataArray
+            State
+        condition : xr.DataArray
+            Condition to consider next pixel
         Returns
         -------
-        variables: list[str]
-            Requested variables
-        """
-        return self.variables
-
-    def find_previous(self, status_arr: npt.NDArray, index: int) -> int:
-        """
-        Find previous index. Return -1 if not found.
-
-        Parameters
-        ----------
-        status_arr: array_like
-            Bit array
-        index: int
-            Index position to considered
-
-        Returns
-        -------
-        previous: int
-            Previous index
-        """
-        # Iterate through the list in reverse order from the target index
-        if index == 0:
-            return -1
-        prev_index = -1
-        for i in range(index - 1, -1, -1):
-            state = sh.get_state(status_arr[i])
-            mode = sh.get_processing_mode(status_arr[i])
-            # Check if the state is 0 and mode is not degraded
-            if (
-                state == sh.State.ACQUISITION
-                and mode == sh.ProcessingMode.NOMINAL
-            ):
-                return i
-            if (
-                state == sh.State.INTERPOLATED
-                and mode == sh.ProcessingMode.NOMINAL
-                and prev_index < i
-            ):
-                prev_index = i
-        if prev_index > -1 and not self.strict_mode:
-            return prev_index
-        return -1
-
-    def find_next(self, status_arr: npt.NDArray, index: int) -> int:
-        """
-        Find next index. Return -1 if not found.
-
-        Parameters
-        ----------
-        status_arr: array_like
-            Bit array
-        index: int
-            Index position to considered
-
-        Returns
-        -------
-        next: int
+        next_idx : xr.DataArray
             Next index
         """
-        # Iterate through the list in reverse order from the target index
-        if index == len(status_arr) - 1:
-            return -1
-        next_index = len(status_arr)
-        for i in range(index + 1, len(status_arr), 1):
-            state = sh.get_state(status_arr[i])
-            mode = sh.get_processing_mode(status_arr[i])
-            # Check if the state is 0 and mode is not degraded
-            if (
-                state == sh.State.ACQUISITION
-                and mode == sh.ProcessingMode.NOMINAL
-            ):
-                return i
-            if (
-                state == sh.State.INTERPOLATED
-                and mode == sh.ProcessingMode.NOMINAL
-                and next_index > i
-            ):
-                next_index = i
-        if next_index < len(status_arr) and not self.strict_mode:
-            return next_index
-        return -1
+        # Time dimension
+        time_size = state.sizes[TSVar.TIME.value]
 
-    @abstractmethod
-    def interpolate(
-        self, index: int, prev_index: int, next_index: int, data: xr.Dataset
-    ) -> tuple[float, sh.ProcessingMode]:
+        # Time indices
+        idx = np.arange(time_size)
+
+        # Index at each location if it is a target, otherwise time_size
+        next_idx = np.where(condition.values, idx, time_size)
+
+        # Propagate the next target index backwards in time
+        # and reverse time again
+        next_idx = np.minimum.accumulate(next_idx[..., ::-1], axis=-1)[
+            ..., ::-1
+        ]
+
+        # strictly after the current index
+        # next_idx = np.where(
+        # condition,
+        # np.concatenate(
+        #    [
+        #        next_idx[..., 1:],
+        #        np.full(next_idx[..., :1].shape, time_size)
+        #    ],
+        #    axis=-1
+        # ),
+        # next_idx
+        # )
+
+        # Create DataArray
+        return state.copy(data=next_idx)
+
+    @staticmethod
+    def find_previous(
+        state: xr.DataArray, condition: xr.DataArray
+    ) -> xr.DataArray:
         """
-        Interpolate data between previous index and next index.
+        Find next index. Return size of time dimensions if not found.
 
         Parameters
         ----------
-        index: int
-            Index position to considered
-        prev_index: int
-            Previous index used to interpolate
-        next_index: int
-            Next index used to interpolate
-        data: xr.Dataset
-            Data used to interpolate
+        state : xr.DataArray
+            State
+        condition : xr.DataArray
+            Condition to consider next pixel
 
         Returns
         -------
-        value: float
-            Interpolated value
-        status: STATUS_TYPE
-            Updated status
+        previous_idx : xr.DataArray
+            Next index
         """
+        # Time dimension
+        time_size = state.sizes[TSVar.TIME.value]
 
-    @abstractmethod
-    def extrapolate(
-        self, index: int, prev_index: int, data: xr.Dataset
-    ) -> tuple[float, sh.ProcessingMode]:
-        """
-        Extrapolate data between from previous index.
+        # Time indices
+        idx = np.arange(time_size)
 
-        Parameters
-        ----------
-        index: int
-            Index position to considered
-        prev_index: int
-            Previous index used to extrapolate
-        data: xr.Dataset
-            Data used to extrapolate
+        # Index at each location if it is a target, otherwise -1
+        prev_idx = np.where(condition.values, idx, -1)
 
-        Returns
-        -------
-        value: float
-            Extrapolated value
-        status: STATUS_TYPE
-            Updated status
-        """
-
-    @abstractmethod
-    def backward_extrapolate(
-        self, index: int, next_index: int, data: xr.Dataset
-    ) -> tuple[float, sh.ProcessingMode]:
-        """
-        Backward extrapolate from next index.
-
-        Parameters
-        ----------
-        index: int
-            Index position to considered
-        next_index: int
-            Next index used to extrapolate
-        data: xr.Dataset
-            Data used to extrapolate
-
-        Returns
-        -------
-        value: float
-            Extrapolated value
-        status: STATUS_TYPE
-            Updated status
-        """
-
-    def update_new_acquisition(
-        self, data: xr.Dataset, feed: xr.Dataset
-    ) -> xr.Dataset:
-        """
-        Update with new acquisition
-
-        Parameters
-        ----------
-        data: xr.Dataset
-            Data to update
-        feed: xr.Dataset
-            Data corresponding new acquisitions
-
-        Returns
-        -------
-        updated: xr.Dataset
-            Updated data
-        """
-        stack = False
-        ts = data.copy()
-        if "stacked_x_y" in ts.coords:
-            stack = True
-            ts = ts.drop_vars(
-                [
-                    "stacked_x_y",
-                    "x",
-                    "y",
-                ],
-                errors="ignore",
-            )  # Use errors='ignore' to avoid errors if the column doesn't exist
-        # Find valid new acquisition data
-        acquisition_dates = feed.coords[TSVar.TIME.value].where(
-            feed[TSVar.VALID.value], drop=True
+        # Propagate the next target index backwards in time
+        previous_idx = np.maximum.accumulate(
+            prev_idx,
+            axis=-1,
         )
-        # Select data corresponding to valid acquisition dates
-        selected_ts = ts.sel({TSVar.TIME.value: acquisition_dates})
-        # Select where to update
-        selected_condition = xr.apply_ufunc(
-            np.vectorize(sh.check_state),
-            selected_ts[TSVar.FLAGS.value],
-            sh.State.ACQUISITION,
-            vectorize=True,
-        )
-        # Update sub time series with acquisition data
-        updated_ts = selected_ts
-        # Update ET
-        updated_ts[TSVar.ET.value] = updated_ts[TSVar.ET.value].where(
-            selected_condition,
-            feed[TSVar.ET.value].sel({TSVar.TIME.value: acquisition_dates}),
-        )
-        # Update Flags
-        updated_ts[TSVar.FLAGS.value] = updated_ts[TSVar.FLAGS.value].where(
-            selected_condition,
-            xr.apply_ufunc(
-                np.vectorize(sh.update_status),
-                selected_ts[TSVar.FLAGS.value],
-                kwargs={
-                    "state": sh.State.ACQUISITION,
-                    "processing": sh.ProcessingMode.NOMINAL,
-                    "updated": True,
-                    "distance": 0,
-                },
-            ),
-        )
-        # Update the full time series
-        ts.loc[{TSVar.TIME.value: acquisition_dates}] = updated_ts
-        if stack:
-            ts = ts.assign_coords(stacked_x_y=data.coords["stacked_x_y"])
-        return ts
 
-    def update_nodata(
-        self, index: int, status: sh.STATUS_TYPE, data: xr.Dataset
-    ) -> tuple[float, sh.STATUS_TYPE]:
-        """
-        Update nodata.
+        # strictly before the current index
+        # previous_idx = np.concatenate(
+        #    [
+        #        np.full(previous_idx[..., :1].shape, -1),
+        #        previous_idx[...,:-1],
+        #    ],
+        #    axis=-1,
+        # )
 
-        Parameters
-        ----------
-        index: int
-            Index position to considered
-        status: STATUS_TYPE
-            Actual status
-        data: xr.Dataset
-            Data used to update
-
-        Returns
-        -------
-        value: float
-            Updated value
-        status: STATUS_TYPE
-            Updated status
-        """
-        prev_index = self.find_previous(data[TSVar.FLAGS.value].data, index)
-        next_index = self.find_next(data[TSVar.FLAGS.value].data, index)
-        # Case 1: Interpolation
-        if prev_index != -1 and next_index != -1:
-            value, mode = self.interpolate(index, prev_index, next_index, data)
-            status = sh.update_status(
-                status,
-                state=sh.State.INTERPOLATED,
-                processing=mode,
-                updated=True,
-                distance=next_index - prev_index,
-            )
-            return value, status
-
-        # Case 2: Extrapolation
-        if prev_index != -1 and next_index == -1:
-            value, mode = self.extrapolate(index, prev_index, data)
-            status = sh.update_status(
-                status,
-                state=sh.State.EXTRAPOLATED,
-                processing=mode,
-                updated=True,
-                distance=index - prev_index,
-            )
-            return value, status
-        # Case 3: Backward extrapolation
-        if prev_index == -1 and next_index != -1:
-            value, mode = self.backward_extrapolate(index, next_index, data)
-            status = sh.update_status(
-                status,
-                state=sh.State.BACKWARD_EXTRAPOLATED,
-                processing=mode,
-                updated=True,
-                distance=next_index - index,
-            )
-            return value, status
-        # Case 4: pixel invalid
-        status = sh.update_status(
-            status,
-            state=sh.State.INVALID,
-            processing=sh.ProcessingMode.DEGRADED,
-            updated=True,
-            distance=0,
-        )
-        return np.nan, status
-
-    def update_interpolated_data(
-        self, index: int, status: sh.STATUS_TYPE, data: xr.Dataset
-    ) -> tuple[float, sh.STATUS_TYPE]:
-        """
-        Update interpolated data
-
-        Parameters
-        ----------
-        index: int
-            Index position to considered
-        status: STATUS_TYPE
-            Actual status
-        data: xr.Dataset
-            Data used to update
-
-        Returns
-        -------
-        value: float
-            Updated value
-        status: STATUS_TYPE
-            Updated status
-        """
-        prev_index = self.find_previous(data[TSVar.FLAGS.value].data, index)
-        next_index = self.find_next(data[TSVar.FLAGS.value].data, index)
-        # If points used to interpolate exist and
-        # If previous value was obtained with a degraded mode or
-        # if the previous distance between interpolated points was greater
-        if (prev_index != -1 and next_index != -1) and (
-            sh.check_processing_mode(status, sh.ProcessingMode.DEGRADED)
-            or (next_index - prev_index) < sh.get_distance(status)
-        ):
-            # Interpolate
-            value, mode = self.interpolate(index, prev_index, next_index, data)
-            status = sh.update_status(
-                status,
-                state=sh.State.INTERPOLATED,
-                processing=mode,
-                updated=True,
-                distance=next_index - prev_index,
-            )
-            return value, status
-        # Do nothing
-        return data[TSVar.ET.value].isel(
-            {TSVar.TIME.value: index}
-        ).item(), status
-
-    def update_extrapolated_data(
-        self, index: int, status: sh.STATUS_TYPE, data: xr.Dataset
-    ) -> tuple[float, sh.STATUS_TYPE]:
-        """
-        Update extrapolated data
-
-        Parameters
-        ----------
-        index: int
-            Index position to considered
-        status: STATUS_TYPE
-            Actual status
-        data: xr.Dataset
-            Data used to update
-
-        Returns
-        -------
-        value: float
-            Updated value
-        status: STATUS_TYPE
-            Updated status
-        """
-        prev_index = self.find_previous(data[TSVar.FLAGS.value].values, index)
-        next_index = self.find_next(data[TSVar.FLAGS.value].values, index)
-        # Case 1: If points used to interpolate exist and
-        if prev_index != -1 and next_index != -1:
-            value, mode = self.interpolate(index, prev_index, next_index, data)
-            status = sh.update_status(
-                status,
-                state=sh.State.INTERPOLATED,
-                processing=mode,
-                updated=True,
-                distance=next_index - prev_index,
-            )
-            return value, status
-        # If previous index exists and
-        # If previous value was obtained with a degraded mode or
-        # the previous distance between interpolated points was greater
-        if (prev_index != -1 and next_index == -1) and (
-            sh.check_processing_mode(status, sh.ProcessingMode.DEGRADED)
-            or (index - prev_index) < sh.get_distance(status)
-        ):
-            # Extrapolate
-            value, mode = self.extrapolate(index, prev_index, data)
-            status = sh.update_status(
-                status,
-                state=sh.State.EXTRAPOLATED,
-                processing=mode,
-                updated=True,
-                distance=index - prev_index,
-            )
-            return value, status
-        # If next index exists and
-        # If previous value was obtained with a degraded mode or
-        # the previous distance between interpolated points was greater
-        if (prev_index == -1 and next_index != -1) and (
-            sh.check_processing_mode(status, sh.ProcessingMode.DEGRADED)
-            or (next_index - index) < sh.get_distance(status)
-        ):
-            # Extrapolate
-            value, mode = self.backward_extrapolate(index, next_index, data)
-            status = sh.update_status(
-                status,
-                state=sh.State.BACKWARD_EXTRAPOLATED,
-                processing=mode,
-                updated=True,
-                distance=next_index - index,
-            )
-            return value, status
-        # Do nothing
-        return data[TSVar.ET.value].isel(
-            {TSVar.TIME.value: index}
-        ).item(), status
+        # Create DataArray
+        return state.copy(data=previous_idx)
 
     def update_with_new_acquisitions(
         self, data: xr.Dataset, feed: xr.Dataset
-    ) -> xr.Dataset:
+    ) -> tuple[xr.DataArray, xr.DataArray, xr.DataArray, xr.DataArray]:
         """
         Update time series with new acquisitions
 
         Parameters
         ----------
-        data: xr.Dataset
+        data : xr.Dataset
             Data to update
-        feed: xr.Dataset
+        feed : xr.Dataset
             Data corresponding new acquisitions
 
         Returns
         -------
-        updated: xr.Dataset
+        updated : xr.Dataset
             Updated data
         """
-        # Get ET and status time series
-        value_ts = data[TSVar.ET.value].values.copy()
-        status_ts = data[TSVar.FLAGS.value].values.copy()
-        # Find valid new acquisition data
-        acquisition_dates = feed.coords[TSVar.TIME.value].where(
-            feed[TSVar.VALID.value], drop=True
-        )
-        for date in acquisition_dates.values:
-            value = feed[TSVar.ET.value].sel({TSVar.TIME.value: date}).item()
-            status = (
-                data[TSVar.FLAGS.value].sel({TSVar.TIME.value: date}).item()
+        if data.sizes[TSVar.TIME.value] != feed.sizes[TSVar.TIME.value]:
+            # Reindex feed to match data's time dimension
+            # Fill missing values: NaN for 'et', 0 for 'valid'
+            feed = feed.reindex(
+                {TSVar.TIME.value: data.time},
+                fill_value={
+                    TSVar.ET.value: np.nan,
+                    TSVar.VALID.value: 0,
+                },
             )
-            if not sh.check_state(status, sh.State.ACQUISITION):
-                index = data.indexes[TSVar.TIME.value].get_loc(date)
-                status = sh.update_status(
-                    status,
-                    state=sh.State.ACQUISITION,
-                    processing=sh.ProcessingMode.NOMINAL,
-                    updated=True,
-                    distance=0,
-                )
-                value_ts[index] = value
-                status_ts[index] = status
-        # Update
-        updated_data = data.copy()
-        updated_data[TSVar.ET.value].values = value_ts
-        updated_data[TSVar.FLAGS.value].values = status_ts
-        return updated_data
+        # Condition to update
+        condition = feed[TSVar.VALID.value]
+        # Fill data with feed where condition is True
+        return (
+            xr.where(condition, feed[TSVar.ET.value], data[TSVar.ET.value]),
+            xr.where(
+                condition, sh.State.ACQUISITION.value, data[TSVar.STATE.value]
+            ).astype(sh.STATE_TYPE),
+            xr.where(condition, True, data[TSVar.UPDATED.value]).astype(bool),
+            xr.where(condition, 0, data[TSVar.DISTANCE.value]).astype(
+                sh.DISTANCE_TYPE
+            ),
+        )
 
+    @abstractmethod
     def update_time_series(self, data: xr.Dataset) -> xr.Dataset:
         """
         Update time series
 
         Parameters
         ----------
-        data: xr.Dataset
+        data : xr.Dataset
             Data to update
 
         Returns
         -------
-        updated: xr.Dataset
+        updated : xr.Dataset
             Updated data
         """
-        # Get ET and status time series
-        value_ts = data[TSVar.ET.value].values.copy()
-        status_ts = data[TSVar.FLAGS.value].values.copy()
-        # Loop over the values for the time series
-        for i, status in enumerate(status_ts):
-            state = sh.get_state(status)
-            if state.value == sh.State.NODATA.value:
-                value_ts[i], status_ts[i] = self.update_nodata(i, status, data)
-            if state.value == sh.State.INTERPOLATED.value:
-                value_ts[i], status_ts[i] = self.update_interpolated_data(
-                    i, status, data
-                )
-            if state.value == sh.State.EXTRAPOLATED.value:
-                value_ts[i], status_ts[i] = self.update_extrapolated_data(
-                    i, status, data
-                )
-            if state.value == sh.State.BACKWARD_EXTRAPOLATED.value:
-                value_ts[i], status_ts[i] = self.update_extrapolated_data(
-                    i, status, data
-                )
-        # Update
-        updated_data = data.copy()
-        updated_data[TSVar.ET.value].values = value_ts
-        updated_data[TSVar.FLAGS.value].values = status_ts
-        return updated_data
 
-    def update(self, data: xr.Dataset, feed: xr.Dataset | None) -> xr.Dataset:
+    def _update_block_with_new_acquisitions(
+        self,
+        data: xr.Dataset,
+        feed: xr.Dataset,
+    ) -> xr.Dataset:
+        """
+        Update with new acquisition
+
+        Parameters
+        ----------
+        data : xr.Dataset
+            Data to update
+        feed : xr.Dataset
+            Data corresponding new acquisitions
+
+        Returns
+        -------
+        updated : xr.Dataset
+            Updated data
+        """
+        # Step 1 update with new acquisitions
+        new_et, new_state, new_updated, new_distance = (
+            self.update_with_new_acquisitions(data, feed)
+        )
+        # Step 2 update time series
+        return self.update_time_series(
+            xr.Dataset(
+                {
+                    TSVar.ET.value: new_et,
+                    TSVar.RADIATION.value: data[TSVar.RADIATION.value],
+                    TSVar.STATE.value: new_state,
+                    TSVar.DISTANCE.value: new_distance,
+                    TSVar.UPDATED.value: new_updated,
+                    TSVar.VALIDITY_FLAGS.value: data[
+                        TSVar.VALIDITY_FLAGS.value
+                    ],
+                },
+                attrs=data.attrs.copy(),
+            )
+        )
+
+    def _update_block_without_new_acquisitions(
+        self,
+        data: xr.Dataset,
+    ) -> xr.Dataset:
+        """
+        Update without new acquisition
+
+        Parameters
+        ----------
+        data : xr.Dataset
+            Data to update
+
+        Returns
+        -------
+        updated : xr.Dataset
+            Updated data
+        """
+        # Update time series
+        return self.update_time_series(data)
+
+    def update(
+        self, data: xr.Dataset, feed: xr.Dataset | None = None
+    ) -> xr.Dataset:
         """
         Update
 
         Parameters
         ----------
-        data: xr.Dataset
+        data : xr.Dataset
             Data to update
-        feed: xr.Dataset
+        feed : xr.Dataset
             Data corresponding new acquisitions
 
         Returns
         -------
-        updated: xr.Dataset
+        updated : xr.Dataset
             Updated data
         """
-        # Get dimensions with order
-        da = next(iter(data.data_vars.values()))
-        original_dims = da.dims
-        spatial_dims = [x for x in da.dims if x != TSVar.TIME.value]
-        x1 = spatial_dims[0]
-        x2 = spatial_dims[1]
-
-        def apply_update_time_series(data_ts: xr.Dataset) -> xr.Dataset:
-            x1_val = data_ts[x1].values.item()
-            x2_val = data_ts[x2].values.item()
-
-            updated_ts = data_ts.copy()
+        if not self.parallel:
             if feed is not None:
-                # Extract corresponding feed
-                feed_ts = feed.sel({x1: x1_val, x2: x2_val})
-                # Update new acquisition
-                updated_ts = self.update_with_new_acquisitions(
-                    updated_ts, feed_ts
+                return self._update_block_with_new_acquisitions(
+                    data=data, feed=feed
                 )
-            # Update time series
-            return self.update_time_series(updated_ts)
+            return self._update_block_without_new_acquisitions(data=data)
+        # Chunk spatial dimensions only.
+        with dask.config.set(
+            scheduler="processes", num_workers=self.num_workers
+        ):
+            spatial_dims = [x for x in data.dims if x != TSVar.TIME.value]
+            data = data.chunk(
+                {
+                    spatial_dims[0]: 256,
+                    spatial_dims[1]: 256,
+                    TSVar.TIME.value: -1,
+                }
+            )
 
-        # Apply update to each (x, y) time series
-        updated = data.groupby([x1, x2]).map(apply_update_time_series)
-        return updated.transpose(*original_dims)
+            # Case 1: new acquisition is available
+            if feed is not None:
+                # Make new_data have the same time coordinate as data.
+                # Reindex feed to match data's time dimension
+                # Fill missing values: NaN for 'et', 0 for 'valid'
+                feed = feed.reindex(
+                    {TSVar.TIME.value: data.time},
+                    fill_value={
+                        TSVar.ET.value: np.nan,
+                        TSVar.VALID.value: 0,
+                    },
+                )
+                # Use the same spatial chunking as data.
+                feed = feed.chunk(
+                    {
+                        spatial_dims[0]: 256,
+                        spatial_dims[1]: 256,
+                        TSVar.TIME.value: -1,
+                    }
+                )
+                return xr.map_blocks(
+                    self._update_block_with_new_acquisitions,
+                    data,
+                    args=(feed,),
+                    template=data,
+                ).compute()
+
+            # Case 2: no new acquisition
+            return xr.map_blocks(
+                self._update_block_without_new_acquisitions,
+                data,
+                template=data,
+            ).compute()

@@ -11,11 +11,15 @@ class TimeSeriesVar(Enum):
     Variables used in time series dataset
     """
 
+    DISTANCE = "distance"
     ET = "et"
     FLAGS = "flags"
-    VALID = "valid"
     RADIATION = "daily_radiation"
+    STATE = "state"
     TIME = "time"
+    UPDATED = "updated"
+    VALID = "valid"
+    VALIDITY_FLAGS = "validity_flags"
     HEIGHT = "height"
     SLOPE = "slope"
     ASPECT = "aspect"
