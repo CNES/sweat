@@ -90,16 +90,7 @@ def test_is_soil_wetness(
         "expected",
     ),
     [
-        pytest.param(
-            0.5,
-            0.3,
-            0.8,
-            0.8,
-            0.8,
-            0.8,
-            0.8,
-            False,
-        ),
+        pytest.param(0.5, 0.3, 0.8, 0.8, 0.8, 0.8, 0.8, False, id="unstressed"),
         pytest.param(
             0.3,
             0.5,
@@ -109,6 +100,7 @@ def test_is_soil_wetness(
             0.2,
             0.2,
             True,
+            id="severely stressed vegetation",
         ),
         pytest.param(
             0.3,
@@ -119,6 +111,7 @@ def test_is_soil_wetness(
             0.2,
             0.2,
             True,
+            id="severely stressed vegetation 2",
         ),
         pytest.param(
             0.3,
@@ -129,6 +122,18 @@ def test_is_soil_wetness(
             0.4,
             0.4,
             True,
+            id="stressed dense vegetation",
+        ),
+        pytest.param(
+            0.5,
+            0.3,
+            -0.1,
+            -0.1,
+            -0.1,
+            -0.1,
+            -0.1,
+            True,
+            id="barren sparse vegetation",
         ),
     ],
 )

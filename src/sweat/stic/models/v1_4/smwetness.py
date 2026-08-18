@@ -143,6 +143,9 @@ def is_water_stressed(
         and (ndvi > msavi)
     ):
         is_stressed = True
+    # Barren sparse vegetation (rocks, sand mainly)
+    if (vari_green < 0.0) and (ndvi < 0.0) and (gndvi < 0.0) and (msavi < 0.0):
+        is_stressed = True
     return is_stressed
 
 
