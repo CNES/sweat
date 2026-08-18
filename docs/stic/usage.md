@@ -170,9 +170,12 @@ output_dir/
 │   └── stic_daily_valid.tif
 ├── stic_inst
 │   ├── stic_inst_ef.tif
+│   ├── stic_inst_e_interception.tif
+│   ├── stic_inst_e_soil.tif
 │   ├── stic_inst_et.tif
 │   ├── stic_inst_flags.tif
 │   ├── stic_inst_le.tif
+│   ├── stic_inst_t.tif
 │   ├── stic_inst_uncertainty_ef.tif
 │   ├── stic_inst_uncertainty_et.tif
 │   ├── stic_inst_uncertainty_le.tif
