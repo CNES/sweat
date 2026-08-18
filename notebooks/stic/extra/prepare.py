@@ -929,7 +929,7 @@ def prepare_ameriflux_data(
         msg = "Dataset unkown"
         raise ValueError(msg)
     # ln
-    output_df["ln"] = output_df["lw_in"] - output_df["lw_in"]
+    output_df["ln"] = -output_df["lw_out"] + output_df["lw_in"]
     # emissivity
     output_df["emis"] = output_df["lw_out"] / (
         CST_SB * (output_df["ts"] + KELVIN_CST) ** 4
