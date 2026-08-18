@@ -550,14 +550,22 @@ def run_stic_model_pixel(
     evaporation_interception_flux = (
         m_canopy * rn_canopy * PT_CST * slope / (slope + PSYCHROMETRIC_CST)
     )
-    evaporation_soil_flux = (
-        (m_soil + m_rz * (1 - m_soil))
-        * (rn_soil - g_flux)
-        * PT_CST
-        * slope
-        / (slope + PSYCHROMETRIC_CST)
+    # Evaporation from soil should be positive
+    evaporation_soil_flux = max(
+        0,
+        (
+            (m_soil + m_rz * (1 - m_soil))
+            * (rn_soil - g_flux)
+            * PT_CST
+            * slope
+            / (slope + PSYCHROMETRIC_CST)
+        ),
     )
-    evaporation_flux = evaporation_interception_flux + evaporation_soil_flux
+    # Evaporation can not exceed latent flux
+    evaporation_flux = min(
+        evaporation_interception_flux + evaporation_soil_flux, le_flux
+    )
+    # Compute transpiration flux
     transpiration_flux = le_flux - evaporation_flux
 
     return (

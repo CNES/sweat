@@ -12,7 +12,22 @@ from sklearn.exceptions import UndefinedMetricWarning
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 
-def safe_r2_score(y_true, y_pred):
+def safe_r2_score(y_true: npt.NDArray, y_pred: npt.NDArray):
+    """
+    Compute R2 score with nan values
+
+    Parameters
+    ----------
+    y_true : np.array
+        Measured values
+    y_pred : np.array
+        Estimated values
+
+    Returns
+    -------
+    r2 : float
+        R2 score
+    """
     idx = np.isfinite(y_true) & np.isfinite(y_pred)
 
     if np.sum(idx) < 2:
@@ -29,7 +44,22 @@ def safe_r2_score(y_true, y_pred):
     return r2
 
 
-def safe_polyfit(x, y):
+def safe_polyfit(x: npt.NDArray, y: npt.NDArray) -> tuple[float, float]:
+    """
+    Compute least squares polynomial fit (order 1) with nan values
+
+    Parameters
+    ----------
+    x : np.array
+        Values
+    y : np.array
+        Values
+
+    Returns
+    -------
+    slope, intercept : tuple[float, float]
+        Coefficient of the polynomial fit
+    """
     idx = np.isfinite(x) & np.isfinite(y)
 
     if np.sum(idx) < 2:
@@ -53,9 +83,21 @@ def compute_metrics(
 ) -> tuple[float, ...]:
     """
     Compute slope, mbe, mae, rmse, r2
+
+    Parameters
+    ----------
+    measured : np.array
+        Measured values
+    estimated : np.array
+        Estimated values
+
+    Returns
+    -------
+    metrics : tuple[float]
+        Metrics values
     """
-    measured_arr = np.array(measured)
-    estimated_arr = np.array(estimated)
+    measured_arr = np.asarray(measured)
+    estimated_arr = np.asarray(estimated)
     slope, _ = safe_polyfit(measured_arr, estimated_arr)
     if len(measured_arr - estimated_arr) > 0 and not np.all(
         np.isnan(measured_arr - estimated_arr)
