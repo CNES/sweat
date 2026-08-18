@@ -20,6 +20,7 @@ from sweat.stic.constant import PSYCHROMETRIC_CST, PT_CST
 from sweat.stic.models.flux import (
     compute_g_flux,
     compute_le_h_fluxes,
+    compute_rn_soil_flux,
     initiate_le_h_fluxes,
 )
 from sweat.stic.models.functions import (
@@ -252,8 +253,8 @@ def init_stic_model_pixel(
 
 @njit(
     [
-        Tuple((f32,) * 8 + (boolean,) * 2)(*(f32,) * 10, i64, boolean),
-        Tuple((f64,) * 8 + (boolean,) * 2)(*(f64,) * 10, i64, boolean),
+        Tuple((f32,) * 11 + (boolean,) * 2)(*(f32,) * 10, i64, boolean),
+        Tuple((f64,) * 11 + (boolean,) * 2)(*(f64,) * 10, i64, boolean),
     ],
     nogil=True,
     cache=True,
@@ -271,7 +272,21 @@ def run_stic_model_pixel(
     threshold: float,
     nb_steps: int,
     debug: bool,
-) -> tuple[float, float, float, float, float, float, float, float, bool, bool]:
+) -> tuple[
+    float,
+    float,
+    float,
+    float,
+    float,
+    float,
+    float,
+    float,
+    float,
+    float,
+    float,
+    bool,
+    bool,
+]:
     """
     STIC model calculation function for a single pixel
 
@@ -455,7 +470,7 @@ def run_stic_model_pixel(
             print("t0d = ", t0d)  # noqa T201
 
         # Re-estimate M (direct ts feedback into M computation)
-        (m, _, _, m_soil, _, is_stressed) = iterate_soil_moisture(
+        (m, _, m_canopy, m_soil, m_rz, is_stressed) = iterate_soil_moisture(
             slope,
             s1,
             s2,
@@ -529,10 +544,29 @@ def run_stic_model_pixel(
     ef = le_flux / (le_flux + h_flux)
     ef = min(max(ef, 0.0), 1.0)
 
+    # Separate evaporation and transpiration fluxes
+    rn_soil = compute_rn_soil_flux(rn, lai)
+    rn_canopy = rn - rn_soil
+    evaporation_interception_flux = (
+        m_canopy * rn_canopy * PT_CST * slope / (slope + PSYCHROMETRIC_CST)
+    )
+    evaporation_soil_flux = (
+        (m_soil + m_rz * (1 - m_soil))
+        * (rn_soil - g_flux)
+        * PT_CST
+        * slope
+        / (slope + PSYCHROMETRIC_CST)
+    )
+    evaporation_flux = evaporation_interception_flux + evaporation_soil_flux
+    transpiration_flux = le_flux - evaporation_flux
+
     return (
         le_flux,
         h_flux,
         ef,
+        evaporation_interception_flux,
+        evaporation_soil_flux,
+        transpiration_flux,
         g_flux,
         g_aero,
         g_surf,
@@ -545,10 +579,10 @@ def run_stic_model_pixel(
 
 @njit(
     [
-        Tuple((Array(f32, 2, "C"),) * 2 + (Array(i64, 2, "C"),) * 2)(
+        Tuple((Array(f32, 2, "C"),) * 5 + (Array(i64, 2, "C"),) * 2)(
             *(Array(f32, 2, "C"),) * 9, Array(i64, 2, "C"), f32, i64
         ),
-        Tuple((Array(f64, 2, "C"),) * 2 + (Array(i64, 2, "C"),) * 2)(
+        Tuple((Array(f64, 2, "C"),) * 5 + (Array(i64, 2, "C"),) * 2)(
             *(Array(f64, 2, "C"),) * 9, Array(i64, 2, "C"), f64, i64
         ),
     ],
@@ -569,7 +603,15 @@ def run_stic_model(
     valid: npt.NDArray,
     threshold: float,
     nb_steps: int,
-) -> tuple[npt.NDArray, npt.NDArray, npt.NDArray, npt.NDArray]:
+) -> tuple[
+    npt.NDArray,
+    npt.NDArray,
+    npt.NDArray,
+    npt.NDArray,
+    npt.NDArray,
+    npt.NDArray,
+    npt.NDArray,
+]:
     """
     STIC model calculation function
 
@@ -605,13 +647,16 @@ def run_stic_model(
     Returns
     -------
     res: tuple[float]
-        Output arrays (LE, EF, flags)
+        Output arrays (LE, EF, ET, E, T, flags)
     """
 
     # Output array creation
     shape = ts.shape
     le_arr = np.empty_like(ts)
     ef_arr = np.empty_like(ts)
+    e_interception_arr = np.empty_like(ts)
+    e_soil_arr = np.empty_like(ts)
+    t_arr = np.empty_like(ts)
     converged_arr = np.empty_like(ts, dtype=i64)
     stressed_arr = np.empty_like(ts, dtype=i64)
     # Pixel loop
@@ -622,6 +667,9 @@ def run_stic_model(
                     le_arr[i, j],
                     _,
                     ef_arr[i, j],
+                    e_interception_arr[i, j],
+                    e_soil_arr[i, j],
+                    t_arr[i, j],
                     _,
                     _,
                     _,
@@ -647,16 +695,30 @@ def run_stic_model(
                 (
                     le_arr[i, j],
                     ef_arr[i, j],
+                    e_interception_arr[i, j],
+                    e_soil_arr[i, j],
+                    t_arr[i, j],
                     converged_arr[i, j],
                     stressed_arr[i, j],
                 ) = (
+                    np.nan,
+                    np.nan,
+                    np.nan,
                     np.nan,
                     np.nan,
                     0,
                     0,
                 )
 
-    return le_arr, ef_arr, converged_arr, stressed_arr
+    return (
+        le_arr,
+        ef_arr,
+        e_interception_arr,
+        e_soil_arr,
+        t_arr,
+        converged_arr,
+        stressed_arr,
+    )
 
 
 @njit(
@@ -679,35 +741,50 @@ def run_batch_stic_model(
 
     """
     n = data.shape[0]
-    out = np.empty((n, 10), dtype=data.dtype)
+    out = np.empty((n, 13), dtype=data.dtype)
 
     for i in prange(n):
-        (le, h, ef, g, ga, gs, t0, m, converged, stressed) = (
-            run_stic_model_pixel(
-                ts=data[i, 0],
-                ta=data[i, 1],
-                td=data[i, 2],
-                rh=data[i, 3],
-                fc=data[i, 4],
-                lai=data[i, 5],
-                rn=data[i, 6],
-                ln=data[i, 7],
-                local_time=data[i, 8],
-                threshold=threshold,
-                nb_steps=nb_steps,
-                debug=debug,
-            )
+        (
+            le,
+            h,
+            ef,
+            e_interception,
+            e_soil,
+            t,
+            g,
+            ga,
+            gs,
+            t0,
+            m,
+            converged,
+            stressed,
+        ) = run_stic_model_pixel(
+            ts=data[i, 0],
+            ta=data[i, 1],
+            td=data[i, 2],
+            rh=data[i, 3],
+            fc=data[i, 4],
+            lai=data[i, 5],
+            rn=data[i, 6],
+            ln=data[i, 7],
+            local_time=data[i, 8],
+            threshold=threshold,
+            nb_steps=nb_steps,
+            debug=debug,
         )
         out[i, 0] = le
         out[i, 1] = h
         out[i, 2] = ef
-        out[i, 3] = g
-        out[i, 4] = ga
-        out[i, 5] = gs
-        out[i, 6] = t0
-        out[i, 7] = m
-        out[i, 8] = converged
-        out[i, 9] = stressed
+        out[i, 3] = e_interception
+        out[i, 4] = e_soil
+        out[i, 5] = t
+        out[i, 6] = g
+        out[i, 7] = ga
+        out[i, 8] = gs
+        out[i, 9] = t0
+        out[i, 10] = m
+        out[i, 11] = converged
+        out[i, 12] = stressed
 
     return out
 

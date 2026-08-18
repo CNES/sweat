@@ -36,32 +36,38 @@ from sweat.stic.models.v1_4.model import (
         "nb_steps",
         "le_expected",
         "ef_expected",
+        "e_interception_expected",
+        "e_soil_expected",
+        "t_expected",
         "converged_expected",
         "stressed_expected",
     ),
     [
         pytest.param(
-            30,
-            25,
-            19,
-            69.36,
-            0.86,
-            4,
-            300,
-            100,
+            34.35,
+            31.575,
+            20.51,
+            52.0,
+            0.54,
+            1.61,
+            529.72,
+            -89.6,
+            0.336,
+            0.226,
+            0.112,
+            0.0,
             0.5,
-            0.3,
-            0.8,
-            0.8,
-            0.8,
-            0.8,
-            0.8,
-            0.9,
-            20000,
+            0.46,
+            0.02,
+            0.98,
+            38440,
             0.01,
             15,
-            210.528,
-            0.69,
+            422.30,
+            0.83,
+            68.33,
+            45.11,
+            308.86,
             True,
             False,
         ),
@@ -89,36 +95,46 @@ def test_run_stic_model_pixel(
     nb_steps,
     le_expected,
     ef_expected,
+    e_interception_expected,
+    e_soil_expected,
+    t_expected,
     converged_expected,
     stressed_expected,
 ) -> None:
     """
     Test function for STIC model calculation function for a single pixel
     """
-    le, _, ef, _, _, _, _, _, converged, stressed = run_stic_model_pixel(
-        lst,
-        ta,
-        td,
-        rh,
-        fc,
-        lai,
-        rn,
-        ln,
-        nir,
-        swir,
-        vari_green,
-        gli,
-        ndvi,
-        gndvi,
-        msavi,
-        emis,
-        local_time,
-        threshold,
-        nb_steps,
-        debug=False,
+    le, _, ef, e_interception, e_soil, t, _, _, _, _, _, converged, stressed = (
+        run_stic_model_pixel(
+            lst,
+            ta,
+            td,
+            rh,
+            fc,
+            lai,
+            rn,
+            ln,
+            nir,
+            swir,
+            vari_green,
+            gli,
+            ndvi,
+            gndvi,
+            msavi,
+            emis,
+            local_time,
+            threshold,
+            nb_steps,
+            debug=False,
+        )
     )
     np.testing.assert_almost_equal(le, le_expected, decimal=2)
     np.testing.assert_almost_equal(ef, ef_expected, decimal=2)
+    np.testing.assert_almost_equal(
+        e_interception, e_interception_expected, decimal=2
+    )
+    np.testing.assert_almost_equal(e_soil, e_soil_expected, decimal=2)
+    np.testing.assert_almost_equal(t, t_expected, decimal=2)
     np.testing.assert_equal(converged, converged_expected)
     np.testing.assert_equal(stressed, stressed_expected)
 
@@ -148,35 +164,41 @@ def test_run_stic_model_pixel(
         "nb_steps",
         "le_expected",
         "ef_expected",
+        "e_interception_expected",
+        "e_soil_expected",
+        "t_expected",
         "converged_expected",
         "stressed_expected",
     ),
     [
         pytest.param(
-            np.array([[30.0, 30.0], [30.0, 30.0]], dtype=np.float32),
-            np.array([[25, 25], [25, 25]], dtype=np.float32),
-            np.array([[19, 19], [19, 19]], dtype=np.float32),
-            np.array([[69.36, 69.36], [69.36, 69.36]], dtype=np.float32),
-            np.array([[0.86, 0.86], [0.86, 0.86]], dtype=np.float32),
-            np.array([[4, 4], [4, 4]], dtype=np.float32),
-            np.array([[300, 300], [300, 300]], dtype=np.float32),
-            np.array([[100, 100], [100, 100]], dtype=np.float32),
-            np.array([[0.5, 0.5], [0.5, 0.5]], dtype=np.float32),
-            np.array([[0.3, 0.3], [0.3, 0.3]], dtype=np.float32),
-            np.array([[0.8, 0.8], [0.8, 0.8]], dtype=np.float32),
-            np.array([[0.8, 0.8], [0.8, 0.8]], dtype=np.float32),
-            np.array([[0.8, 0.8], [0.8, 0.8]], dtype=np.float32),
-            np.array([[0.8, 0.8], [0.8, 0.8]], dtype=np.float32),
-            np.array([[0.8, 0.8], [0.8, 0.8]], dtype=np.float32),
-            np.array([[0.9, 0.9], [0.9, 0.9]], dtype=np.float32),
-            np.array([[20000, 20000], [20000, 20000]], dtype=np.float32),
-            np.array([[1, 1], [1, 1]], dtype=np.int64),
+            np.full((2, 2), 34.35, dtype=np.float32),
+            np.full((2, 2), 31.575, dtype=np.float32),
+            np.full((2, 2), 20.51, dtype=np.float32),
+            np.full((2, 2), 52.0, dtype=np.float32),
+            np.full((2, 2), 0.54, dtype=np.float32),
+            np.full((2, 2), 1.61, dtype=np.float32),
+            np.full((2, 2), 529.72, dtype=np.float32),
+            np.full((2, 2), -89.6, dtype=np.float32),
+            np.full((2, 2), 0.336, dtype=np.float32),
+            np.full((2, 2), 0.226, dtype=np.float32),
+            np.full((2, 2), 0.112, dtype=np.float32),
+            np.full((2, 2), 0.0, dtype=np.float32),
+            np.full((2, 2), 0.5, dtype=np.float32),
+            np.full((2, 2), 0.46, dtype=np.float32),
+            np.full((2, 2), 0.02, dtype=np.float32),
+            np.full((2, 2), 0.98, dtype=np.float32),
+            np.full((2, 2), 38440, dtype=np.float32),
+            np.ones((2, 2), dtype=np.int64),
             0.01,
             15,
-            np.array([[210.528, 210.528], [210.528, 210.528]]),
-            np.array([[0.69, 0.69], [0.69, 0.69]]),
-            np.array([[True, True], [True, True]]),
-            np.array([[False, False], [False, False]]),
+            np.full((2, 2), 422.30, dtype=np.float32),
+            np.full((2, 2), 0.83, dtype=np.float32),
+            np.full((2, 2), 68.33, dtype=np.float32),
+            np.full((2, 2), 45.11, dtype=np.float32),
+            np.full((2, 2), 308.86, dtype=np.float32),
+            np.full((2, 2), True, dtype=bool),
+            np.full((2, 2), False, dtype=bool),
         ),
     ],
 )
@@ -203,13 +225,16 @@ def test_run_stic_model(
     nb_steps,
     le_expected,
     ef_expected,
+    e_interception_expected,
+    e_soil_expected,
+    t_expected,
     converged_expected,
     stressed_expected,
 ) -> None:
     """
     Test function for STIC model calculation function (raster mode)
     """
-    le, ef, cv, st = run_stic_model(
+    le, ef, e_interception, e_soil, t, cv, st = run_stic_model(
         lst,
         ta,
         td,
@@ -233,6 +258,11 @@ def test_run_stic_model(
     )
     np.testing.assert_almost_equal(le, le_expected, decimal=2)
     np.testing.assert_almost_equal(ef, ef_expected, decimal=2)
+    np.testing.assert_almost_equal(
+        e_interception, e_interception_expected, decimal=2
+    )
+    np.testing.assert_almost_equal(e_soil, e_soil_expected, decimal=2)
+    np.testing.assert_almost_equal(t, t_expected, decimal=2)
     np.testing.assert_equal(cv, converged_expected)
     np.testing.assert_equal(st, stressed_expected)
 
@@ -251,31 +281,31 @@ def test_run_stic_model(
             np.array(
                 [
                     [
-                        30.0,
-                        25,
-                        19,
-                        69.36,
-                        0.86,
-                        4,
-                        300,
-                        100,
+                        34.35,
+                        31.575,
+                        20.51,
+                        52.0,
+                        0.54,
+                        1.61,
+                        529.72,
+                        -89.6,
+                        0.336,
+                        0.226,
+                        0.112,
+                        0.0,
                         0.5,
-                        0.3,
-                        0.8,
-                        0.8,
-                        0.8,
-                        0.8,
-                        0.8,
-                        0.9,
-                        20000,
+                        0.46,
+                        0.02,
+                        0.98,
+                        38440,
                     ]
                 ],
                 dtype=np.float32,
             ),
             0.01,
             15,
-            210.528,
-            0.69,
+            422.30,
+            0.83,
         ),
     ],
 )
@@ -290,7 +320,7 @@ def test_run_batch_stic_model(
     Test function for STIC model calculation function (batch mode)
     """
     res = run_batch_stic_model(data, threshold, nb_steps, debug=False)
-    assert res.shape == (1, 10)
+    assert res.shape == (1, 13)
     np.testing.assert_almost_equal(res[0, 0], le_expected, decimal=2)
     np.testing.assert_almost_equal(res[0, 2], ef_expected, decimal=2)
 
@@ -306,28 +336,28 @@ def test_run_batch_stic_model(
             np.array(
                 [
                     [
-                        30.0,
-                        25,
-                        19,
-                        69.36,
-                        0.86,
-                        4,
-                        300,
-                        100,
+                        34.35,
+                        31.575,
+                        20.51,
+                        52.0,
+                        0.54,
+                        1.61,
+                        529.72,
+                        -89.6,
+                        0.336,
+                        0.226,
+                        0.112,
+                        0.0,
                         0.5,
-                        0.3,
-                        0.8,
-                        0.8,
-                        0.8,
-                        0.8,
-                        0.8,
-                        0.9,
-                        20000,
+                        0.46,
+                        0.02,
+                        0.98,
+                        38440,
                     ]
                 ],
                 dtype=np.float32,
             ),
-            210.142,
+            417.97,
         ),
     ],
 )

@@ -257,12 +257,14 @@ def run(
         flags_arr = np.ones_like(data[ETVar.LST.value].data, dtype=FLAGS_TYPE)
 
     # Run STIC main loop
-    le_arr, ef_arr, converged_arr, _ = run_model(
-        data=data,
-        valid=valid_arr,
-        threshold=threshold,
-        nb_steps=nb_steps,
-        version=version,
+    le_arr, ef_arr, e_interception_arr, e_soil_arr, t_arr, converged_arr, _ = (
+        run_model(
+            data=data,
+            valid=valid_arr,
+            threshold=threshold,
+            nb_steps=nb_steps,
+            version=version,
+        )
     )
     converged_arr = converged_arr.astype(np.int64)
     et_arr = compute_et_from_le(le_arr)
@@ -270,6 +272,9 @@ def run(
     le_arr[converged_arr == 0] = np.nan
     et_arr[converged_arr == 0] = np.nan
     ef_arr[converged_arr == 0] = np.nan
+    e_interception_arr[converged_arr == 0] = np.nan
+    e_soil_arr[converged_arr == 0] = np.nan
+    t_arr[converged_arr == 0] = np.nan
     flags_arr = np.where(
         converged_arr == 0,
         flags_arr | MSK_PROCESSING_FAILED,
@@ -283,6 +288,9 @@ def run(
             ETVar.LE.value: (dims, le_arr),
             ETVar.ET.value: (dims, et_arr),
             ETVar.EF.value: (dims, ef_arr),
+            ETVar.EVAPORATION_INTERCEPTION.value: (dims, e_interception_arr),
+            ETVar.EVAPORATION_SOIL.value: (dims, e_soil_arr),
+            ETVar.TRANSPIRATION.value: (dims, t_arr),
             ETVar.UNCERTAINTY_LE.value: (dims, np.zeros_like(le_arr)),
             ETVar.UNCERTAINTY_ET.value: (dims, np.zeros_like(et_arr)),
             ETVar.UNCERTAINTY_EF.value: (dims, np.zeros_like(ef_arr)),

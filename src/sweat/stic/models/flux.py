@@ -20,6 +20,37 @@ TG_MAX = 100000  # for dry surface
 
 
 @njit(
+    [f32(*(f32,) * 2), f64(*(f64,) * 2)],
+    nogil=True,
+    cache=True,
+)
+def compute_rn_soil_flux(
+    rn: float,
+    lai: float,
+) -> float:
+    """
+    Compute net radiation from soil
+
+    Parameters
+    ----------
+    rn : float
+        Net radiation
+    lai : float
+        Leaf Area Index
+    local_time : float
+        Local time in seconds
+    m : float
+        Surface moisture
+
+    Returns
+    -------
+    g_flux : float
+        G flux
+    """
+    return rn * np.exp(-KRN * lai)
+
+
+@njit(
     [f32(*(f32,) * 4), f64(*(f64,) * 4)],
     nogil=True,
     cache=True,

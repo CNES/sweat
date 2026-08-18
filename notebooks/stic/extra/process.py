@@ -8,7 +8,6 @@ import datetime as dt
 import numpy as np
 import pandas as pd
 
-from sweat.common.flux import compute_et_from_le
 from sweat.stic.models.flux import (
     compute_omega_stressed,
     compute_omega_unstressed,
@@ -79,27 +78,28 @@ def run_stic(df: pd.DataFrame, version: str) -> pd.DataFrame:
             "le": res[:, 0],
             "h": res[:, 1],
             "ef": res[:, 2],
-            "g": res[:, 3],
+            "e_interception": res[:, 3],
+            "e_soil": res[:, 4],
+            "t": res[:, 5],
+            "g": res[:, 6],
             "rn": df["rn"].values,
             "srn": df["srn"].values,
             "ta": df["ta"].values,
             "td": df["td"].values,
             "rh": df["rh"].values,
             "ts": df["ts"].values,
-            "ga": res[:, 4],
-            "gs": res[:, 5],
-            "t0": res[:, 6],
-            "m": res[:, 7],
-            "converged": res[:, 8],
-            "stressed": res[:, 9],
+            "ga": res[:, 7],
+            "gs": res[:, 8],
+            "t0": res[:, 9],
+            "m": res[:, 10],
+            "converged": res[:, 11],
+            "stressed": res[:, 12],
         }
     )
     output_df[["converged", "stressed"]] = output_df[
         ["converged", "stressed"]
     ].astype(int)
-    output_df["et"] = output_df.apply(
-        lambda x: compute_et_from_le(x["le"]), axis=1
-    )
+    output_df["e"] = output_df["e_interception"] + output_df["e_soil"]
     output_df["rn-g"] = output_df["rn"] - output_df["g"]
     output_df["diff_le"] = output_df["le"] - df["ec_le"]
     output_df["diff_le_closed"] = output_df["le"] - df["ec_le_closed"]
