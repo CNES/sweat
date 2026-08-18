@@ -294,3 +294,24 @@ output_dir/
 ├── debug
 └── et_timeseries_YYYYMMDD.tif
 ```
+
+### Flag description
+
+| Bit | Description |
+|-----|-------------|
+| 0   | `PROCESSING_FAILED`: a flag to indicate if the processing failed |
+| 1   | `RADIATION_MISSING`: a flag to indicate if radiation data is missing, this implies that processing failed |
+| 2   | `AUX_DATA_MISSING`: a flag to indicate if auxiliary data is missing, this implies that processing failed |
+| 3   | `FILTERED`: a flag to indicate if data is filtered, this implies that processing failed |
+| 4   | `UPDATED`: a flag to indicate if data has been updated |
+| 5 to 7 | `STATE`: to indicate the state: valid, interpolated, forward extrapolated, backward extrapolated, invalid, no data |
+| 8 to 15 | `DISTANCE`: the difference between the two dates used for interpolation or the difference with the date used for extrapolation |
+
+Available states:
+
+- `0`: acquisition
+- `1`: interpolation
+- `2`: forward extrapolation
+- `3`: backward extrapolation
+- `6`: invalid
+- `7`: n odata
