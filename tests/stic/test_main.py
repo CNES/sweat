@@ -1,7 +1,7 @@
 # Copyright: (c) 2025 CESBIO / Centre National d'Etudes Spatiales
 
 import datetime as dt
-import warnings
+from typing import cast
 
 import numpy as np
 import pytest
@@ -24,6 +24,7 @@ def setup_data(
     rn: tuple[float, float],
     ln: tuple[float, float],
     local_time: tuple[float, float],
+    reflectances: tuple[float, float],
     valid: tuple[float, float],
     size: int = 4,
     seed: int = 0,
@@ -62,6 +63,21 @@ def setup_data(
     localtime_arr = np.random.uniform(
         low=local_time[0], high=local_time[1], size=(size, size)
     )
+    blue_arr = np.random.uniform(
+        low=reflectances[0], high=reflectances[1], size=(size, size)
+    )
+    green_arr = np.random.uniform(
+        low=reflectances[0], high=reflectances[1], size=(size, size)
+    )
+    red_arr = np.random.uniform(
+        low=reflectances[0], high=reflectances[1], size=(size, size)
+    )
+    nir_arr = np.random.uniform(
+        low=reflectances[0], high=reflectances[1], size=(size, size)
+    )
+    swir_arr = np.random.uniform(
+        low=reflectances[0], high=reflectances[1], size=(size, size)
+    )
     data_vars = {
         ETVar.LST.value: (["y", "x"], lst_arr),
         ETVar.ALBEDO.value: (["y", "x"], albedo_arr),
@@ -77,6 +93,11 @@ def setup_data(
         ETVar.NET_RADIATION.value: (["y", "x"], rn_arr),
         ETVar.LONGWAVE_NET_RADIATION.value: (["y", "x"], ln_arr),
         ETVar.LOCAL_TIME.value: (["y", "x"], localtime_arr),
+        ETVar.BLUE.value: (["y", "x"], blue_arr),
+        ETVar.GREEN.value: (["y", "x"], green_arr),
+        ETVar.RED.value: (["y", "x"], red_arr),
+        ETVar.NIR.value: (["y", "x"], nir_arr),
+        ETVar.SWIR.value: (["y", "x"], swir_arr),
         "valid": (["y", "x"], valid_arr),
     }
     return xr.Dataset(
@@ -96,7 +117,11 @@ def setup_data(
 @pytest.mark.functional
 @pytest.mark.parametrize(
     "version",
-    [None, "1.3", "1.4"],
+    [
+        pytest.param(None, id="default"),
+        pytest.param("1.3", id="1.3"),
+        pytest.param("1.4", id="1.4"),
+    ],
 )
 def test_prepare(version):
     """
@@ -229,6 +254,14 @@ def test_prepare_with_radiation_selection(
         "lai",
         "rn",
         "ln",
+        "nir",
+        "swir",
+        "vari_green",
+        "gli",
+        "ndvi",
+        "gndvi",
+        "msavi",
+        "emis",
         "local_time",
         "threshold",
         "nb_steps",
@@ -238,24 +271,58 @@ def test_prepare_with_radiation_selection(
     ),
     [
         pytest.param(
-            np.array([[30.0, 30.0], [30.0, 30.0]], dtype=np.float32),
-            np.array([[25, 25], [25, 25]], dtype=np.float32),
-            np.array([[19, 19], [19, 19]], dtype=np.float32),
-            np.array([[69.36, 69.36], [69.36, 69.36]], dtype=np.float32),
-            np.array([[0.86, 0.86], [0.86, 0.86]], dtype=np.float32),
-            np.array([[4, 4], [4, 4]], dtype=np.float32),
-            np.array([[300, 300], [300, 300]], dtype=np.float32),
-            np.array([[100, 100], [100, 100]], dtype=np.float32),
-            np.array([[20000, 20000], [20000, 20000]], dtype=np.float32),
+            np.full((2, 2), 34.35, dtype=np.float32),
+            np.full((2, 2), 31.575, dtype=np.float32),
+            np.full((2, 2), 20.51, dtype=np.float32),
+            np.full((2, 2), 52.0, dtype=np.float32),
+            np.full((2, 2), 0.54, dtype=np.float32),
+            np.full((2, 2), 1.61, dtype=np.float32),
+            np.full((2, 2), 529.72, dtype=np.float32),
+            np.full((2, 2), -89.6, dtype=np.float32),
+            np.full((2, 2), np.nan, dtype=np.float32),
+            np.full((2, 2), np.nan, dtype=np.float32),
+            np.full((2, 2), np.nan, dtype=np.float32),
+            np.full((2, 2), np.nan, dtype=np.float32),
+            np.full((2, 2), np.nan, dtype=np.float32),
+            np.full((2, 2), np.nan, dtype=np.float32),
+            np.full((2, 2), np.nan, dtype=np.float32),
+            np.full((2, 2), np.nan, dtype=np.float32),
+            np.full((2, 2), 38440, dtype=np.float32),
             0.01,
             15,
             "1.3",
-            np.array([[210.53, 210.53], [210.53, 210.53]]),
-            np.array([[0.6925, 0.6925], [0.6925, 0.6925]]),
+            np.full((2, 2), 241.79, dtype=np.float32),
+            np.full((2, 2), 0.49, dtype=np.float32),
+            id="1.3",
+        ),
+        pytest.param(
+            np.full((2, 2), 34.35, dtype=np.float32),
+            np.full((2, 2), 31.575, dtype=np.float32),
+            np.full((2, 2), 20.51, dtype=np.float32),
+            np.full((2, 2), 52.0, dtype=np.float32),
+            np.full((2, 2), 0.54, dtype=np.float32),
+            np.full((2, 2), 1.61, dtype=np.float32),
+            np.full((2, 2), 529.72, dtype=np.float32),
+            np.full((2, 2), -89.6, dtype=np.float32),
+            np.full((2, 2), 0.336, dtype=np.float32),
+            np.full((2, 2), 0.226, dtype=np.float32),
+            np.full((2, 2), 0.112, dtype=np.float32),
+            np.full((2, 2), 0.0, dtype=np.float32),
+            np.full((2, 2), 0.5, dtype=np.float32),
+            np.full((2, 2), 0.46, dtype=np.float32),
+            np.full((2, 2), 0.02, dtype=np.float32),
+            np.full((2, 2), 0.98, dtype=np.float32),
+            np.full((2, 2), 38440, dtype=np.float32),
+            0.01,
+            15,
+            "1.4",
+            np.full((2, 2), 422.30, dtype=np.float32),
+            np.full((2, 2), 0.83, dtype=np.float32),
+            id="1.4",
         ),
     ],
 )
-def test_run_stic_model(
+def test_run(
     ts,
     ta,
     td,
@@ -264,6 +331,14 @@ def test_run_stic_model(
     lai,
     rn,
     ln,
+    nir,
+    swir,
+    vari_green,
+    gli,
+    ndvi,
+    gndvi,
+    msavi,
+    emis,
     local_time,
     threshold,
     nb_steps,
@@ -285,6 +360,14 @@ def test_run_stic_model(
             ETVar.NET_RADIATION.value: (["y", "x"], rn),
             ETVar.LONGWAVE_NET_RADIATION.value: (["y", "x"], ln),
             ETVar.LOCAL_TIME.value: (["y", "x"], local_time),
+            ETVar.NIR.value: (["y", "x"], nir),
+            ETVar.SWIR.value: (["y", "x"], swir),
+            ETVar.VARI.value: (["y", "x"], vari_green),
+            ETVar.GLI.value: (["y", "x"], gli),
+            ETVar.NDVI.value: (["y", "x"], ndvi),
+            ETVar.GNDVI.value: (["y", "x"], gndvi),
+            ETVar.MSAVI.value: (["y", "x"], msavi),
+            ETVar.EMISSIVITY.value: (["y", "x"], emis),
         },
         coords={
             "y": ("y", np.array([0, 1])),
@@ -297,33 +380,7 @@ def test_run_stic_model(
     )
     np.testing.assert_almost_equal(res["le"], le_expected, decimal=2)
     np.testing.assert_almost_equal(res["ef"], ef_expected, decimal=2)
-
-
-@pytest.mark.functional
-@pytest.mark.parametrize(("version"), ["1.3"])
-def test_run(version):
-    """
-    Test function for STIC run function
-    """
-    warnings.filterwarnings("error")
-    data = setup_data(
-        lst=(20, 30),
-        albedo=(0.2, 0.4),
-        temperature=(15, 25),
-        dewpoint_temperature=(12, 19),
-        rh=(0.4, 0.6),
-        fcover=(0.4, 0.7),
-        lai=(1, 4),
-        emissivity=(0.4, 0.7),
-        rn=(300, 300),
-        ln=(50, 50),
-        local_time=(30000, 40000),
-        valid=(0, 1),
-    )
-
-    res = main.run(data, threshold=0.01, nb_steps=15, version=version)
-    assert res
-    assert sorted(res.data_vars) == sorted(
+    assert sorted(cast(list[str], res.data_vars)) == sorted(
         [
             ETVar.LE.value,
             ETVar.ET.value,

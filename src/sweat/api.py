@@ -374,7 +374,6 @@ def run_stic(
     data = stic.prepare(
         data,
         **params_config.prepare.model_dump(),
-        version=params_config.stic.version,
     )
     logger.debug("Prepare input data: OK")
     # Filter data

@@ -144,6 +144,7 @@ def test_filter_data_for_evaspa():
                 },
             },
             None,
+            id="default",
         ),
         pytest.param(
             {
@@ -208,6 +209,7 @@ def test_filter_data_for_evaspa():
                 "waterstress": {"method": "ef"},
             },
             None,
+            id="detailed",
         ),
         pytest.param(
             {
@@ -297,6 +299,7 @@ def test_filter_data_for_evaspa():
                 "profile": True,
                 "verbose": False,
             },
+            id="debug",
         ),
     ],
 )
@@ -329,38 +332,65 @@ def test_run_evaspa(entry, params, debug) -> None:
             },
             {},
             None,
+            id="default",
         ),
         pytest.param(
             {
                 "path": "tests/data/data_test_20230303T112730.tif",
                 "date": "2023-03-03T11:27:30-00:00",
             },
-            {
-                "prepare": {"use_topo": True},
-                "filtering": {"tdp": {"op": ">=", "value": -30.0}},
-                "stic": {"threshold": 0.01, "nb_steps": 15},
-                "daily": {"method": "toa", "use_topo": True},
-                "waterstress": {"method": "ef"},
-            },
-            None,
-        ),
-        pytest.param(
-            {
-                "path": "tests/data/data_test_20230303T112730.tif",
-                "date": "2023-03-03T11:27:30-00:00",
-            },
-            {
-                "prepare": {"use_topo": True},
-                "filtering": {"tdp": {"op": ">=", "value": -30.0}},
-                "stic": {"threshold": 0.01, "nb_steps": 15},
-                "daily": {"method": "toa", "use_topo": True},
-                "waterstress": {"method": "ef"},
-            },
+            {},
             {
                 "path": "out/debug",
                 "profile": True,
                 "verbose": False,
             },
+            id="debug",
+        ),
+        pytest.param(
+            {
+                "path": "tests/data/data_test_20230303T112730.tif",
+                "date": "2023-03-03T11:27:30-00:00",
+            },
+            {
+                "prepare": {"use_topo": True},
+                "filtering": {"tdp": {"op": ">=", "value": -30.0}},
+                "stic": {"threshold": 0.01, "nb_steps": 15, "version": "1.3"},
+                "daily": {"method": "toa", "use_topo": True},
+                "waterstress": {"method": "ef"},
+            },
+            None,
+            id="1.3",
+        ),
+        pytest.param(
+            {
+                "path": "tests/data/data_test_20230303T112730.tif",
+                "date": "2023-03-03T11:27:30-00:00",
+            },
+            {
+                "prepare": {"use_topo": True},
+                "filtering": {"tdp": {"op": ">=", "value": -30.0}},
+                "stic": {"threshold": 0.01, "nb_steps": 15, "version": "1.4"},
+                "daily": {"method": "toa", "use_topo": True},
+                "waterstress": {"method": "ef"},
+            },
+            None,
+            id="1.4",
+        ),
+        pytest.param(
+            {
+                "path": "tests/data/data_test_20230303T112730.tif",
+                "date": "2023-03-03T11:27:30-00:00",
+            },
+            {
+                "prepare": {"use_topo": True, "selected_radiation": "msg"},
+                "filtering": {"tdp": {"op": ">=", "value": -30.0}},
+                "stic": {"threshold": 0.01, "nb_steps": 15, "version": "1.4"},
+                "daily": {"method": "toa", "use_topo": True},
+                "waterstress": {"method": "ef"},
+            },
+            None,
+            id="1.4_selected_radiation",
         ),
     ],
 )
@@ -487,6 +517,7 @@ def test_run_stic(entry, params, debug) -> None:
             },
             {},
             None,
+            id="default",
         ),
         pytest.param(
             {
@@ -601,6 +632,7 @@ def test_run_stic(entry, params, debug) -> None:
                 },
             },
             None,
+            id="detailed",
         ),
         pytest.param(
             {
@@ -707,6 +739,7 @@ def test_run_stic(entry, params, debug) -> None:
                 "profile": True,
                 "verbose": False,
             },
+            id="debug",
         ),
     ],
 )

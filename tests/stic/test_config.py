@@ -18,6 +18,7 @@ from sweat.__about__ import __version__
             {
                 "use_topo": False,
                 "selected_radiation": None,
+                "version": None,
             },
         ),
         pytest.param(
@@ -28,15 +29,18 @@ from sweat.__about__ import __version__
             {
                 "use_topo": True,
                 "selected_radiation": "msg",
+                "version": None,
             },
         ),
         pytest.param(
             {
                 "use_topo": True,
+                "version": "1.4",
             },
             {
                 "use_topo": True,
                 "selected_radiation": None,
+                "version": "1.4",
             },
         ),
     ],
@@ -195,13 +199,25 @@ def test_sticmodelconfig_error(config) -> None:
             "daily": {"method": "toa"},
             "waterstress": {"method": "ef"},
         },
+        {
+            "prepare": {"use_topo": True},
+            "filtering": {"cloud": {"op": "!=", "value": 1}},
+            "stic": {"version": "1.4"},
+        },
+        {
+            "prepare": {"version": "1.3"},
+            "filtering": {"cloud": {"op": "!=", "value": 1}},
+            "stic": {"version": "1.4"},
+        },
     ],
 )
 def test_paramsconfig(config) -> None:
     """
     Test STICParamsConfig
     """
-    assert cfg.STICParamsConfig.model_validate(config)
+    checked_config = cfg.STICParamsConfig.model_validate(config)
+    assert checked_config
+    assert checked_config.prepare.version == checked_config.stic.version
 
 
 @pytest.mark.unit

@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import pytest
@@ -23,34 +24,36 @@ def test_read_data_from_file() -> None:
     assert xarr.sizes["x"] == 131
     assert xarr.sizes["y"] == 134
     assert len(xarr) == 26
-    assert sorted(xarr.data_vars) == [
-        "albedo",
-        "aspect",
-        "blue",
-        "cloud",
-        "daily_msg",
-        "emis",
-        "fcover",
-        "fdiff_msg",
-        "green",
-        "height",
-        "lai",
-        "lst",
-        "ndvi",
-        "nir",
-        "qa",
-        "red",
-        "rld_era5",
-        "rld_msg",
-        "rsd_era5",
-        "rsd_msg",
-        "slope",
-        "swir1",
-        "swir2",
-        "ta",
-        "tdp",
-        "water",
-    ]
+    assert sorted(cast(list[str], xarr.data_vars)) == sorted(
+        [
+            "albedo",
+            "aspect",
+            "blue",
+            "cloud",
+            "daily_msg",
+            "emis",
+            "fcover",
+            "fdiff_msg",
+            "green",
+            "height",
+            "lai",
+            "lst",
+            "ndvi",
+            "nir",
+            "qa",
+            "red",
+            "rld_era5",
+            "rld_msg",
+            "rsd_era5",
+            "rsd_msg",
+            "slope",
+            "swir",
+            "swir2",
+            "ta",
+            "tdp",
+            "water",
+        ]
+    )
 
 
 @pytest.mark.unit
@@ -63,34 +66,36 @@ def test_read_data() -> None:
     assert xarr.sizes["x"] == 131
     assert xarr.sizes["y"] == 134
     assert len(xarr) == 26
-    assert sorted(xarr.data_vars) == [
-        "albedo",
-        "aspect",
-        "blue",
-        "cloud",
-        "daily_msg",
-        "emis",
-        "fcover",
-        "fdiff_msg",
-        "green",
-        "height",
-        "lai",
-        "lst",
-        "ndvi",
-        "nir",
-        "qa",
-        "red",
-        "rld_era5",
-        "rld_msg",
-        "rsd_era5",
-        "rsd_msg",
-        "slope",
-        "swir1",
-        "swir2",
-        "ta",
-        "tdp",
-        "water",
-    ]
+    assert sorted(cast(list[str], xarr.data_vars)) == sorted(
+        [
+            "albedo",
+            "aspect",
+            "blue",
+            "cloud",
+            "daily_msg",
+            "emis",
+            "fcover",
+            "fdiff_msg",
+            "green",
+            "height",
+            "lai",
+            "lst",
+            "ndvi",
+            "nir",
+            "qa",
+            "red",
+            "rld_era5",
+            "rld_msg",
+            "rsd_era5",
+            "rsd_msg",
+            "slope",
+            "swir1",
+            "swir2",
+            "ta",
+            "tdp",
+            "water",
+        ]
+    )
 
 
 def setup_data(georef: bool = False) -> xr.Dataset:
@@ -203,7 +208,7 @@ def test_outputconfig(tmp_path) -> None:
 @pytest.mark.unit
 @pytest.mark.parametrize(
     "fmt",
-    ["json","yaml" , "yml"],
+    ["json", "yaml", "yml"],
 )
 def test_outputconfig_valid_extension(fmt, tmp_path) -> None:
     """
@@ -213,6 +218,7 @@ def test_outputconfig_valid_extension(fmt, tmp_path) -> None:
     output = {"path": str(d), "fmt": fmt}
     config = io.OutputConfig.model_validate(output)
     assert config.fmt == fmt
+
 
 @pytest.mark.unit
 @pytest.mark.parametrize("fmt", [".json", ".txt", "invalid", ""])

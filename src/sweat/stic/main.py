@@ -62,7 +62,7 @@ def prepare(
 
     Returns
     -------
-    res: tuple[float]
+    prepared_data: tuple[float]
         Output arrays
     """
     # Default version if needed
@@ -74,7 +74,7 @@ def prepare(
         raise ValueError(msg)
     spec = MODEL_REGISTRY[version]
     # Select radiation
-    rsd_data, rld_data = get_radiation_variables(data)
+    rsd_data, _ = get_radiation_variables(data)
     if selected_radiation is not None:
         if f"{ETVar.RSD.value}_{selected_radiation}" not in rsd_data:
             msg = f"Radiation data {selected_radiation} is missing"
@@ -85,6 +85,16 @@ def prepare(
     else:
         rsd_name = rsd_data[0]
     rld_name = str.replace(rsd_name, ETVar.RSD.value, ETVar.RLD.value, 1)
+    fdiff_name = str.replace(rsd_name, ETVar.RSD.value, ETVar.FDIFF.value, 1)
+    radiation_vars = [
+        v for v in [rsd_name, rld_name, fdiff_name] if v in data.data_vars
+    ]
+    # Add DEM data, if available
+    dem_vars = [
+        d
+        for d in data.data_vars
+        if d in [ETVar.HEIGHT.value, ETVar.SLOPE.value, ETVar.ASPECT.value]
+    ]
     # Check variables
     checked_vars = spec.required_inputs
     # Replace radiation
@@ -99,31 +109,31 @@ def prepare(
             msg = f"Variable {var} is missing in the dataset"
             raise KeyError(msg)
     # Copy
-    new_data = data[checked_vars].copy()
+    prepared_data = data.copy()
     # Extract dimensions, shape, coordinates
-    dims = new_data[ETVar.LST.value].dims
-    coords = new_data[ETVar.LST.value].coords
+    dims = prepared_data[ETVar.LST.value].dims
+    coords = prepared_data[ETVar.LST.value].coords
     # Converting temperature from Kelvin to Celsius degree
-    new_data[ETVar.LST.value] = xr.DataArray(
+    prepared_data[ETVar.LST.value] = xr.DataArray(
         convert_kelvin_to_celsius(data[ETVar.LST.value]),
         dims=dims,
         coords=coords,
     )
-    new_data[ETVar.TEMPERATURE.value] = xr.DataArray(
+    prepared_data[ETVar.TEMPERATURE.value] = xr.DataArray(
         convert_kelvin_to_celsius(data[ETVar.TEMPERATURE.value]),
         dims=dims,
         coords=coords,
     )
-    new_data[ETVar.DEWPOINT_TEMPERATURE.value] = xr.DataArray(
+    prepared_data[ETVar.DEWPOINT_TEMPERATURE.value] = xr.DataArray(
         convert_kelvin_to_celsius(data[ETVar.DEWPOINT_TEMPERATURE.value]),
         dims=dims,
         coords=coords,
     )
     # Converting to relative humidity percentage
-    new_data[ETVar.RH.value] = xr.DataArray(
+    prepared_data[ETVar.RH.value] = xr.DataArray(
         convert_to_rh(
-            t2m=new_data[ETVar.TEMPERATURE.value],
-            d2m=new_data[ETVar.DEWPOINT_TEMPERATURE.value],
+            t2m=prepared_data[ETVar.TEMPERATURE.value],
+            d2m=prepared_data[ETVar.DEWPOINT_TEMPERATURE.value],
         ),
         dims=dims,
         coords=coords,
@@ -137,85 +147,93 @@ def prepare(
         msg = "Coordinate unknown for local time conversion"
         raise ValueError(msg)
     local_time = convert_to_local_time(
-        new_data.attrs["date"],
-        new_data.coords[col],
-        new_data.coords[row],
-        new_data.attrs["crs"],
+        prepared_data.attrs["date"],
+        prepared_data.coords[col],
+        prepared_data.coords[row],
+        prepared_data.attrs["crs"],
     )
-    new_data[ETVar.LOCAL_TIME.value] = ((row, col), local_time)
+    prepared_data[ETVar.LOCAL_TIME.value] = ((row, col), local_time)
     # Compute net radiation
-    rn_xr, ln_xr = create_net_radiation(data, use_topo=use_topo)
+    rn_xr, ln_xr = create_net_radiation(
+        data[
+            [
+                ETVar.LST.value,
+                ETVar.ALBEDO.value,
+                ETVar.EMISSIVITY.value,
+                *radiation_vars,
+                *dem_vars,
+            ]
+        ],
+        use_topo=use_topo,
+    )
     rn_xr = next(iter(rn_xr.data_vars.values()))
     ln_xr = next(iter(ln_xr.data_vars.values()))
-    new_data[ETVar.NET_RADIATION.value] = rn_xr
-    new_data[ETVar.LONGWAVE_NET_RADIATION.value] = ln_xr
+    prepared_data[ETVar.NET_RADIATION.value] = rn_xr
+    prepared_data[ETVar.LONGWAVE_NET_RADIATION.value] = ln_xr
     # Compute vegetation indices
     if (
         ETVar.NDVI.value in spec.inputs
-        and ETVar.NDVI.value not in data.data_vars
+        and ETVar.NDVI.value not in prepared_data.data_vars
     ):
-        new_data[ETVar.NDVI.value] = xr.DataArray(
+        prepared_data[ETVar.NDVI.value] = xr.DataArray(
             utils.compute_ndvi(
-                nir=new_data[ETVar.NIR.value], red=new_data[ETVar.RED.value]
+                nir=prepared_data[ETVar.NIR.value],
+                red=prepared_data[ETVar.RED.value],
             ),
             dims=dims,
             coords=coords,
         )
     if (
         ETVar.GNDVI.value in spec.inputs
-        and ETVar.GNDVI.value not in data.data_vars
+        and ETVar.GNDVI.value not in prepared_data.data_vars
     ):
-        new_data[ETVar.GNDVI.value] = xr.DataArray(
+        prepared_data[ETVar.GNDVI.value] = xr.DataArray(
             utils.compute_gndvi(
-                nir=new_data[ETVar.NIR.value], green=new_data[ETVar.GREEN.value]
+                nir=prepared_data[ETVar.NIR.value],
+                green=prepared_data[ETVar.GREEN.value],
             ),
             dims=dims,
             coords=coords,
         )
-    if ETVar.GLI.value in spec.inputs and ETVar.GLI.value not in data.data_vars:
-        new_data[ETVar.GLI.value] = xr.DataArray(
+    if (
+        ETVar.GLI.value in spec.inputs
+        and ETVar.GLI.value not in prepared_data.data_vars
+    ):
+        prepared_data[ETVar.GLI.value] = xr.DataArray(
             utils.compute_gli(
-                blue=new_data[ETVar.BLUE.value],
-                green=new_data[ETVar.GREEN.value],
-                red=new_data[ETVar.RED.value],
+                blue=prepared_data[ETVar.BLUE.value],
+                green=prepared_data[ETVar.GREEN.value],
+                red=prepared_data[ETVar.RED.value],
             ),
             dims=dims,
             coords=coords,
         )
     if (
         ETVar.VARI.value in spec.inputs
-        and ETVar.VARI.value not in data.data_vars
+        and ETVar.VARI.value not in prepared_data.data_vars
     ):
-        new_data[ETVar.VARI.value] = xr.DataArray(
+        prepared_data[ETVar.VARI.value] = xr.DataArray(
             utils.compute_vari_green(
-                blue=new_data[ETVar.BLUE.value],
-                green=new_data[ETVar.GREEN.value],
-                red=new_data[ETVar.RED.value],
+                blue=prepared_data[ETVar.BLUE.value],
+                green=prepared_data[ETVar.GREEN.value],
+                red=prepared_data[ETVar.RED.value],
             ),
             dims=dims,
             coords=coords,
         )
     if (
         ETVar.MSAVI.value in spec.inputs
-        and ETVar.MSAVI.value not in data.data_vars
+        and ETVar.MSAVI.value not in prepared_data.data_vars
     ):
-        new_data[ETVar.MSAVI.value] = xr.DataArray(
+        prepared_data[ETVar.MSAVI.value] = xr.DataArray(
             utils.compute_msavi(
-                nir=new_data[ETVar.NIR.value], red=new_data[ETVar.RED.value]
+                nir=prepared_data[ETVar.NIR.value],
+                red=prepared_data[ETVar.RED.value],
             ),
             dims=dims,
             coords=coords,
         )
-    # Add DEM data, if available
-    dem_vars = [
-        d
-        for d in data.data_vars
-        if d in [ETVar.HEIGHT.value, ETVar.SLOPE.value, ETVar.ASPECT.value]
-    ]
-    if len(dem_vars) > 0:
-        new_data[dem_vars] = data[dem_vars].copy()
-
-    return new_data
+    return prepared_data
 
 
 def run(

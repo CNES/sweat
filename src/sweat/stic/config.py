@@ -37,6 +37,7 @@ class STICPrepareConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     use_topo: bool = Field(default=False)
     selected_radiation: str | None = Field(default=None)
+    version: str | None = Field(default=None)
 
 
 class STICFilteringConfig(FilteringConfig):
@@ -103,6 +104,20 @@ class STICParamsConfig(BaseModel):
     stic: STICModelConfig = Field(default=STICModelConfig())
     daily: DailyConfig = Field(default=DailyConfig())
     waterstress: WaterStressConfig = Field(default=WaterStressConfig())
+
+    @model_validator(mode="after")
+    def update_model_version(self):
+        """
+        Use model version form STICmodel config
+        """
+        if (
+            self.prepare.version is not None
+            and self.prepare.version != self.stic.version
+        ):
+            msg = "Use STIC model version for data preparation"
+            logger.warning(msg)
+        self.prepare.version = self.stic.version
+        return self
 
 
 class STICInputFile(BaseModel):
