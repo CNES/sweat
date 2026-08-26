@@ -45,14 +45,20 @@ class LoggerManager:
             logging.basicConfig(
                 level=LoggerManager._level,
                 datefmt="%y-%m-%d %H:%M:%S",
-                format="%(asctime)s :: %(levelname)s :: %(message)s",
+                format=(
+                    "%(asctime)s :: %(levelname)s :: %(name)s "
+                    ":: %(funcName)s :: %(message)s"
+                ),
             )
             return logging.getLogger()
         if name not in LoggerManager._loggers:
             logging.basicConfig(
                 level=LoggerManager._level,
                 datefmt="%y-%m-%d %H:%M:%S",
-                format="%(asctime)s :: %(levelname)s :: %(message)s",
+                format=(
+                    "%(asctime)s :: %(levelname)s :: %(name)s "
+                    ":: %(funcName)s :: %(message)s"
+                ),
             )
             LoggerManager._loggers[name] = logging.getLogger(str(name))
         return LoggerManager._loggers[name]
