@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import datetime as dt
+import logging
 
 import numpy as np
 import pytest
 import rasterio as rio
 import rasterio.warp
 import xarray as xr
+from pydantic import ValidationError
 from pyproj import CRS
 from sensorsio.utils import bb_transform
 
@@ -63,6 +65,67 @@ def setup_dataset(
         },
         attrs={"description": "Test data", "crs": crs, "date": date},
     )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "config",
+    [
+        {"method": "toa"},
+        {"method": "geo"},
+        {"method": "toa", "use_topo": True},
+        {"method": "geo", "name": "msg"},
+    ],
+)
+def test_dailyconfig(config) -> None:
+    """
+    Test DailyConfig
+    """
+    assert daily.DailyConfig.model_validate(config)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "config",
+    [
+        {"method": "foo"},
+        {"method": "toa", "foo": True},
+    ],
+)
+def test_dailyconfig_error(config) -> None:
+    """
+    Test DailyConfig with exception raising
+    """
+    with pytest.raises(ValidationError):
+        daily.DailyConfig.model_validate_json(config)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("config", "msg_expected", "config_expected"),
+    [
+        (
+            {"method": "geo", "use_topo": True},
+            "The 'use_topo' parameter is not used with daily method='geo'",
+            {"method": "geo", "name": None},
+        ),
+        (
+            {"method": "toa", "name": "msg"},
+            "The 'name' parameter is not used with daily method='toa'",
+            {"method": "toa", "use_topo": False},
+        ),
+    ],
+)
+def test_dailyconfig_consistency(
+    config, msg_expected, config_expected, caplog
+) -> None:
+    """
+    Test DailyConfig with consistency checking between parameters
+    """
+    caplog.set_level(logging.WARNING)
+    res = daily.DailyConfig.model_validate(config)
+    assert msg_expected in caplog.text
+    assert res.model_dump() == config_expected
 
 
 @pytest.mark.functional
@@ -208,19 +271,50 @@ def test_extrapolate_toa_missing_date():
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
-    ("variables", "method", "use_topo", "expected"),
+    ("variables", "method", "use_topo", "name", "expected"),
     [
-        pytest.param(["var1"], "toa", False, 3),
-        pytest.param(["var1", "var2", "var3"], "toa", True, 5),
-        pytest.param(None, "toa", True, 5),
+        pytest.param(["var1"], "toa", False, None, 3, id="selection_toa"),
+        pytest.param(
+            ["var1", "var2", "var3"],
+            "toa",
+            True,
+            None,
+            5,
+            id="all_toa_use_topo",
+        ),
+        pytest.param(None, "toa", True, None, 5, id="none_toa_use_topo"),
+        pytest.param(
+            ["var1", "var2", "var3"],
+            "geo",
+            False,
+            None,
+            5,
+            id="all_geo_default",
+        ),
+        pytest.param(
+            ["var1", "var2", "var3"], "geo", False, "msg", 5, id="all_geo_msg"
+        ),
     ],
 )
-def test_extrapolate_at_daily_scale(variables, method, use_topo, expected):
+def test_extrapolate_at_daily_scale(
+    variables, method, use_topo, name, expected
+):
     """
     Test extrapolation function at daily scale
     """
     data = setup_dataset(
-        ["var1", "var2", "var3", "height", "slope", "aspect"],
+        [
+            "var1",
+            "var2",
+            "var3",
+            "height",
+            "slope",
+            "aspect",
+            "daily_rsd",
+            "rsd",
+            "daily_msg",
+            "rsd_msg",
+        ],
         dt.datetime(2025, 1, 9, 11, 30, 00, tzinfo=dt.UTC),
         wgs84_bounds=(1.0, 43.0, 2.0, 44.0),
         epsg=32631,
@@ -228,15 +322,13 @@ def test_extrapolate_at_daily_scale(variables, method, use_topo, expected):
         min_value=0,
         size=(200, 100),
     )
-    dem = None
-    if use_topo:
-        dem = data[["height", "slope", "aspect"]]
     res = daily.extrapolate_at_daily_scale(
         data[["var1", "var2", "var3"]],
         variables=variables,
         method=method,
-        dem=dem,
+        extra=data,
         use_topo=use_topo,
+        name=name,
     )
     assert len(res.data_vars) == expected
 
@@ -244,7 +336,7 @@ def test_extrapolate_at_daily_scale(variables, method, use_topo, expected):
 @pytest.mark.unit
 def test_extrapolate_at_daily_scale_without_dem(caplog):
     """
-    Test extrapolation function at daily scale
+    Test extrapolation function at daily scale (toa method)
     """
     caplog.clear()
     data = setup_dataset(
@@ -257,9 +349,57 @@ def test_extrapolate_at_daily_scale_without_dem(caplog):
         size=(200, 100),
     )
     daily.extrapolate_at_daily_scale(
-        data, variables=None, method="toa", dem=None, use_topo=True
+        data, variables=None, method="toa", extra=None, use_topo=True
     )
     assert (
         "No DEM information to compute topographic corrections. "
         "Topographic corrections are disabled." in caplog.text
     )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("extra", "name", "msg_expected"),
+    [
+        pytest.param(
+            False,
+            None,
+            "Impossible to extrapolate because no geostationary is providing",
+            id="no_data",
+        ),
+        pytest.param(
+            True,
+            None,
+            r"Geostationary data \(rsd or/and daily_rsd\) is missing",
+            id="missing_default_data",
+        ),
+        pytest.param(
+            True,
+            "foo",
+            r"Geostationary data \(rsd_foo or/and daily_foo\) is missing",
+            id="missing_data",
+        ),
+    ],
+)
+def test_extrapolate_at_daily_scale_without_data(extra, name, msg_expected):
+    """
+    Test extrapolation function at daily scale with exception raising
+    """
+    data = setup_dataset(
+        ["var1", "var2", "var3", "daily_msg", "rsd_msg"],
+        dt.datetime(2025, 1, 9, 11, 30, 00, tzinfo=dt.UTC),
+        wgs84_bounds=(1.0, 43.0, 2.0, 44.0),
+        epsg=32631,
+        max_value=90,
+        min_value=0,
+        size=(200, 100),
+    )
+    with pytest.raises(ValueError, match=msg_expected):
+        daily.extrapolate_at_daily_scale(
+            data,
+            variables=None,
+            method="geo",
+            extra=data if extra else None,
+            use_topo=False,
+            name=name,
+        )

@@ -6,10 +6,18 @@ Module for daily extrapolation
 from __future__ import annotations
 
 import datetime as dt
+from typing import Literal, Self
 
 import numpy as np
 import xarray as xr
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SerializerFunctionWrapHandler,
+    model_serializer,
+    model_validator,
+)
 
 from sweat.common import solar
 from sweat.common.constant import FLAGS_TYPE, MSK_PROCESSING_FAILED
@@ -29,8 +37,34 @@ class DailyConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    method: str = Field(default="toa")
+    method: Literal["toa", "geo"] = Field(default="toa")
     use_topo: bool = Field(default=False)
+    name: str | None = None
+
+    @model_validator(mode="after")
+    def validate_method_parameters(self) -> Self:
+        if self.method == "toa" and self.name is not None:
+            msg = "The 'name' parameter is not used with daily method='toa'"
+            logger.warning(msg)
+        if self.method == "geo" and self.use_topo:
+            msg = "The 'use_topo' parameter is not used with daily method='geo'"
+            logger.warning(msg)
+        return self
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, serializer: SerializerFunctionWrapHandler):
+        # Get the default serialization
+        data = serializer(self)
+
+        # Remove name if method toa is selected
+        if self.method == "toa":
+            data.pop("name", None)
+
+        # Remove use_topo if method geo is selected
+        if self.method == "geo":
+            data.pop("use_topo", None)
+
+        return data
 
 
 def toa_daily_estimate(
@@ -60,7 +94,7 @@ def toa_daily_estimate(
 
     Returns
     -------
-    daily: xr.DataArray
+    daily: xr.Dataset
         Daily extrapolated data
     """
     # DEM
@@ -111,12 +145,42 @@ def toa_daily_estimate(
     return daily
 
 
+def geo_daily_estimate(
+    data: xr.Dataset, inst_rsd: xr.DataArray, daily_rsd: xr.DataArray
+) -> xr.Dataset:
+    """
+    Estimate daily extrapolation using instantaneous and daily product.
+
+    Parameters
+    ----------
+    data: xr.Dataset
+        Instantaneous data
+    inst_rsd: xr.DataArray
+        Instantaneous radiation product
+    daily_rsd: xr.DataArray
+        Daily radiation product
+
+    Returns
+    -------
+    daily: xr.Dataset
+        Daily extrapolated data
+    """
+    # Initiate dataset
+    daily = data.copy(data=None)
+    daily.attrs = data.attrs.copy()
+    # Compute ratio
+    for var in daily.data_vars:
+        daily[var] = data[var] * daily_rsd / inst_rsd
+    return daily
+
+
 def extrapolate_at_daily_scale(
     data: xr.Dataset,
     variables: list[str] | None = None,
-    dem: xr.Dataset | None = None,
+    extra: xr.Dataset | None = None,
     method: str = "toa",
     use_topo: bool = False,
+    name: str | None = None,
 ) -> xr.Dataset:
     """
     Extrapolate data variables at daily scale.
@@ -137,27 +201,41 @@ def extrapolate_at_daily_scale(
         Instantaneous data
     variables: list[str]
         List of variables to extrapolate.
-    dem: xr.Dataset
-        DEM data
+    extra: xr.Dataset
+        Additional data used to compute the ratio
     method: str
         Method used for extrapolation (default: toa)
     use_topo: bool
         Use topographic corrections
+    name: bool
+        Name to use for radiation product
 
     Returns
     -------
     daily: xr.DataArray
         Daily extrapolated data
     """
+    # Check input dataset
     if len(data.data_vars) == 0:
         msg = "EF dataset empty"
         raise ValueError(msg)
+    # Extract DEM data from extra data
+    dem = None
+    if extra is not None:
+        dem_vars = [
+            d
+            for d in extra.data_vars
+            if d in [ETVar.HEIGHT.value, ETVar.SLOPE.value, ETVar.ASPECT.value]
+        ]
+        if len(dem_vars) > 0:
+            dem = extra[dem_vars]
     if use_topo and dem is None:
         msg = (
             "No DEM information to compute topographic corrections. "
             "Topographic corrections are disabled."
         )
         logger.warning(msg)
+    # Use topography
     if not use_topo:
         dem = None
     # Data selection
@@ -185,6 +263,8 @@ def extrapolate_at_daily_scale(
             next(iter(data.data_vars.values())), dtype=FLAGS_TYPE
         )
     # Extrapolation
+    msg = f"Method used for extrapolation: {method}"
+    logger.debug(msg)
     if method.lower() == "toa":
         if data.attrs.get("date", None) is None:
             msg = (
@@ -198,6 +278,39 @@ def extrapolate_at_daily_scale(
             )[keep],
             date=data.attrs["date"],
             dem=dem,
+        )
+    elif method.lower() == "geo":
+        # Get geostationary data
+        if extra is None:
+            msg = (
+                "Impossible to extrapolate because no geostationary "
+                "is providing"
+            )
+            raise ValueError(msg)
+        inst_rsd_name = ETVar.RSD.value
+        daily_rsd_name = ETVar.DAILY_RSD.value
+        if name is not None:
+            inst_rsd_name = f"{ETVar.RSD.value}_{name}"
+            daily_rsd_name = str.replace(
+                ETVar.DAILY_RSD.value, ETVar.RSD.value, name, 1
+            )
+        msg = f"Use {inst_rsd_name} and {daily_rsd_name} for extrapolation"
+        logger.debug(msg)
+        if (
+            inst_rsd_name not in extra.data_vars
+            and daily_rsd_name not in extra.data_vars
+        ):
+            msg = (
+                f"Geostationary data ({inst_rsd_name} "
+                f"or/and {daily_rsd_name}) is missing"
+            )
+            raise ValueError(msg)
+        daily = geo_daily_estimate(
+            data=data.drop_vars(
+                [ETVar.VALID.value, ETVar.FLAGS.value], errors="ignore"
+            )[keep],
+            inst_rsd=extra[inst_rsd_name],
+            daily_rsd=extra[daily_rsd_name],
         )
     else:
         msg = f"Extrapolation method {method} unknown"
@@ -218,6 +331,9 @@ def extrapolate_at_daily_scale(
         )
 
     # Propagate flags
-    daily[ETVar.VALID.value] = valid
-    daily[ETVar.FLAGS.value] = flags
+    xarr = next(iter(daily.data_vars.values()))
+    daily[ETVar.VALID.value] = xr.where(xarr.isnull(), 1, valid)
+    daily[ETVar.FLAGS.value] = xr.where(
+        xarr.isnull(), flags | FLAGS_TYPE(MSK_PROCESSING_FAILED), flags
+    )
     return daily

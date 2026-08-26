@@ -308,15 +308,6 @@ def run_evaspa(
     )
     logger.debug("Compute LE: OK")
     # Extrapolate at daily scale
-    # Extract DEM data mask
-    dem = None
-    dem_data = [
-        d
-        for d in data.data_vars
-        if d in [ETVar.HEIGHT.value, ETVar.SLOPE.value, ETVar.ASPECT.value]
-    ]
-    if len(dem_data) > 0:
-        dem = data[dem_data]
     daily_xr = daily.extrapolate_at_daily_scale(
         inst_xr,
         variables=[
@@ -325,7 +316,7 @@ def run_evaspa(
             ETVar.UNCERTAINTY_LE.value,
             ETVar.UNCERTAINTY_ET.value,
         ],
-        dem=dem,
+        extra=data,
         **params_config.daily.model_dump(),
     )
     logger.debug("Daily extrapolation: OK")
@@ -389,15 +380,6 @@ def run_stic(
     # Compute instant ET/LE
     inst_xr = stic.run(data, **params_config.stic.model_dump())
     logger.debug("Compute instant ET/LE: OK")
-    # Extract DEM data
-    dem = None
-    dem_data = [
-        d
-        for d in data.data_vars
-        if d in [ETVar.HEIGHT.value, ETVar.SLOPE.value, ETVar.ASPECT.value]
-    ]
-    if len(dem_data) > 0:
-        dem = data[dem_data]
     # Extrapolate at daily scale
     daily_xr = daily.extrapolate_at_daily_scale(
         inst_xr,
@@ -407,7 +389,7 @@ def run_stic(
             ETVar.UNCERTAINTY_LE.value,
             ETVar.UNCERTAINTY_ET.value,
         ],
-        dem=dem,
+        extra=data,
         **params_config.daily.model_dump(),
     )
     logger.debug("Daily extrapolation: OK")

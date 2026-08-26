@@ -17,6 +17,7 @@ class ETVar(Enum):
     ALBEDO = "albedo"
     ASPECT = "aspect"
     BLUE = "blue"
+    DAILY_RSD = "daily_rsd"
     DEWPOINT_TEMPERATURE = "tdp"
     EMISSIVITY = "emis"
     ET = "et"
