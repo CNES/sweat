@@ -242,8 +242,9 @@ This configuration describes the parameters for daily extrapolation processing s
 
 | Name | Description | Type | Mandatory | Default value | Possible value |
 |------|-------------|------|-----------|---------------|----------------|
-| `method` | Method used daily extrapolation | str | no | "toa" | "toa" |
-| `use_topo` | Use topographic corrections for daily extrapolation | bool | no | false | true or false |
+| `method` | Method used daily extrapolation | str | no | "toa" | "toa", "geo" |
+| `use_topo` | Use topographic corrections for daily extrapolation (only with daily method ="toa") | bool | no | false | true or false |
+| `name` | Name of the geostationary product (only with daily method ="geo") | str | no | - | - |
 
 ```json
 {
