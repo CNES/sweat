@@ -4,7 +4,7 @@ description = "Spatial Water stress and Evapotranspiration Assessment for TRISHN
 readme = "README.md"
 version = "0.0.1"
 requires-python = ">=3.12"
-license = "LicenseRef-Public-Domain"
+license = "AGPL-3.0-only"
 keywords = []
 authors = [
   { name = "Emmanuelle Sarrazin", email = "emmanuelle.sarrazin@cnes.fr" },

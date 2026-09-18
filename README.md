@@ -157,3 +157,8 @@ jupyter-lab
 [1]: https://doi.org/10.1016/j.proenv.2013.06.035 "B. Gallego-Elvira et al., EVASPA (EVapotranspiration Assessment from SPAce) Tool: An overview, Procedia Environmental Sciences, Volume 19, 2013."
 
 [2]: https://doi.org/10.1016/j.rse.2013.10.022 "K. Mallick *et al.*, A Surface Temperature Initiated Closure (STIC) for surface energy balance fluxes, Remote Sensing of Environment, Volume 141, 2014."
+
+## License
+
+This project is licensed under the GNU Affero General Public License
+version 3. See [LICENSE](LICENSE) for the full text.

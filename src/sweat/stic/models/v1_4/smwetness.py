@@ -1,4 +1,5 @@
-# Copyright: (c) 2026 CESBIO / Centre National d'Etudes Spatiales
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 CESBIO / Centre National d'Etudes Spatiales
 """
 Module containing functions to compute soil moisture
 for STIC model v1.4
