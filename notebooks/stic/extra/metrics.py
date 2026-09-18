@@ -98,7 +98,7 @@ def compute_metrics(
     """
     measured_arr = np.asarray(measured)
     estimated_arr = np.asarray(estimated)
-    slope, _ = safe_polyfit(measured_arr, estimated_arr)
+    slope, intercept = safe_polyfit(measured_arr, estimated_arr)
     if len(measured_arr - estimated_arr) > 0 and not np.all(
         np.isnan(measured_arr - estimated_arr)
     ):
@@ -136,7 +136,17 @@ def compute_metrics(
         nrmse_mean = np.nan
         nrmse_minmax = np.nan
         nrmse_iq = np.nan
-    return (slope, mbe, mae, rmse, r2, nrmse_mean, nrmse_minmax, nrmse_iq)
+    return (
+        slope,
+        intercept,
+        mbe,
+        mae,
+        rmse,
+        r2,
+        nrmse_mean,
+        nrmse_minmax,
+        nrmse_iq,
+    )
 
 
 def generate_metrics_table(
@@ -175,7 +185,7 @@ def generate_metrics_table(
             est_var = var if "_closed" not in var else var[:-7]
 
             # Compute for the entire group
-            slope, mbe, mae, rmse, r2, nrmse_mean, nrmse_minmax, nrmse_iq = (
+            slope, _, mbe, mae, rmse, r2, nrmse_mean, nrmse_minmax, nrmse_iq = (
                 compute_metrics(
                     measured=group[f"ec_{var}"], estimated=group[est_var]
                 )
@@ -209,6 +219,7 @@ def generate_metrics_table(
                     if len(group_range) > 0:
                         (
                             slope,
+                            _,
                             mbe,
                             mae,
                             rmse,
@@ -253,7 +264,7 @@ def generate_metrics_table(
     # Compute for all
     for var in variables:
         est_var = var if "_closed" not in var else var[:-7]
-        slope, mbe, mae, rmse, r2, nrmse_mean, nrmse_minmax, nrmse_iq = (
+        slope, _, mbe, mae, rmse, r2, nrmse_mean, nrmse_minmax, nrmse_iq = (
             compute_metrics(measured=df[f"ec_{var}"], estimated=df[est_var])
         )
         metrics.append(
@@ -285,6 +296,7 @@ def generate_metrics_table(
                 if len(df_range) > 0:
                     (
                         slope,
+                        _,
                         mbe,
                         mae,
                         rmse,
