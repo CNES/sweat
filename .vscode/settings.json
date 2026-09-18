@@ -69,5 +69,9 @@
   "[jsonc]": {
     "editor.defaultFormatter": "vscode.json-language-features"
   },
-  "jupyter.interactiveWindow.textEditor.magicCommandsAsComments": true
+  "jupyter.interactiveWindow.textEditor.magicCommandsAsComments": true,
+  "jupyter.widgetScriptSources": [
+    "jsdelivr.com",
+    "unpkg.com"
+  ]
 }
