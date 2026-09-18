@@ -17,43 +17,26 @@ from tqdm.autonotebook import tqdm
 
 from sweat.common import utils
 from sweat.common.flux import CST_SB, compute_et_from_le
-from sweat.stic.constant import KELVIN_CST
+from sweat.stic.constant import KELVIN_CST, PSYCHROMETRIC_CST
 from sweat.stic.convert import (
     convert_kelvin_to_celsius,
     convert_to_local_time,
     convert_to_rh,
 )
-from sweat.stic.models.functions import _tetens
+from sweat.stic.models.functions import _tetens, compute_psychrometrics
 
 # Functions for handling EC data
 
 
-def get_code(name: str) -> str:
+def get_code(name_str: str) -> str:
     """
     Get code site from the name
     """
-    m = re.match(r"(US-.*)[_,-].*", name)
-    name = m.group(1) if m else f"US-{name}"
+    m = re.match(r"(US-.*)[_,-].*", name_str)
+    name = m.group(1) if m else f"US-{name_str}"
     if len(name) > 6:
         name = name[0:6]
     return name[:4].upper() + name[4:].lower()
-
-
-def get_ec_data_filename(name: str, root: str) -> str:
-    """
-    Get EC data path for a site
-    """
-    code = get_code(name)
-    files = [
-        f
-        for f in os.listdir(root)
-        if re.match(r"AMF_US-(.*)_BASE_HH_.*\.csv", f)
-    ]
-    for file in files:
-        if code.lower() in file.lower():
-            return os.path.join(root, file)
-    msg = f"File {file} for ground truth data not found"
-    raise OSError(msg)
 
 
 # Functions for handling Ameriflux EC data
@@ -142,7 +125,16 @@ def read_ameriflux_data(name: str) -> pd.DataFrame:
         usecols=(
             lambda col: (
                 col
-                in ["TIMESTAMP_START", "TIMESTAMP_END", "G", "TA", "LE", "H"]
+                in [
+                    "TIMESTAMP_START",
+                    "TIMESTAMP_END",
+                    "G",
+                    "TA",
+                    "LE",
+                    "H",
+                    "WS",
+                    "USTAR",
+                ]
                 or col.startswith(  # type: ignore
                     (
                         "TA_",
@@ -156,6 +148,11 @@ def read_ameriflux_data(name: str) -> pd.DataFrame:
                         "LW_IN",
                         "LW_OUT",
                         "TS",
+                        "SWC",
+                        "VPD",
+                        "GPP",
+                        "WS",
+                        "USTAR",
                     )
                 )
             )
@@ -197,6 +194,16 @@ def read_ameriflux_data(name: str) -> pd.DataFrame:
     df = process_ameriflux_column(df, "TS")
     # RH
     df = process_ameriflux_column(df, "RH")
+    # WS
+    df = process_ameriflux_column(df, "WS", "ws")
+    # U STAR
+    df = process_ameriflux_column(df, "USTAR", "ustar")
+    # Soil Water Content
+    df = process_ameriflux_column(df, "SWC", "swc")
+    # Vapor Pressure Deficit
+    df = process_ameriflux_column(df, "VPD", "vpd")
+    # Gross Primary Production
+    df = process_ameriflux_column(df, "GPP", "gpp")
     # Keep required columns
     df = df[
         [
@@ -213,6 +220,11 @@ def read_ameriflux_data(name: str) -> pd.DataFrame:
             "ta",
             "ts",
             "rh",
+            "ws",
+            "ustar",
+            "swc",
+            "vpd",
+            "gpp",
         ]
     ]
     # Exclude nodata
@@ -236,6 +248,38 @@ def read_ameriflux_data(name: str) -> pd.DataFrame:
         df["rn-g"] = df["rn"] - df["g"]
         # Compute LE closed
         df["le_closed"] = df["rn"] - df["g"] - df["h"]
+        # Compute psychrometric
+        res = df.apply(
+            lambda row: compute_psychrometrics(
+                row["ts"], row["ta"], row["td"], row["rh"]
+            ),
+            axis=1,
+            result_type="expand",
+        )
+        df[["slope", "rho", "cp"]] = res.iloc[:, [4, 9, 10]].to_numpy()
+        # Compute conductance
+        df["ga"] = np.clip(
+            1 / (df["ws"] / df["ustar"] ** 2 + 6.2 * df["ustar"] ** (-2 / 3)),
+            0.0001,
+            0.1,
+        )
+        df["gs"] = np.clip(
+            PSYCHROMETRIC_CST
+            * df["le"]
+            * df["ga"]
+            / (
+                df["slope"] * df["rn-g"]
+                + df["rho"] * df["cp"] * df["vpd"] * df["ga"]
+                - df["le"] * (df["slope"] + PSYCHROMETRIC_CST)
+            ),
+            0.0001,
+            0.1,
+        )
+        df["gs/ga"] = np.clip(df["gs"] / df["ga"], 0, 1)
+        # Temperature difference
+        df["ts-ta"] = df["ts"] - df["ta"]
+        # Process GPP
+        df["gpp"] = df["gpp"].clip(lower=0.0)
     # Keep columns
     return df[
         [
@@ -258,6 +302,15 @@ def read_ameriflux_data(name: str) -> pd.DataFrame:
             "et",
             "rn-g",
             "le_closed",
+            "ws",
+            "ustar",
+            "swc",
+            "vpd",
+            "gpp",
+            "gs",
+            "ga",
+            "gs/ga",
+            "ts-ta",
         ]
     ]
 
@@ -277,7 +330,7 @@ def get_ameriflux_data(df: pd.DataFrame, path: str):
             # Select data for a site
             selected_df = df[df["name"] == site].reset_index(drop=True)
             # Code du site
-            code = get_code(site)
+            code = site
             # Read data
             archive = get_ameriflux_archive(code, path)
             with zipfile.ZipFile(archive, "r") as zip_ref:
@@ -330,7 +383,9 @@ def get_ameriflux_data(df: pd.DataFrame, path: str):
                 "traceback": traceback.format_exc(),
             }
             errors.append(error_info)
+            print(error_info)
             tqdm.write(f"ERROR for site {site}: {e}")
+            return None, None
     if len(errors) > 0:
         print("\n=== ERRORS ENCOUNTERED ===")
         for error in errors:
@@ -420,6 +475,9 @@ def read_fluxnet_hh_data(name: str) -> pd.DataFrame:
                     "TIMESTAMP_END",
                     "LE_CORR",
                     "H_CORR",
+                    "USTAR",
+                    "GPP_NT_VUT_MEAN",
+                    "GPP_NT_VUT_REF",
                 ]
                 or col.startswith(  # type: ignore
                     (
@@ -434,6 +492,11 @@ def read_fluxnet_hh_data(name: str) -> pd.DataFrame:
                         "SW_OUT",
                         "LW_IN_F",
                         "LW_OUT",
+                        "WS_F",
+                        "SWC_F_MDS",
+                        "VPD_F_MDS",
+                        "WS",
+                        "USTAR",
                     )
                 )
             )
@@ -469,6 +532,17 @@ def read_fluxnet_hh_data(name: str) -> pd.DataFrame:
     df = process_fluxnet_column(df, "TS_F_MDS", "ts")
     # RH
     df = process_fluxnet_column(df, "RH", "rh")
+    # Wind speed
+    df = process_fluxnet_column(df, "WS_F", "ws")
+    # U STAR
+    df = process_fluxnet_column(df, "USTAR", "ustar")
+    # Soil Water Content
+    df = process_fluxnet_column(df, "SWC_F_MDS", "swc")
+    # Vapor Pressure Deficit
+    df = process_fluxnet_column(df, "VPD_F_MDS", "vpd")
+    # Gross Primary Production
+    df = process_fluxnet_column(df, "GPP_NT_VUT_MEAN", "gpp_mean")
+    df = process_fluxnet_column(df, "GPP_NT_VUT_REF", "gpp_ref")
     # Keep required columns
     cols = [
         item
@@ -488,6 +562,12 @@ def read_fluxnet_hh_data(name: str) -> pd.DataFrame:
             "rh",
             "le_closed",
             "h_closed",
+            "ws",
+            "ustar",
+            "swc",
+            "vpd",
+            "gpp_mean",
+            "gpp_ref",
         ]
         for item in ([c, f"{c}_qc"] if f"{c}_qc" in df.columns else [c])
     ]
@@ -501,8 +581,12 @@ def read_fluxnet_hh_data(name: str) -> pd.DataFrame:
     with warnings.catch_warnings(action="ignore"):
         # Compute EF
         df["ef"] = df["le"] / (df["h"] + df["le"])
+        df["ef_closed"] = df["le_closed"] / (df["h_closed"] + df["le_closed"])
         # Compute ET
         df["et"] = df.apply(lambda x: compute_et_from_le(x["le"]), axis=1)
+        df["et_closed"] = df.apply(
+            lambda x: compute_et_from_le(x["le_closed"]), axis=1
+        )
         # Compute solar net radiation
         df["srn"] = df["sw_in"] - df["sw_out"]
         # Compute dewpoint temperature
@@ -511,6 +595,41 @@ def read_fluxnet_hh_data(name: str) -> pd.DataFrame:
         df["td"] = 237.3 * np.log(ea / 6.13753) / (17.27 - np.log(ea / 6.13753))
         # Compute Rn - G
         df["rn-g"] = df["rn"] - df["g"]
+        # Compute psychrometric
+        res = df.apply(
+            lambda row: compute_psychrometrics(
+                row["ts"], row["ta"], row["td"], row["rh"]
+            ),
+            axis=1,
+            result_type="expand",
+        )
+        df[["slope", "rho", "cp"]] = res.iloc[:, [4, 9, 10]].to_numpy()
+        # Compute conductance
+        df["ga"] = np.clip(
+            1 / (df["ws"] / df["ustar"] ** 2 + 6.2 * df["ustar"] ** (-2 / 3)),
+            0.0001,
+            0.1,
+        )
+        df["gs"] = np.clip(
+            PSYCHROMETRIC_CST
+            * df["le_closed"]
+            * df["ga"]
+            / (
+                df["slope"] * df["rn-g"]
+                + df["rho"] * df["cp"] * df["vpd"] * df["ga"]
+                - df["le_closed"] * (df["slope"] + PSYCHROMETRIC_CST)
+            ),
+            0.0001,
+            0.1,
+        )
+        df["gs/ga"] = np.clip(df["gs"] / df["ga"], 0, 1)
+        # Temperature difference
+        df["ts-ta"] = df["ts"] - df["ta"]
+        # Process GPP
+        df["gpp_ref"] = df["gpp_ref"].clip(lower=0.0)
+        df["gpp_mean"] = df["gpp_mean"].clip(lower=0.0)
+        df["gpp_ref/gs"] = df["gpp_ref"] / df["gs"]
+        df["gpp_mean/gs"] = df["gpp_mean"] / df["gs"]
     # Keep columns
     cols = [
         item
@@ -535,6 +654,16 @@ def read_fluxnet_hh_data(name: str) -> pd.DataFrame:
             "h_closed",
             "et",
             "rn-g",
+            "ws",
+            "ustar",
+            "swc",
+            "vpd",
+            "gpp_mean",
+            "gpp_ref",
+            "gs",
+            "ga",
+            "gs/ga",
+            "ts-ta",
         ]
         for item in ([c, f"{c}_qc"] if f"{c}_qc" in df.columns else [c])
     ]
@@ -556,7 +685,7 @@ def get_fluxnet_data(df: pd.DataFrame, path: str):
             # Select data for a site
             selected_df = df[df["name"] == site].reset_index(drop=True)
             # Code site
-            code = get_code(site)
+            code = site
             # Read data
             archive = get_fluxnet_archive(code, path)
             with zipfile.ZipFile(archive, "r") as zip_ref:
@@ -699,7 +828,7 @@ def prepare_california_data(df: pd.DataFrame) -> pd.DataFrame:
         axis=1,
     )
     # name
-    output_df["name"] = df["Name"]
+    output_df["name"] = df.apply(lambda row: get_code(row["Name"]), axis=1)
     # lat/lon
     output_df["lon"] = df["Lon"]
     output_df["lat"] = df["Lat"]
@@ -734,7 +863,14 @@ def prepare_california_data(df: pd.DataFrame) -> pd.DataFrame:
     output_df["date"] = pd.to_datetime(
         df["Landsat_overpass"]
     ) + pd.to_timedelta(output_df["local_time"], unit="s")
-
+    # Ration nir/swir
+    output_df["nir/swir"] = np.clip(
+        (output_df["nir"] - output_df["swir"])
+        / (output_df["nir"] + output_df["swir"] + 0.01),
+        -1,
+        1,
+    )
+    output_df["ts-ta"] = output_df["ts"] - output_df["ta"]
     # reorder columns
     return output_df[
         [
@@ -764,6 +900,8 @@ def prepare_california_data(df: pd.DataFrame) -> pd.DataFrame:
             "gndvi",
             "msavi",
             "emis",
+            "nir/swir",
+            "ts-ta",
         ]
     ]
 
@@ -810,7 +948,7 @@ def merge_data(
 
 
 def prepare_ameriflux_data(
-    df: pd.DataFrame, dataset: str = "fl"
+    df: pd.DataFrame, dataset: str | None = None
 ) -> pd.DataFrame:
     """
     Prepare data to run STIC
@@ -821,9 +959,9 @@ def prepare_ameriflux_data(
             "name",
             "lat",
             "lon",
-            "datetime_utc",
+            "date (utc)",
             "local_time",
-            "datetime",
+            "date",
             "elevation",
             "landcover",
             "blue",
@@ -859,11 +997,19 @@ def prepare_ameriflux_data(
                         "am_et",
                         "am_rn-g",
                         "am_le_closed",
+                        "am_gs/ga",
+                        "am_gs",
+                        "am_ga",
+                        "am_ts-ta",
+                        "am_gpp",
+                        "am_ef",
+                        "am_swc",
                     ]
                 ],
             ],
             axis=1,
         )
+        output_df["am_gpp/gs"] = output_df["am_gpp"] / output_df["am_gs"]
         output_df = output_df.rename(
             columns={
                 "am_le": "ec_le",
@@ -880,6 +1026,14 @@ def prepare_ameriflux_data(
                 "am_rh": "rh",
                 "am_rn-g": "ec_rn-g",
                 "am_le_closed": "ec_le_closed",
+                "am_gs/ga": "ec_gs/ga",
+                "am_ga": "ec_ga",
+                "am_gs": "ec_gs",
+                "am_ts-ta": "ec_ts-ta",
+                "am_gpp": "ec_gpp",
+                "am_gpp/gs": "am_gpp/gs",
+                "am_ef": "ec_ef",
+                "am_swc": "ec_swc",
             }
         )
     elif dataset == "fl":
@@ -902,10 +1056,24 @@ def prepare_ameriflux_data(
                         "fl_rh",
                         "fl_le_closed",
                         "fl_rn-g",
+                        "fl_gs/ga",
+                        "fl_ga",
+                        "fl_gs",
+                        "fl_ts-ta",
+                        "fl_gpp_ref",
+                        "fl_gpp_mean",
+                        "fl_ef",
+                        "fl_swc",
                     ]
                 ],
             ],
             axis=1,
+        )
+        output_df["fl_gpp_ref/gs"] = (
+            output_df["fl_gpp_ref"] / output_df["fl_gs"]
+        )
+        output_df["fl_gpp_mean/gs"] = (
+            output_df["fl_gpp_mean"] / output_df["fl_gs"]
         )
         output_df = output_df.rename(
             columns={
@@ -923,9 +1091,19 @@ def prepare_ameriflux_data(
                 "fl_rh": "rh",
                 "fl_rn-g": "ec_rn-g",
                 "fl_le_closed": "ec_le_closed",
+                "fl_gs/ga": "ec_gs/ga",
+                "fl_ga": "ec_ga",
+                "fl_gs": "ec_gs",
+                "fl_ts-ta": "ec_ts-ta",
+                "fl_gpp_ref": "ec_gpp_ref",
+                "fl_gpp_mean": "ec_gpp_mean",
+                "fl_gpp_ref/gs": "ec_gpp_ref/gs",
+                "fl_gpp_mean/gs": "ec_gpp_mean/gs",
+                "fl_ef": "ec_ef",
+                "fl_swc": "ec_swc",
             }
         )
-    else:
+    elif dataset is not None:
         msg = "Dataset unkown"
         raise ValueError(msg)
     # ln
@@ -949,10 +1127,6 @@ def prepare_ameriflux_data(
     )
     output_df["msavi"] = utils.compute_msavi(
         red=output_df["red"], nir=output_df["green"]
-    )
-    # Rename columns
-    output_df = output_df.rename(
-        columns={"datetime": "date", "datetime_utc": "date (utc)"}
     )
     # Remove nan inputs
     output_df = output_df.dropna(
@@ -981,9 +1155,10 @@ def prepare_ameriflux_data(
         ],
         how="any",
     )
-    # reorder columns
-    return output_df[
-        [
+    # reorder columns and select columns
+    exact_columns = [
+        col
+        for col in [
             "name",
             "date",
             "date (utc)",
@@ -1016,5 +1191,90 @@ def prepare_ameriflux_data(
             "ec_le_closed",
             "ec_g",
             "ec_rn-g",
+            "ec_gs/ga",
+            "ec_ga",
+            "ec_gs",
+            "ec_ts-ta",
+            "ec_ef",
+            "ec_swc",
         ]
+        if col in output_df.columns
     ]
+    matching_columns = output_df.columns[
+        output_df.columns.str.contains("gpp", na=False)
+    ].tolist()
+    # Preserve the dataframe's original column order and remove duplicates
+    selected = [
+        col
+        for col in output_df.columns
+        if col in exact_columns or col in matching_columns
+    ]
+
+    return output_df[selected]
+
+
+# Functions for reading input data
+
+
+def read_input_data(filename: str) -> pd.DataFrame:
+    """
+    Read input data
+    """
+    return pd.read_csv(
+        filename,
+        parse_dates=[
+            "date",
+            "datetime_utc",
+            "datetime_local",
+            "landsat_datetime_utc",
+        ],
+    )
+
+
+def prepare_input_data(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Prepare data
+    """
+    # name
+    output_df = df[["site_id"]].rename(columns={"site_id": "name"})
+    # lat/lon
+    output_df["lat"] = df["lat"]
+    output_df["lon"] = df["lon"]
+    # acquisition datetime
+    output_df["date (utc)"] = df["landsat_datetime_utc"].dt.tz_localize(dt.UTC)
+    # local time
+    output_df["local_time"] = output_df[["date (utc)", "lon", "lat"]].apply(
+        lambda row: convert_to_local_time(
+            date=row["date (utc)"],
+            y=row["lat"],
+            x=row["lon"],
+            crs="epsg:4326",
+        ),
+        axis=1,
+    )
+    output_df["date"] = pd.to_datetime(df["date"]) + pd.to_timedelta(
+        output_df["local_time"], unit="s"
+    )
+    # elevation
+    output_df["elevation"] = df["elevation"]
+    # landcover
+    output_df["landcover"] = df["landcover"]
+    # Reflectances
+    output_df["blue"] = df["SR_B2"]
+    output_df["green"] = df["SR_B3"]
+    output_df["red"] = df["SR_B4"]
+    output_df["nir"] = df["SR_B5"]
+    output_df["swir"] = df["SR_B6"]
+    # LST (in Celsius)
+    output_df["ts"] = (
+        df[["LST_K"]]
+        .apply(convert_kelvin_to_celsius)
+        .rename(columns={"LST_K": "ts"})
+    )
+    # fc
+    output_df["fc"] = df["Predicted_FCOVER"]
+    # lai
+    output_df["lai"] = df["Predicted_LAI"]
+
+    # reorder columns
+    return output_df
