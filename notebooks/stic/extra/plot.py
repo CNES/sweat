@@ -11,6 +11,7 @@ import plotly.graph_objects as go
 from IPython.display import clear_output, display
 from plotly.colors import sample_colorscale
 from plotly.subplots import make_subplots
+from scipy.stats import pearsonr
 
 from extra.metrics import compute_metrics, safe_polyfit
 
@@ -144,7 +145,7 @@ def plot_metrics_for_sites(df: pd.DataFrame, variable: str = "le"):
         )
 
         # Metrics
-        slope_m, mbe, mae, rmse, r2, _, _, _ = compute_metrics(
+        slope_m, intercept, mbe, mae, rmse, r2, _, _, _ = compute_metrics(
             measured, estimated
         )
 
@@ -155,6 +156,7 @@ def plot_metrics_for_sites(df: pd.DataFrame, variable: str = "le"):
             yref="y domain",
             text=(
                 f"slope = {slope_m:.2f}<br>"
+                f"intercept = {intercept:.2f}<br>"
                 f"MBE = {mbe:.2f}<br>"
                 f"MAE = {mae:.2f}<br>"
                 f"RMSE = {rmse:.2f}<br>"
@@ -451,6 +453,13 @@ def plot_scatter(
     df: pd.DataFrame | list[pd.DataFrame],
     x: str | None = None,
     y: str | None = None,
+    xrange: tuple[float, float] | None = None,
+    yrange: tuple[float, float] | None = None,
+    width: int = 600,
+    height: int = 600,
+    marker_size: int = 6,
+    font_size: int = 12,
+    use_colors: bool = True,
 ):
     """
     Scatter plot by class
@@ -582,9 +591,11 @@ def plot_scatter(
                         mode="markers",
                         name=site_name,
                         marker={
-                            "size": 6,
+                            "size": marker_size,
                             "opacity": 0.5,
-                            "color": colors[color_idx],
+                            "color": colors[color_idx]
+                            if use_colors
+                            else "blue",
                         },
                         customdata=group["date"],
                         legendgroup=site_name,  # Group legend entries
@@ -667,8 +678,8 @@ def plot_scatter(
                             fig.add_trace(line2)
 
                     # --- Metrics text ---
-                    slope_m, mbe, mae, rmse, r2, _, _, _ = compute_metrics(
-                        x_values, y_values
+                    slope_m, intercept, mbe, mae, rmse, r2, _, _, _ = (
+                        compute_metrics(x_values, y_values)
                     )
 
                     if len(dfs) == 2:
@@ -679,6 +690,7 @@ def plot_scatter(
                             yref="y domain",
                             text=(
                                 f"slope = {slope_m:.2f}<br>"
+                                f"intercept = {intercept:.2f}<br>"
                                 f"MBE = {mbe:.2f}<br>"
                                 f"MAE = {mae:.2f}<br>"
                                 f"RMSE = {rmse:.2f}<br>"
@@ -697,6 +709,7 @@ def plot_scatter(
                             yref="y domain",
                             text=(
                                 f"slope = {slope_m:.2f}<br>"
+                                f"intercept = {intercept:.2f}<br>"
                                 f"MBE = {mbe:.2f}<br>"
                                 f"MAE = {mae:.2f}<br>"
                                 f"RMSE = {rmse:.2f}<br>"
@@ -705,19 +718,101 @@ def plot_scatter(
                             showarrow=False,
                             align="right",
                         )
+                if xrange is not None and yrange is not None:
+                    if len(dfs) == 2:
+                        fig.update_xaxes(range=xrange, row=row, col=col)
+                        fig.update_yaxes(range=yrange, row=row, col=col)
+                    else:
+                        fig.update_xaxes(range=xrange)
+                        fig.update_yaxes(range=yrange)
                 if len(dfs) == 2:
-                    fig.update_xaxes(title_text=xvar, row=row, col=col)
-                    fig.update_yaxes(title_text=yvar, row=row, col=col)
+                    fig.update_xaxes(
+                        title_text=xvar,
+                        row=row,
+                        col=col,
+                        showline=False,
+                        mirror=True,
+                        linecolor="black",
+                        linewidth=2,
+                        showgrid=True,
+                        gridcolor="white",
+                        gridwidth=1,
+                        zeroline=False,
+                        zerolinecolor="white",
+                        zerolinewidth=1,
+                        title_font={"size": font_size + 4},
+                        tickfont={"size": font_size},
+                    )
+                    fig.update_yaxes(
+                        title_text=yvar,
+                        row=row,
+                        col=col,
+                        showline=False,
+                        mirror=True,
+                        linecolor="black",
+                        linewidth=2,
+                        showgrid=True,
+                        gridcolor="white",
+                        gridwidth=1,
+                        zeroline=True,
+                        zerolinecolor="white",
+                        zerolinewidth=1,
+                        title_font={"size": font_size + 4},
+                        tickfont={"size": font_size},
+                    )
                 else:
-                    fig.update_xaxes(title_text=xvar)
-                    fig.update_yaxes(title_text=yvar)
+                    fig.update_xaxes(
+                        title_text=xvar,
+                        showgrid=True,
+                        showline=False,
+                        mirror=True,
+                        linecolor="black",
+                        linewidth=2,
+                        gridcolor="white",
+                        gridwidth=1,
+                        zeroline=True,
+                        zerolinecolor="white",
+                        zerolinewidth=1,
+                        title_font={"size": font_size + 4},
+                        tickfont={"size": font_size},
+                    )
+                    fig.update_yaxes(
+                        title_text=yvar,
+                        showgrid=True,
+                        showline=False,
+                        mirror=True,
+                        linecolor="black",
+                        linewidth=2,
+                        gridcolor="white",
+                        gridwidth=1,
+                        zeroline=True,
+                        zerolinecolor="white",
+                        zerolinewidth=1,
+                        title_font={"size": font_size + 4},
+                        tickfont={"size": font_size},
+                    )
 
             # Layout
             fig.update_layout(
-                template="plotly_white",
-                height=700,
-                width=1400 if len(dfs) == 2 else 700,
+                template="plotly",
+                height=height,
+                width=width * len(dfs),
+                showlegend=True,  # Add this line
+                font={
+                    "size": font_size,
+                },
             )
+
+            # Subplot title font and metrics font
+            if len(dfs) == 2:
+                # First annotations are the subplot titles
+                for annotation in fig.layout.annotations[: len(names)]:
+                    annotation.font = {"size": font_size + 6, "color": "black"}
+
+                # Remaining annotations are the metrics
+                for annotation in fig.layout.annotations[len(names) :]:
+                    annotation.font = {"size": font_size + 4, "color": "black"}
+
             fig.show(config={"responsive": True})
 
     # --- Bind widgets ---
@@ -754,6 +849,7 @@ def plot_metrics(
     metric: str,
     facet_by_range: bool = False,
     only_all: bool = False,
+    font_size: int = 12,
 ):
     """
     Plot metrics per landcover class
@@ -878,6 +974,12 @@ def plot_metrics(
             "<b>Source:</b> %{fullData.name}<extra></extra>"
         )
     )
+    # Layout
+    fig.update_layout(
+        font={
+            "size": font_size,
+        },
+    )
     fig.show()
 
 
@@ -886,6 +988,14 @@ def plot_scatter_with_colorbar(
     x: str | None = None,
     y: str | None = None,
     c: str | None = None,
+    xrange: tuple[float, float] | None = None,
+    yrange: tuple[float, float] | None = None,
+    crange: tuple[float, float] | None = None,
+    width: int = 600,
+    height: int = 600,
+    marker_size: int = 6,
+    font_size: int = 14,
+    use_stressed: bool = False,
 ):
     """
     Plot scatter plots with dynamic coloring,
@@ -970,6 +1080,10 @@ def plot_scatter_with_colorbar(
         style={"description_width": "initial"},
     )
 
+    metrics_checkbox = widgets.Checkbox(
+        value=False, description="Compute metrics"
+    )
+
     range_checkbox = widgets.Checkbox(value=False, description="Fixed range")
 
     output = widgets.Output()
@@ -1023,10 +1137,15 @@ def plot_scatter_with_colorbar(
 
                 for site_name, group in subset.groupby("name"):
                     # Separate by stressed status
-                    stressed_groups = [
-                        (group[group["stressed"] == 0], "circle"),
-                        (group[group["stressed"] == 1], "square"),
-                    ]
+                    if use_stressed:
+                        stressed_groups = [
+                            (group[group["stressed"] == 0], "circle"),
+                            (group[group["stressed"] == 1], "square"),
+                        ]
+                    else:
+                        stressed_groups = [
+                            (group, "circle"),
+                        ]
 
                     for group_data, marker_symbol in stressed_groups:
                         if len(group_data) == 0:
@@ -1036,24 +1155,34 @@ def plot_scatter_with_colorbar(
                         if cvar is not None:
                             marker_color = group_data[cvar]
                             marker_dict = {
-                                "size": 6,
+                                "size": marker_size,
                                 "opacity": 0.5,
                                 "symbol": marker_symbol,
                                 "color": marker_color,
-                                "colorscale": "Viridis",
+                                "colorscale": "RdYlGn",
                                 "cmin": color_min,
                                 "cmax": color_max,
                                 "showscale": is_first_trace_in_subplot,
                                 "colorbar": {
-                                    "title": cvar,
-                                    "x": 1.02,
+                                    "title": {
+                                        "text": cvar,
+                                        "font": {
+                                            "size": font_size + 2,
+                                        },
+                                    },
+                                    "tickfont": {
+                                        "size": font_size,
+                                    },
                                 }
                                 if is_first_trace_in_subplot
                                 else None,
                             }
+                            if crange is not None:
+                                marker_dict["cmin"] = crange[0]
+                                marker_dict["cmax"] = crange[1]
                         else:
                             marker_dict = {
-                                "size": 6,
+                                "size": marker_size,
                                 "opacity": 0.5,
                                 "symbol": marker_symbol,
                                 "color": "blue",
@@ -1116,36 +1245,202 @@ def plot_scatter_with_colorbar(
                         fig.update_xaxes(range=axis_range)
                         fig.update_yaxes(range=axis_range)
 
-                # Identity line
-                lims = [
-                    min(x_values.min(), y_values.min()),
-                    max(x_values.max(), y_values.max()),
-                ]
+                    # Identity line
+                    lims = [
+                        min(x_values.min(), y_values.min()),
+                        max(x_values.max(), y_values.max()),
+                    ]
+                    lims = [xrange[0], xrange[1]]
 
-                line1 = go.Scatter(
-                    x=lims,
-                    y=lims,
-                    mode="lines",
-                    line={"dash": "dash", "color": "black"},
-                    showlegend=False,
-                )
+                    line1 = go.Scatter(
+                        x=lims,
+                        y=lims,
+                        mode="lines",
+                        line={"dash": "dash", "color": "black"},
+                        showlegend=False,
+                    )
 
+                    if len(dfs) == 2:
+                        fig.add_trace(line1, row=row, col=col)
+                    else:
+                        fig.add_trace(line1)
+
+                # Metrics
+                if metrics_checkbox.value:
+                    slope, intercept = safe_polyfit(x_values, y_values)
+
+                    lims = [
+                        min(x_values.min(), y_values.min()),
+                        max(x_values.max(), y_values.max()),
+                    ]
+
+                    # Identity line
+                    line1 = go.Scatter(
+                        x=lims,
+                        y=lims,
+                        mode="lines",
+                        line={"dash": "dash", "color": "black"},
+                        showlegend=False,
+                    )
+
+                    # Fit line
+                    line2 = None
+                    if not np.isnan(slope) and not np.isnan(intercept):
+                        line2 = go.Scatter(
+                            x=lims,
+                            y=[
+                                lims[0] * slope + intercept,
+                                lims[1] * slope + intercept,
+                            ],
+                            mode="lines",
+                            line={"color": "red"},
+                            showlegend=False,
+                        )
+
+                    if len(dfs) == 2:
+                        fig.add_trace(line1, row=row, col=col)
+                        if line2:
+                            fig.add_trace(line2, row=row, col=col)
+                    else:
+                        fig.add_trace(line1)
+                        if line2:
+                            fig.add_trace(line2)
+
+                    # --- Metrics text ---
+                    slope_m, intercept, mbe, mae, rmse, r2, _, _, _ = (
+                        compute_metrics(x_values, y_values)
+                    )
+
+                    if len(dfs) == 2:
+                        fig.add_annotation(
+                            x=0.97,
+                            y=0.03,
+                            xref="x domain",
+                            yref="y domain",
+                            text=(
+                                f"slope = {slope_m:.2f}<br>"
+                                f"intercept = {intercept:.2f}<br>"
+                                f"MBE = {mbe:.2f}<br>"
+                                f"MAE = {mae:.2f}<br>"
+                                f"RMSE = {rmse:.2f}<br>"
+                                f"R² = {r2:.2f}"
+                            ),
+                            showarrow=False,
+                            align="right",
+                            row=row,
+                            col=col,
+                        )
+                    else:
+                        fig.add_annotation(
+                            x=0.97,
+                            y=0.03,
+                            xref="x domain",
+                            yref="y domain",
+                            text=(
+                                f"slope = {slope_m:.2f}<br>"
+                                f"intercept = {intercept:.2f}<br>"
+                                f"MBE = {mbe:.2f}<br>"
+                                f"MAE = {mae:.2f}<br>"
+                                f"RMSE = {rmse:.2f}<br>"
+                                f"R² = {r2:.2f}"
+                            ),
+                            showarrow=False,
+                            align="right",
+                        )
+                if xrange is not None and yrange is not None:
+                    if len(dfs) == 2:
+                        fig.update_xaxes(range=xrange, row=row, col=col)
+                        fig.update_yaxes(range=yrange, row=row, col=col)
+                    else:
+                        fig.update_xaxes(range=xrange)
+                        fig.update_yaxes(range=yrange)
                 if len(dfs) == 2:
-                    fig.add_trace(line1, row=row, col=col)
-                    fig.update_xaxes(title_text=xvar, row=row, col=col)
-                    fig.update_yaxes(title_text=yvar, row=row, col=col)
+                    fig.update_xaxes(
+                        title_text=xvar,
+                        row=row,
+                        col=col,
+                        showline=False,
+                        mirror=True,
+                        linecolor="black",
+                        linewidth=2,
+                        showgrid=True,
+                        gridcolor="white",
+                        gridwidth=1,
+                        zeroline=True,
+                        zerolinecolor="white",
+                        zerolinewidth=1,
+                        title_font={"size": font_size + 4},
+                        tickfont={"size": font_size},
+                    )
+                    fig.update_yaxes(
+                        title_text=yvar,
+                        row=row,
+                        col=col,
+                        showline=False,
+                        mirror=True,
+                        linecolor="black",
+                        linewidth=2,
+                        showgrid=True,
+                        gridcolor="white",
+                        gridwidth=1,
+                        zeroline=True,
+                        zerolinecolor="white",
+                        zerolinewidth=1,
+                        title_font={"size": font_size + 4},
+                        tickfont={"size": font_size},
+                    )
                 else:
-                    fig.add_trace(line1)
-                    fig.update_xaxes(title_text=xvar)
-                    fig.update_yaxes(title_text=yvar)
+                    fig.update_xaxes(
+                        title_text=xvar,
+                        showgrid=True,
+                        showline=False,
+                        mirror=True,
+                        linecolor="black",
+                        linewidth=2,
+                        gridcolor="white",
+                        gridwidth=1,
+                        zeroline=True,
+                        zerolinecolor="white",
+                        zerolinewidth=1,
+                        title_font={"size": font_size + 4},
+                        tickfont={"size": font_size},
+                    )
+                    fig.update_yaxes(
+                        title_text=yvar,
+                        showgrid=True,
+                        showline=False,
+                        mirror=True,
+                        linecolor="black",
+                        linewidth=2,
+                        gridcolor="white",
+                        gridwidth=1,
+                        zeroline=True,
+                        zerolinecolor="white",
+                        zerolinewidth=1,
+                        title_font={"size": font_size + 4},
+                        tickfont={"size": font_size},
+                    )
 
             # Layout
             fig.update_layout(
-                template="plotly_white",
-                height=700,
-                width=1400 if len(dfs) == 2 else 700,
+                template="plotly",
+                height=height,
+                width=width * len(dfs),
                 showlegend=False,  # Add this line
+                font={
+                    "size": font_size,
+                },
             )
+
+            # Subplot title font and metrics font
+            if len(dfs) == 2:
+                # First annotations are the subplot titles
+                for annotation in fig.layout.annotations[: len(names)]:
+                    annotation.font = {"size": font_size + 6, "color": "black"}
+
+                # Remaining annotations are the metrics
+                for annotation in fig.layout.annotations[len(names) :]:
+                    annotation.font = {"size": font_size + 4, "color": "black"}
 
             fig.show(config={"responsive": True})
 
@@ -1156,6 +1451,7 @@ def plot_scatter_with_colorbar(
         xvar_dropdown,
         yvar_dropdown,
         cvar_dropdown,
+        metrics_checkbox,
         range_checkbox,
     ]:
         w.observe(update_plot, names="value")
@@ -1167,6 +1463,7 @@ def plot_scatter_with_colorbar(
             xvar_dropdown,
             yvar_dropdown,
             cvar_dropdown,
+            metrics_checkbox,
             range_checkbox,
         ]
     )
@@ -1272,7 +1569,7 @@ def plot_scatter_3d(df: pd.DataFrame):
             color=color_axis,
             hover_data=metadata,
             size_max=1,
-            color_continuous_scale="Viridis",
+            color_continuous_scale="RdYlGn",
         )
         fig.update_traces(marker={"size": 2})
         fig.show(renderer="browser")
@@ -1302,3 +1599,171 @@ def plot_scatter_3d(df: pd.DataFrame):
             output,
         ]
     )
+
+
+def analyze(
+    df: pd.DataFrame,
+    x: str,
+    y: str,
+    c: str,
+    bins: int = 50,
+    x_label: str | None = None,
+    y_label: str | None = None,
+    color_label: str | None = None,
+    title: str | None = None,
+    width: int = 1000,
+    height: int = 700,
+    x_range: tuple[float, float] | None = None,
+    y_range: tuple[float, float] | None = None,
+    c_range: tuple[float, float] | None = None,
+    font_size: int = 14,
+):
+    """
+    Plot data and overlay the mean y value within x bins.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input data.
+    x, y, c : str
+        Column names for the x axis, y axis, and color.
+    bins : int
+        Number of equally sized bins along x.
+    x_label, y_label, color_label : str, optional
+        Display labels for the axes and color legend/color bar.
+    width, height : int
+        Figure dimensions in pixels.
+    x_range, y_range, c_range : tuple[float, float], optional
+        Axis ranges and color range, for example ``(0, 100)``.
+    font_size : int
+        Base font size for the figure.
+    """
+
+    data = df[[x, y, c]].dropna().copy()
+
+    # Create x bins
+    data["_x_bin"] = pd.cut(data[x], bins=bins, include_lowest=True)
+
+    # Compute mean y and mean x for each bin
+    means = (
+        data.groupby("_x_bin", observed=True)
+        .agg(
+            x_mean=(x, "mean"),
+            y_mean=(y, "mean"),
+        )
+        .dropna()
+        .reset_index(drop=True)
+        .sort_values("x_mean")
+    )
+
+    labels = {
+        x: x_label or x,
+        y: y_label or y,
+        c: color_label or c,
+    }
+
+    # Original scatter plot
+    fig = px.scatter(
+        data,
+        x=x,
+        y=y,
+        color=c,
+        labels=labels,
+        opacity=0.6,
+        render_mode="svg",
+        width=width,
+        height=height,
+    )
+    # Increase only the original scatter-point size
+    fig.update_traces(
+        selector={"mode": "markers"},
+        marker={"size": 8},
+    )
+
+    # Mean line
+    fig.add_scatter(
+        x=means["x_mean"],
+        y=means["y_mean"],
+        mode="lines+markers",
+        line={"color": "red", "width": 3},
+        marker={"size": 10},
+        showlegend=False,
+    )
+
+    if c_range is not None:
+        fig.update_coloraxes(
+            cmin=c_range[0],
+            cmax=c_range[1],
+        )
+
+    # Compute Pearson correlation and p-value
+    if len(data) >= 3 and data[x].nunique() > 1 and data[y].nunique() > 1:
+        correlation, p_value = pearsonr(data[x], data[y])
+        correlation_text = f"r = {correlation:.2f}<br>p-value = {p_value:.2g}"
+
+    fig.update_layout(
+        template="plotly",
+        title={
+            "text": title,
+            "x": 0.5,
+            "xanchor": "center",
+            "font": {"size": font_size + 6},
+        },
+        font={
+            "size": font_size,
+        },
+        # Axis ranges
+        xaxis={
+            "range": x_range,
+            "showline": False,
+            "mirror": True,
+            "linecolor": "black",
+            "linewidth": 2,
+            "showgrid": True,
+            "zeroline": True,
+            "title_font": {"size": font_size + 4},
+            "tickfont": {"size": font_size},
+        },
+        yaxis={
+            "range": y_range,
+            "showline": False,
+            "mirror": True,
+            "linecolor": "black",
+            "linewidth": 2,
+            "showgrid": True,
+            "zeroline": True,
+            "zerolinecolor": "white",
+            "zerolinewidth": 1,
+            "title_font": {"size": font_size + 4},
+            "tickfont": {"size": font_size},
+        },
+    )
+
+    # Larger colorbar title and tick labels
+    fig.update_coloraxes(
+        colorbar={
+            "title": {
+                "text": color_label or c,
+                "font": {"size": font_size + 4},
+            },
+            "tickfont": {"size": font_size},
+        }
+    )
+    # Display correlation
+    fig.add_annotation(
+        x=0.02,
+        y=0.98,
+        xref="paper",
+        yref="paper",
+        text=correlation_text,
+        showarrow=False,
+        xanchor="left",
+        yanchor="top",
+        align="left",
+        font={
+            "size": font_size,
+            "color": "black",
+        },
+    )
+
+    fig.show()

@@ -104,6 +104,7 @@ def run_stic(df: pd.DataFrame, version: str) -> pd.DataFrame:
     output_df["diff_le"] = output_df["le"] - df["ec_le"]
     output_df["diff_le_closed"] = output_df["le"] - df["ec_le_closed"]
     output_df["ts-ta"] = df["ts"] - df["ta"]
+    output_df["gs/ga"] = np.clip(output_df["gs"] / output_df["ga"], 0, 1)
     output_df["t/le"] = np.clip(output_df["t"] / output_df["le"], 0, 1)
     output_df["e/le"] = np.clip(output_df["e"] / output_df["le"], 0, 1)
     output_df["nir/swir"] = np.clip(
