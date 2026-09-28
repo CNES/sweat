@@ -12,7 +12,7 @@ used in TRISHNA mission to compute evapotranspiration:
 ### Clone the repository
 
 ```console
-git clone https://src.koda.cnrs.fr/trishna/sweat.git
+git clone https://github.com/CNES/sweat.git
 ```
 
 ### Install prerequisites
