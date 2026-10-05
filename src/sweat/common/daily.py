@@ -333,7 +333,7 @@ def extrapolate_at_daily_scale(
 
     # Propagate flags
     xarr = next(iter(daily.data_vars.values()))
-    daily[ETVar.VALID.value] = xr.where(xarr.isnull(), 1, valid)
+    daily[ETVar.VALID.value] = xr.where(xarr.isnull(), 0, valid)
     daily[ETVar.FLAGS.value] = xr.where(
         xarr.isnull(), flags | FLAGS_TYPE(MSK_PROCESSING_FAILED), flags
     )
