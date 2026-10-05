@@ -257,7 +257,7 @@ def plot_models(
                 lst = data[ETVar.LST.value].data
             ax = plt.subplot2grid((row, col), (i, j))
             # plot LST points
-            ax.scatter(var, lst, s=20, alpha=1, color="moccasin", clip_on=False)
+            ax.scatter(var, lst, s=3, alpha=1, color="moccasin", clip_on=False)
             # edges coordinates
             var_max = np.round(np.ceil(np.nanmax(var) * 10) / 10, decimals=1)
             var_min = np.round(np.floor(np.nanmin(var) * 10) / 10, decimals=1)
