@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2025 CESBIO / Centre National d'Etudes Spatiales
 """
 Module for computing error metrics and other related statistics.
 """

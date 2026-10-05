@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2025 CESBIO / Centre National d'Etudes Spatiales
 """
 Module for handling data related to observed and simulated
 evapotranspiration, daily radiation, and extra ERA5-Land variables.
