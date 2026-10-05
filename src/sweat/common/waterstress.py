@@ -117,6 +117,6 @@ def run(
         data_vars={ETVar.WATERSTRESS.value: water_stress}, attrs=attrs
     )
     # Propagate flags
-    ws_xr[ETVar.VALID.value] = valid
-    ws_xr[ETVar.FLAGS.value] = flags
+    ws_xr[ETVar.VALID.value] = valid.copy()
+    ws_xr[ETVar.FLAGS.value] = flags.copy()
     return ws_xr

@@ -608,8 +608,8 @@ def run(
         flags | MSK_INPUT_FILTERED_DURING_PROCESSING,
         flags,
     )
-    ef[ETVar.VALID.value] = valid
-    ef[ETVar.FLAGS.value] = flags
-    merged[ETVar.VALID.value] = valid
-    merged[ETVar.FLAGS.value] = flags
+    ef[ETVar.VALID.value] = valid.copy()
+    ef[ETVar.FLAGS.value] = flags.copy()
+    merged[ETVar.VALID.value] = valid.copy()
+    merged[ETVar.FLAGS.value] = flags.copy()
     return ef, merged

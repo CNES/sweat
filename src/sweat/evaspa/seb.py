@@ -481,8 +481,8 @@ def run(
         ETVar.UNCERTAINTY_LE.value
     ].copy(data=compute_et_from_le(merged_xr[ETVar.UNCERTAINTY_LE.value]))
     # Propagate flags
-    le_xr[ETVar.VALID.value] = valid
-    le_xr[ETVar.FLAGS.value] = flags
-    merged_xr[ETVar.VALID.value] = valid
-    merged_xr[ETVar.FLAGS.value] = flags
+    le_xr[ETVar.VALID.value] = valid.copy()
+    le_xr[ETVar.FLAGS.value] = flags.copy()
+    merged_xr[ETVar.VALID.value] = valid.copy()
+    merged_xr[ETVar.FLAGS.value] = flags.copy()
     return le_xr, merged_xr
