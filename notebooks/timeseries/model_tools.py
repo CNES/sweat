@@ -94,7 +94,7 @@ def get_extra_variable(
     dir_var: str, variable: str, date: dt.datetime
 ) -> xr.DataArray:
     """
-    Return the sepcified daily extra variable for a given date
+    Return the specified daily extra variable for a given date
     from the corresponding GeoTIFF file in the specified directory.
 
     Parameters
@@ -317,7 +317,7 @@ def find_directories(input_dir: str) -> tuple[str, str, str | None]:
     Parameters
     ----------
     input_dir : str
-        Path to the main input directory containing the subfolders.
+        Path to the main input directory containing the subdirectories.
 
     Returns
     -------
