@@ -258,19 +258,19 @@ def plot_time_evolution_error(
     )
     # Plot
     fig, axes = plt.subplots(1, 2, figsize=(10, 7))
+    start_str = (
+        start_date
+        if isinstance(start_date, str)
+        else start_date.strftime("%Y-%m-%d")
+    )
+    end_str = (
+        end_date if isinstance(end_date, str) else end_date.strftime("%Y-%m-%d")
+    )
     fig.suptitle(
-        "Evolution of daily error from "
-        f"{
-            start_date
-            if isinstance(start_date, str)
-            else start_date.strftime('%Y-%m-%d')
-        }"
-        f" to {
-            end_date
-            if isinstance(end_date, str)
-            else end_date.strftime('%Y-%m-%d')
-        }"
-        f" for pixel [{x},{y}]",
+        (
+            f"Evolution of daily error from {start_str} "
+            f"to {end_str} for pixel [{x},{y}]"
+        ),
         fontsize=12,
     )
     axes[0].bar(time, ae, color="green", width=0.25)
@@ -551,18 +551,20 @@ def plot_time_error_characteristic_pixels(
     description = "Absolute Errors" if absolute else "Errors"
     plt.xlabel("Date")
     plt.ylabel(description)
+    start_str = (
+        start_date
+        if isinstance(start_date, str)
+        else start_date.strftime("%Y-%m-%d")
+    )
+    end_str = (
+        end_date if isinstance(end_date, str) else end_date.strftime("%Y-%m-%d")
+    )
     plt.title(
-        f"Evolution of daily {description} for selected pixels "
-        f" from {
-            start_date
-            if isinstance(start_date, str)
-            else start_date.strftime('%Y-%m-%d')
-        }"
-        f" to {
-            end_date
-            if isinstance(end_date, str)
-            else end_date.strftime('%Y-%m-%d')
-        }"
+        (
+            f"Evolution of daily {description} for selected pixels "
+            f"from {start_str} to {end_str}"
+        ),
+        fontsize=12,
     )
     plt.legend(loc="upper center", bbox_to_anchor=(0.5, -0.15), ncol=3)
     plt.grid(True, linestyle="--", alpha=0.4)
@@ -900,7 +902,7 @@ def plot_et_time_comparison(dir_sd, dir_ts, start_date, end_date, x, y):
         Directory where the observed evapotranspiration product files
         are stored.
     dir_ts : str
-        Directory where the simulated evapotranspirationproduct files
+        Directory where the simulated evapotranspiration product files
         are stored.
     start_date : str
         Start date of the period in `YYYY-MM-DD` format.
@@ -918,18 +920,17 @@ def plot_et_time_comparison(dir_sd, dir_ts, start_date, end_date, x, y):
     # Plot
     plt.plot(time, et_ts, color="red", label="Simulated ET")
     plt.plot(time, et_sd, color="blue", label="Observed ET")
+    start_str = (
+        start_date
+        if isinstance(start_date, str)
+        else start_date.strftime("%Y-%m-%d")
+    )
+    end_str = (
+        end_date if isinstance(end_date, str) else end_date.strftime("%Y-%m-%d")
+    )
     plt.title(
-        "Simulated ET vs Observed ET from "
-        f"{
-            start_date
-            if isinstance(start_date, str)
-            else start_date.strftime('%Y-%m-%d')
-        }"
-        f" to {
-            end_date
-            if isinstance(end_date, str)
-            else end_date.strftime('%Y-%m-%d')
-        }"
+        (f"Simulated ET vs Observed ET from {start_str} to {end_str}"),
+        fontsize=12,
     )
     plt.xlabel("Date")
     ax = plt.gca()
@@ -1015,20 +1016,21 @@ def plot_time_error_with_extra_variable(
     ax1.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
     # Rotate date labels
     plt.setp(ax1.xaxis.get_majorticklabels(), rotation=45, ha="right")
-
+    start_str = (
+        start_date
+        if isinstance(start_date, str)
+        else start_date.strftime("%Y-%m-%d")
+    )
+    end_str = (
+        end_date if isinstance(end_date, str) else end_date.strftime("%Y-%m-%d")
+    )
     plt.title(
-        f"{var_name} vs {error_name} errors from "
-        f"{
-            start_date
-            if isinstance(start_date, str)
-            else start_date.strftime('%Y-%m-%d')
-        }"
-        f" to {
-            end_date
-            if isinstance(end_date, str)
-            else end_date.strftime('%Y-%m-%d')
-        } "
-        f"for pixel [{pix_x},{pix_y}]"
+        (
+            f"{var_name} vs {error_name} errors from "
+            f"from {start_str} to {end_str} "
+            f"for pixel [{pix_x},{pix_y}]"
+        ),
+        fontsize=12,
     )
     plt.tight_layout()
     plt.show()
